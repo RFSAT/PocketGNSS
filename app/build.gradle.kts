@@ -23,6 +23,14 @@ android {
     }
 
     signingConfigs {
+        // Fixed debug key kept in the repository, so every CI debug APK installs over the previous one
+        // (the runner would otherwise sign each build with a new random debug key). Not used for Play.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         create("release") {
             // Same secret names as the other RFSAT apps (DBM, BAS, TinyRAD, PocketSpectro); absent locally,
             // in which case the release build stays unsigned.
@@ -38,6 +46,10 @@ android {
 
     buildTypes {
         debug {
+            // Side-by-side with the Play version: com.PocketGNSS.debug, labelled "PocketGNSS debug".
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            signingConfig = signingConfigs.getByName("debug")
             isPseudoLocalesEnabled = true
         }
         release {

@@ -100,7 +100,9 @@ All text is in `res/values/strings.xml` (debug builds have pseudo-locales to che
 
 ## Build
 
-GitHub Actions (`.github/workflows/android-ci.yml`), as for PocketSpectro: unit tests, then the signed Play bundle
+GitHub Actions (`.github/workflows/android-ci.yml`), as for PocketSpectro: unit tests, a **debug APK** on every run
+(artifact `PocketGNSS-v<version>-debug-apk`; package `com.PocketGNSS.debug`, label "PocketGNSS debug", signed with the
+fixed key `app/debug.keystore` so it updates in place and installs next to the Play version), then the signed Play bundle
 (AAB) and release APK when the repository secrets `KEYSTORE_BASE64`, `STORE_PASSWORD`, `KEY_ALIAS`,
 `KEY_PASSWORD` are set (same names as the other RFSAT apps). A second job renders all screens with the simulator
 (Robolectric + Roborazzi), including the Play set at 1080 × 1920 (24-bit). The Map tab is not rendered there
