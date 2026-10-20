@@ -83,6 +83,7 @@ class ScreenshotTest {
     @Test fun ttff() { simulatorAtFix(); shot("11_tool_ttff", Tab.TOOLS, ToolId.TTFF) }
     @Test fun stream() { simulatorAtFix(); shot("12_tool_stream", Tab.TOOLS, ToolId.STREAM) }
     @Test fun log() { simulatorAtFix(); engine.markPoint("P1"); shot("13_log", Tab.LOG) }
+    @Test fun live_disconnect_row() { simulatorAtFix(); shot("02b_live_top", Tab.LIVE) }
     @Test fun setup() { simulatorAtFix(); shot("14_setup", Tab.SETUP) }
     @Test fun exit() { simulatorAtFix(); shot("15_exit", Tab.HOME, exit = true) }
 }

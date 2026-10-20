@@ -4,7 +4,7 @@ plugins {
 }
 
 // The one place to change the app version.
-val appVersion = "1.0.0"
+val appVersion = "1.1.0"
 val appVersionCode = appVersion.split(".").map { it.toInt() }.let { (a, b, c) -> a * 10000 + b * 100 + c }
 
 android {
@@ -20,6 +20,8 @@ android {
         // 1.MINOR.PATCH -> 1*10000 + MINOR*100 + PATCH (1.1.2 -> 10102).
         versionCode = appVersionCode
         versionName = appVersion
+        // Launcher label only; the screens always show app_name ("PocketGNSS"), also in screenshots.
+        manifestPlaceholders["appLabel"] = "PocketGNSS"
     }
 
     signingConfigs {
@@ -46,8 +48,9 @@ android {
 
     buildTypes {
         debug {
-            // Side-by-side with the Play version: com.PocketGNSS.debug, labelled "PocketGNSS debug".
+            // Side-by-side with the Play version: com.PocketGNSS.debug, labelled "PocketGNSS debug" in the launcher.
             applicationIdSuffix = ".debug"
+            manifestPlaceholders["appLabel"] = "PocketGNSS debug"
             versionNameSuffix = "-debug"
             signingConfig = signingConfigs.getByName("debug")
             isPseudoLocalesEnabled = true

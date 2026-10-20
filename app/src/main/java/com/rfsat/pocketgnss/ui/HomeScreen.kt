@@ -88,7 +88,8 @@ fun HomeScreen(engine: GnssEngine, onOpenTab: (Tab) -> Unit, onReconnect: () -> 
                     if (s.nmeaServer) add(stringResource(R.string.state_server, s.nmeaServerPort))
                 }.ifEmpty { listOf(stringResource(R.string.state_receiving)) }.joinToString(", "), live = true)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ActionButton(onClick = { onOpenTab(Tab.LIVE) }, emphasis = true) { Text(stringResource(R.string.tab_live)) }
+                    // Navigation shortcuts: all neutral (a filled button is kept for a screen's main action, e.g. Connect).
+                    ActionButton(onClick = { onOpenTab(Tab.LIVE) }) { Text(stringResource(R.string.tab_live)) }
                     ActionButton(onClick = { onOpenTab(Tab.MAP) }) { Text(stringResource(R.string.tab_map)) }
                     ActionButton(onClick = { onOpenTab(Tab.TOOLS) }) { Text(stringResource(R.string.tab_tools)) }
                 }
@@ -97,6 +98,9 @@ fun HomeScreen(engine: GnssEngine, onOpenTab: (Tab) -> Unit, onReconnect: () -> 
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ActionButton(onClick = onReconnect, emphasis = true) { Text(stringResource(R.string.action_connect)) }
                     ActionButton(onClick = { onOpenTab(Tab.SETUP) }) { Text(stringResource(R.string.tab_setup)) }
+                    if (s.source != LinkKind.PHONE) ActionButton(onClick = {
+                        engine.store.update { it.copy(source = LinkKind.PHONE) }; onReconnect()
+                    }) { Text(stringResource(R.string.home_try_phone)) }
                     if (!s.useSimulator) ActionButton(onClick = {
                         engine.store.update { it.copy(source = LinkKind.SIMULATOR) }; onReconnect()
                     }) { Text(stringResource(R.string.home_try_sim)) }
@@ -125,6 +129,7 @@ fun sourceHelp(s: AppSettings) = when (s.source) {
     LinkKind.USB -> R.string.help_usb
     LinkKind.BLUETOOTH -> R.string.help_bt
     LinkKind.TCP -> R.string.help_tcp
+    LinkKind.PHONE -> R.string.help_phone
     LinkKind.SIMULATOR -> R.string.help_sim
 }
 

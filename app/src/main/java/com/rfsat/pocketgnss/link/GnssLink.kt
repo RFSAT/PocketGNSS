@@ -2,7 +2,8 @@ package com.rfsat.pocketgnss.link
 
 import java.io.IOException
 
-enum class LinkKind { USB, BLUETOOTH, TCP, SIMULATOR }
+/** Where the position comes from. [PHONE] is the phone's own GNSS chip (no RTK), read through Android's location API. */
+enum class LinkKind { USB, BLUETOOTH, TCP, PHONE, SIMULATOR }
 
 /**
  * Hardware versions of the RFSAT receiver (D3.3 §4.6). Both run ESPrtk on the ESP32 and fetch RTK corrections with
@@ -53,6 +54,9 @@ data class LinkInfo(
      * Over the ESP32 (Bluetooth or its USB bridge) they may or may not be passed through.
      */
     val ubxDirect: Boolean get() = chip == UsbChip.UBLOX || kind == LinkKind.SIMULATOR
+
+    /** True when corrections (RTCM) and u-blox commands can be written to the receiver. */
+    val writable: Boolean get() = kind != LinkKind.PHONE
 }
 
 /**

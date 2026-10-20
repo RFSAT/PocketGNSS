@@ -3,7 +3,7 @@
     <!-- App name; a product name, keep as is. -->
     <string name="app_name" translatable="false">PocketGNSS</string>
     <string name="acc_estimated">estimated (enable GST for measured)</string>
-    <string name="acc_measured">measured (GST)</string>
+    <string name="acc_measured">reported by the receiver</string>
     <string name="action_back">Back</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_close">Close</string>
@@ -19,8 +19,10 @@
     <string name="conn_lost">Connection lost: %1$s</string>
     <string name="conn_no_bt">This phone has no Bluetooth</string>
     <string name="conn_opening_bt">Bluetooth %1$s…</string>
+    <string name="conn_opening_phone">Phone GNSS…</string>
     <string name="conn_opening_sim">Simulated receiver…</string>
     <string name="conn_opening_usb">USB receiver…</string>
+    <string name="conn_phone_permission">Location access is needed to use the phone\'s GNSS</string>
     <string name="conn_unplugged">Receiver unplugged</string>
     <string name="conn_usb_refused">USB permission refused</string>
     <string name="cons_beidou">BeiDou</string>
@@ -70,6 +72,7 @@
     <string name="fixhint_none">Waiting for satellites</string>
     <string name="fixhint_single">Expected ~1 m (no corrections)</string>
     <string name="help_bt">The receiver sends the same NMEA over Bluetooth Classic. Pair the phone with its adapter (BTU-ESPrtk : &lt;ID&gt;) in Android settings, then choose it below.</string>
+    <string name="help_phone">The phone\'s own GNSS chip, without the RFSAT receiver: metre-level accuracy (no RTK), handy for trying the app, mapping roughly or comparing with the receiver. Needs location access and location turned on.</string>
     <string name="help_sim">A simulated RTK receiver: every screen and tool works without hardware.</string>
     <string name="help_tcp">NMEA over TCP from the receiver\'s Wi-Fi stream or another relay (for example EOS Tools Pro on port 3967).</string>
     <string name="help_usb">Connect the receiver\'s upper micro-USB port (data / COM port, NMEA at 115200 bd) with an OTG cable; the middle port is for power. The app opens automatically when it is plugged in.</string>
@@ -93,6 +96,7 @@
     <string name="home_rfsat">RFSAT Limited is a non-profit R&amp;D company in Dublin and Athens working on satellite navigation, sensing and signal processing for agriculture, environment and safety.</string>
     <string name="home_state">State</string>
     <string name="home_tagline">RTK GNSS receiver manager</string>
+    <string name="home_try_phone">Use phone GNSS</string>
     <string name="home_try_sim">Try the simulator</string>
     <string name="home_variant">Receiver version</string>
     <string name="home_version">v%1$s (build %2$d)</string>
@@ -120,6 +124,7 @@
     <string name="live_ntrip_receiver">off: the receiver uses its own NTRIP client over Wi-Fi</string>
     <string name="live_ntrip_setup">Corrections normally come through the receiver\'s own Wi-Fi link to the RTK service. To send them from the phone instead, enter an NTRIP caster in Setup.</string>
     <string name="live_ntrip_value">%1$s · %2$s · %3$.0f B/s</string>
+    <string name="live_phone_no_rtk">Phone GNSS: corrections cannot be applied to the phone\'s chip, so the position stays autonomous (no RTK).</string>
     <string name="live_position">Position</string>
     <string name="live_route">Receiver version</string>
     <string name="live_sats">Satellites</string>
@@ -133,7 +138,7 @@
     <string name="log_delete_point">Delete this point?</string>
     <string name="log_delete_title">Delete this session?</string>
     <string name="log_every_epoch">Every epoch</string>
-    <string name="log_help">Each session keeps the complete NMEA stream (raw.nmea, replayable in u-center) and a CSV of fixes with accuracy, filtered by the minimum fix and interval above. Export tracks as GPX or KML.</string>
+    <string name="log_help">Recording saves to files. Each session keeps the complete NMEA stream (raw.nmea, replayable in u-center) and a CSV of fixes with accuracy, filtered by the minimum fix and interval above. Export tracks as GPX or KML.</string>
     <string name="log_min_quality">Log fixes of at least</string>
     <string name="log_no_points">No points yet: use Mark point, or average one with Tools &gt; Survey point.</string>
     <string name="log_no_sessions">No recorded sessions.</string>
@@ -156,6 +161,17 @@
     <string name="nc_failed">Connection problem: %1$s</string>
     <string name="nc_help">Connect the receiver over USB (data port, OTG cable) or Bluetooth, or choose NMEA over TCP, in Setup. To try the app without hardware, choose the simulator.</string>
     <string name="nc_none">No receiver connected.</string>
+    <string name="nmea_all">All</string>
+    <string name="nmea_copied">NMEA copied</string>
+    <string name="nmea_copy">Copy</string>
+    <string name="nmea_count">%1$d shown of the last %2$d sentences</string>
+    <string name="nmea_empty">No sentences of this type yet.</string>
+    <string name="nmea_fewer">Show fewer</string>
+    <string name="nmea_help">The receiver\'s sentences as they arrive, without saving a file. Filter by type, pause to read, copy or share what is shown. To keep a complete record, use Recording above.</string>
+    <string name="nmea_more">Show more</string>
+    <string name="nmea_other">Other</string>
+    <string name="nmea_share">Share</string>
+    <string name="nmea_title">NMEA messages (live)</string>
     <string name="notif_channel">Receiver link</string>
     <string name="notif_channel_help">Shown while the app records, sends corrections or publishes the position with the screen off.</string>
     <string name="notif_logging">Recording %1$d fixes</string>
@@ -182,6 +198,7 @@
     <string name="out_mock_not_allowed">Not allowed yet: select PocketGNSS in Developer options &gt; Select mock location app, then Retry.</string>
     <string name="out_mock_off">Starting…</string>
     <string name="out_mock_open_dev">Developer options</string>
+    <string name="out_mock_phone">Not available with Phone GNSS as the source: the phone already uses its own position.</string>
     <string name="out_server">NMEA TCP server</string>
     <string name="out_server_help">Serves the receiver\'s NMEA at %1$s:%2$d · %3$d client(s)</string>
     <string name="out_server_local">This phone only</string>
@@ -217,6 +234,7 @@
     <string name="sim_static">Static antenna</string>
     <string name="sim_swaths">Tractor on swaths</string>
     <string name="src_bt">Bluetooth</string>
+    <string name="src_phone">Phone GNSS</string>
     <string name="src_sim">Simulator</string>
     <string name="src_tcp">TCP</string>
     <string name="src_usb">USB</string>
@@ -338,6 +356,7 @@
     <string name="ubx_no_version">No answer: this link does not pass UBX to the u-blox chip. Connect the bottom micro-USB port (u-blox chip).</string>
     <string name="ubx_permanent">Save permanently</string>
     <string name="ubx_permanent_help">RAM + battery-backed RAM + Flash, like u-center\'s Save config. Off: until the next power-down.</string>
+    <string name="ubx_phone">The phone\'s own GNSS chip cannot be configured from here; connect the RFSAT receiver.</string>
     <string name="ubx_ports_help">u-blox ports to configure. The receiver guide sets I2C, UART1, USB and SPI; UART1 feeds the ESP32 (Bluetooth and the receiver\'s own logging).</string>
     <string name="ubx_ports_rate">Ports and rate</string>
     <string name="ubx_preset_agenso">AGENSO (GGA, RMC)</string>

@@ -346,9 +346,6 @@ private fun TtffRows(r: com.rfsat.pocketgnss.core.TtffRun) {
 @Composable
 private fun StreamTool(engine: GnssEngine) = NeedsReceiver(engine) {
     val st by engine.stream.collectAsState()
-    val console by engine.console.collectAsState()
-    var paused by remember { mutableStateOf(false) }
-    var frozen by remember { mutableStateOf<List<String>>(emptyList()) }
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     Column(Modifier.verticalScroll(rememberScrollState())) {
         Section(stringResource(R.string.stream_counts)) {
@@ -367,14 +364,6 @@ private fun StreamTool(engine: GnssEngine) = NeedsReceiver(engine) {
             }
             Text(stringResource(R.string.stream_spec), style = MaterialTheme.typography.bodySmall, color = muted)
         }
-        Section(stringResource(R.string.stream_console)) {
-            ToggleButton(on = !paused, label = stringResource(if (paused) R.string.stream_paused else R.string.stream_live), onClick = {
-                if (!paused) frozen = console; paused = !paused
-            }, compact = true)
-            val lines = (if (paused) frozen else console).takeLast(80)
-            Column(Modifier.fillMaxWidth().background(Color(0xFF0E1012), RoundedCornerShape(8.dp)).padding(8.dp)) {
-                for (l in lines) Text(l, color = Color(0xFFB9F6CA), fontFamily = FontFamily.Monospace, fontSize = 10.sp, maxLines = 1)
-            }
-        }
+        Section(stringResource(R.string.stream_console)) { NmeaConsole(engine) }
     }
 }

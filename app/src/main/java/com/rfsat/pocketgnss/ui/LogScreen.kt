@@ -76,6 +76,13 @@ fun LogScreen(engine: GnssEngine) {
             Text(stringResource(R.string.log_help), style = MaterialTheme.typography.bodySmall, color = muted)
         }
 
+        Section(stringResource(R.string.nmea_title)) {
+            val conn by engine.connection.collectAsState()
+            Text(stringResource(R.string.nmea_help), style = MaterialTheme.typography.bodySmall, color = muted)
+            if (conn is com.rfsat.pocketgnss.core.Connection.Ready) NmeaConsole(engine, rows = 25)
+            else Text(stringResource(R.string.tools_need_receiver), style = MaterialTheme.typography.bodySmall, color = muted)
+        }
+
         Section(stringResource(R.string.log_points, points.size)) {
             if (points.isEmpty()) Text(stringResource(R.string.log_no_points), style = MaterialTheme.typography.bodySmall, color = muted)
             else {

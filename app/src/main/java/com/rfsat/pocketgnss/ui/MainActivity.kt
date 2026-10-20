@@ -84,6 +84,9 @@ class MainActivity : ComponentActivity() {
     }
     private val notifPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
     private val locationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    private val phonePermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) engine.connectPhone() else engine.disconnect(getString(R.string.conn_phone_permission))
+    }
 
     private val usbReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -174,6 +177,10 @@ class MainActivity : ComponentActivity() {
         val s = engine.store.value
         when (s.source) {
             LinkKind.SIMULATOR -> engine.connectSimulator()
+            LinkKind.PHONE -> {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) engine.connectPhone()
+                else phonePermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            }
             LinkKind.TCP -> engine.connectTcp(s.tcpHost, s.tcpPort)
             LinkKind.USB -> {
                 val device = usbManager.deviceList.values.firstOrNull { UsbSerialLink.isCandidate(it) }

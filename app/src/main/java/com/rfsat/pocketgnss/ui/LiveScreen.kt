@@ -56,6 +56,7 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val f = fix
     val q = f?.quality ?: FixQuality.NONE
+    val phoneChip = (conn as? Connection.Ready)?.info?.kind == com.rfsat.pocketgnss.link.LinkKind.PHONE
 
     Column(Modifier.verticalScroll(rememberScrollState()).padding(vertical = 6.dp)) {
         // Fix banner: the colour and the expected accuracy class, readable at arm's length on a tractor.
@@ -69,6 +70,15 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
                 if (f != null) Text(stringResource(if (f.measuredAccuracy) R.string.acc_measured else R.string.acc_estimated),
                     color = Color.White.copy(alpha = 0.9f), fontSize = 13.sp)
             }
+        }
+
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                val info = (conn as Connection.Ready).info
+                Text(info.name, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                Text(info.detail, style = MaterialTheme.typography.bodySmall, color = muted, maxLines = 1)
+            }
+            ActionButton(onClick = { engine.disconnect() }, compact = true) { Text(stringResource(R.string.action_disconnect)) }
         }
 
         Section(stringResource(R.string.live_position)) {
@@ -91,8 +101,8 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
         Section(stringResource(R.string.live_corrections)) {
             val ageText = f?.diffAgeSec?.let { stringResource(R.string.live_age_value, it, f.diffStation ?: "—") } ?: stringResource(R.string.live_age_none)
             KeyValue(stringResource(R.string.live_age), ageText, live = true)
-            KeyValue(stringResource(R.string.live_route), stringResource(variantName(s.receiverVariant)), live = true)
-            if (f != null && f.diffAgeSec == null && f.quality.rank < FixQuality.RTK_FLOAT.rank && !s.ntripEnabled)
+            if (!phoneChip) KeyValue(stringResource(R.string.live_route), stringResource(variantName(s.receiverVariant)), live = true)
+            if (!phoneChip && f != null && f.diffAgeSec == null && f.quality.rank < FixQuality.RTK_FLOAT.rank && !s.ntripEnabled)
                 Text(stringResource(variantTroubleshoot(s.receiverVariant)), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
             f?.modes?.takeIf { it.length >= 4 }?.let { m ->
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -114,14 +124,15 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ToggleButton(on = s.ntripEnabled, label = stringResource(if (s.ntripEnabled) R.string.live_ntrip_on else R.string.live_ntrip_off),
-                    onClick = { engine.setNtrip(!s.ntripEnabled) }, enabled = s.ntrip.usable || s.ntripEnabled)
+                    onClick = { engine.setNtrip(!s.ntripEnabled) }, enabled = phoneChip.not() && (s.ntrip.usable || s.ntripEnabled))
                 ToggleButton(on = rec.active, label = stringResource(if (rec.active) R.string.log_recording_on else R.string.log_recording_off),
                     onClick = { if (rec.active) engine.stopRecording() else engine.startRecording() })
                 ActionButton(onClick = { engine.markPoint(engine.nextPointName())?.let { engine.toast(it.name) } }, enabled = f != null) {
                     Text(stringResource(R.string.live_mark))
                 }
             }
-            if (!s.ntrip.usable && !s.ntripEnabled) Text(stringResource(R.string.live_ntrip_setup), style = MaterialTheme.typography.bodySmall, color = muted)
+            if (phoneChip) Text(stringResource(R.string.live_phone_no_rtk), style = MaterialTheme.typography.bodySmall, color = muted)
+            else if (!s.ntrip.usable && !s.ntripEnabled) Text(stringResource(R.string.live_ntrip_setup), style = MaterialTheme.typography.bodySmall, color = muted)
         }
 
         Section(stringResource(R.string.live_sky)) {

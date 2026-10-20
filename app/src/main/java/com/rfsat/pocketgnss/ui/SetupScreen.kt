@@ -55,7 +55,8 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
     Column(Modifier.verticalScroll(rememberScrollState())) {
         Section(stringResource(R.string.setup_source)) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                for ((k, l) in listOf(LinkKind.USB to R.string.src_usb, LinkKind.BLUETOOTH to R.string.src_bt, LinkKind.TCP to R.string.src_tcp, LinkKind.SIMULATOR to R.string.src_sim))
+                for ((k, l) in listOf(LinkKind.USB to R.string.src_usb, LinkKind.BLUETOOTH to R.string.src_bt, LinkKind.TCP to R.string.src_tcp, LinkKind.PHONE to R.string.src_phone,
+                    LinkKind.SIMULATOR to R.string.src_sim))
                     ChoiceChip(s.source == k, stringResource(l), { if (s.source != k) { upd { it.copy(source = k) }; engine.disconnect() } })
             }
             Text(stringResource(sourceHelp(s)), style = MaterialTheme.typography.bodySmall, color = muted)
@@ -90,6 +91,7 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
                     TextSetting(stringResource(R.string.setup_tcp_host), s.tcpHost, { v -> upd { it.copy(tcpHost = v) } }, keyboard = KeyboardType.Uri)
                     NumberField(stringResource(R.string.setup_tcp_port), s.tcpPort.toDouble(), { v -> upd { it.copy(tcpPort = v.toInt()) } }, Modifier.fillMaxWidth(), min = 1.0, max = 65535.0)
                 }
+                LinkKind.PHONE -> {}
                 LinkKind.SIMULATOR -> {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         ChoiceChip(s.simMotion == SimMotion.STATIC, stringResource(R.string.sim_static), { upd { it.copy(simMotion = SimMotion.STATIC) } })
@@ -125,7 +127,8 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
         }
 
         Section(stringResource(R.string.setup_outputs)) {
-            SwitchRow(stringResource(R.string.out_mock), s.mockLocation, { v -> upd { it.copy(mockLocation = v) }; if (v) onNeedLocation() }, stringResource(R.string.out_mock_help))
+            SwitchRow(stringResource(R.string.out_mock), s.mockLocation, { v -> upd { it.copy(mockLocation = v) }; if (v) onNeedLocation() },
+                stringResource(if (s.source == LinkKind.PHONE) R.string.out_mock_phone else R.string.out_mock_help), enabled = s.source != LinkKind.PHONE)
             if (s.mockLocation) Text(stringResource(when (mock) {
                 MockStatus.ACTIVE -> R.string.out_mock_active; MockStatus.NOT_ALLOWED -> R.string.out_mock_not_allowed
                 MockStatus.ERROR -> R.string.out_mock_error; MockStatus.OFF -> R.string.out_mock_off

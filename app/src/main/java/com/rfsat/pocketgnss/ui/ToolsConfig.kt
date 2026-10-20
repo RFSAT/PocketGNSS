@@ -70,8 +70,11 @@ fun NmeaConfigTool(engine: GnssEngine) {
         Section(stringResource(R.string.ubx_receiver)) {
             KeyValue(stringResource(R.string.home_module), rx.module?.let { it + (rx.firmware?.let { f -> " · $f" } ?: "") } ?: "—")
             KeyValue(stringResource(R.string.home_link), info?.detail ?: "—")
-            Text(stringResource(if (info?.ubxDirect == true) R.string.ubx_direct else R.string.ubx_via_esp32), style = MaterialTheme.typography.bodySmall,
-                color = if (info?.ubxDirect == true) SafeGreen else WarnAmber)
+            Text(stringResource(when {
+                info?.kind == com.rfsat.pocketgnss.link.LinkKind.PHONE -> R.string.ubx_phone
+                info?.ubxDirect == true -> R.string.ubx_direct
+                else -> R.string.ubx_via_esp32
+            }), style = MaterialTheme.typography.bodySmall, color = if (info?.ubxDirect == true) SafeGreen else WarnAmber)
             ActionButton(onClick = { scope.launch { busy = true; result = if (engine.pollVersion()) txtAck else txtNoVer; busy = false } }, enabled = ready && !busy) {
                 Text(stringResource(R.string.ubx_identify))
             }

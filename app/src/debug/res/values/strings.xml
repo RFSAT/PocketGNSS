@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Debug builds (CI side-loading APK) are labelled so they can be told apart from the Play version on the same phone. -->
-    <string name="app_name" translatable="false">PocketGNSS debug</string>
-</resources>

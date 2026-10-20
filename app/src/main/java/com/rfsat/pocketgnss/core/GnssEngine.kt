@@ -209,6 +209,12 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         open("$host:$port", retry = true) { TcpLink.open(host, port) }
     }
 
+    /** The phone's own GNSS chip (needs ACCESS_FINE_LOCATION, asked by the activity). */
+    fun connectPhone() {
+        if (ntripClient.running) ntripClient.stop()
+        open(context.getString(R.string.conn_opening_phone)) { com.rfsat.pocketgnss.link.PhoneGnssLink.open(context) }
+    }
+
     fun connectSimulator() {
         open(context.getString(R.string.conn_opening_sim)) { SimulatedLink(store.value.simConfig) }
     }
@@ -249,7 +255,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
             delay(1500)
             pollVersion()
         }
-        if (store.value.ntripEnabled && !ntripClient.running) ntripClient.start(store.value.ntrip)
+        if (store.value.ntripEnabled && l.info.writable && !ntripClient.running) ntripClient.start(store.value.ntrip)
     }
 
     private suspend fun readLoop(l: GnssLink) {
@@ -288,13 +294,14 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         val now = System.currentTimeMillis()
         val s = Nmea.parse(line) ?: return
         rates.mark(s.type, now)
-        synchronized(consoleBuf) { consoleBuf.addLast(line); while (consoleBuf.size > 300) consoleBuf.removeFirst() }
+        synchronized(consoleBuf) { consoleBuf.addLast(line); while (consoleBuf.size > 2000) consoleBuf.removeFirst() }
         recorder?.line(line)
         server.send(line)
         if (s is NmeaSentence.Gga && s.quality != FixQuality.NONE) lastGgaLine = line
         val f = model.accept(s) ?: return
         _fix.value = f
-        mock.push(f)
+        // Mock location from the phone's own chip would only feed the phone its own position back.
+        if (link?.info?.kind != LinkKind.PHONE) mock.push(f)
         onFix(f, now)
     }
 
@@ -511,7 +518,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
 
     fun setNtrip(on: Boolean) {
         store.update { it.copy(ntripEnabled = on) }
-        if (on) ntripClient.start(store.value.ntrip) else ntripClient.stop()
+        if (on && linkInfo?.writable != false) ntripClient.start(store.value.ntrip) else ntripClient.stop()
     }
 
     fun toast(msg: String) { _messages.tryEmit(msg) }
