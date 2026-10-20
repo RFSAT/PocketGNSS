@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="512" height="512">
+  <!-- Same artwork as app/src/main/res/drawable/ic_launcher_foreground.xml -->
+  <defs><radialGradient id="bg" cx="54" cy="40" r="80" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#2B3137"/><stop offset="1" stop-color="#0F1113"/></radialGradient></defs>
+  <rect width="108" height="108" fill="url(#bg)"/>
+  <path d="M30,64 A26,12 -25 1,1 78,42" fill="none" stroke="#80CBC4" stroke-opacity="0.4" stroke-width="1.6" stroke-linecap="round"/>
+  <circle cx="54" cy="56" r="20" fill="none" stroke="#FFFFFF" stroke-width="2.4"/>
+  <circle cx="54" cy="56" r="11" fill="none" stroke="#FF8A65" stroke-width="2.4"/>
+  <path d="M54,30 L54,42 M54,70 L54,82 M28,56 L40,56 M68,56 L80,56" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"/>
+  <circle cx="54" cy="56" r="4" fill="#43A047"/>
+  <path d="M74,26 l5,5 l-5,5 l-5,-5 z" fill="#FFFFFF"/>
+  <path d="M64,24 l5,5 l-3,3 l-5,-5 z M84,34 l-5,-5 l3,-3 l5,5 z" fill="#80CBC4"/>
+</svg>

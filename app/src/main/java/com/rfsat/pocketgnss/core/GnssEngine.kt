@@ -1,0 +1,539 @@
+package com.rfsat.pocketgnss.core
+
+import android.annotation.SuppressLint
+import android.bluetooth.BluetoothDevice
+import android.content.Context
+import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbManager
+import com.rfsat.pocketgnss.R
+import com.rfsat.pocketgnss.data.FixCsv
+import com.rfsat.pocketgnss.data.PointStore
+import com.rfsat.pocketgnss.data.SessionRecorder
+import com.rfsat.pocketgnss.data.SettingsStore
+import com.rfsat.pocketgnss.data.SurveyPoint
+import com.rfsat.pocketgnss.data.TrackPoint
+import com.rfsat.pocketgnss.link.BluetoothSppLink
+import com.rfsat.pocketgnss.link.GnssLink
+import com.rfsat.pocketgnss.link.LinkInfo
+import com.rfsat.pocketgnss.link.LinkKind
+import com.rfsat.pocketgnss.link.SimulatedLink
+import com.rfsat.pocketgnss.link.TcpLink
+import com.rfsat.pocketgnss.link.UsbChip
+import com.rfsat.pocketgnss.link.UsbSerialLink
+import com.rfsat.pocketgnss.protocol.FixQuality
+import com.rfsat.pocketgnss.protocol.Nmea
+import com.rfsat.pocketgnss.protocol.NmeaMsg
+import com.rfsat.pocketgnss.protocol.NmeaSentence
+import com.rfsat.pocketgnss.protocol.Ntrip
+import com.rfsat.pocketgnss.protocol.StartType
+import com.rfsat.pocketgnss.protocol.StreamSplitter
+import com.rfsat.pocketgnss.protocol.Ubx
+import com.rfsat.pocketgnss.protocol.UbxFrame
+import com.rfsat.pocketgnss.protocol.UbxPort
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import java.io.File
+import java.io.IOException
+import java.util.concurrent.CopyOnWriteArrayList
+
+sealed class Connection {
+    data object NoDevice : Connection()
+    data class Connecting(val label: String) : Connection()
+    data object AwaitingPermission : Connection()
+    data class Ready(val info: LinkInfo) : Connection()
+    data class Failed(val message: String) : Connection()
+}
+
+data class ReceiverInfo(val module: String? = null, val firmware: String? = null, val protocol: String? = null,
+                        val datum: String? = null, val lastText: String? = null, val ubxAnswered: Boolean = false)
+
+data class StreamStats(val bytes: Long = 0, val nmeaLines: Long = 0, val badChecksums: Long = 0, val garbageBytes: Long = 0,
+                       val ubxFrames: Long = 0, val rates: List<RateMeter.Row> = emptyList(), val lastDataMs: Long = 0, val baud: Int? = null)
+
+data class RecordingState(val active: Boolean = false, val dir: File? = null, val fixes: Int = 0, val lines: Long = 0, val startedMs: Long = 0)
+
+data class SurveyState(
+    val running: Boolean = false,
+    val minQuality: FixQuality = FixQuality.RTK_FIXED,
+    val samples: Int = 0,
+    val rejected: Int = 0,
+    val stats: PositionStats? = null,
+    val startedMs: Long = 0,
+    val reference: Reference? = null,
+    val meanMsl: Double? = null,
+)
+
+data class TtffState(val current: TtffRun? = null, val history: List<TtffRun> = emptyList(),
+                     /** RTK fixed reacquisition times (s) after the fix was lost, D3.5 GNSS-test-07 (3). */
+                     val reacquisitions: List<Double> = emptyList())
+
+sealed class UbxResult {
+    data object Ack : UbxResult()
+    data object Nak : UbxResult()
+    data object Timeout : UbxResult()
+    data class Data(val frame: UbxFrame) : UbxResult()
+}
+
+/**
+ * The receiver connection and everything fed by it. One instance per process (held by [com.rfsat.pocketgnss.GnssApp]).
+ */
+class GnssEngine(private val context: Context, val store: SettingsStore) {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    private val _connection = MutableStateFlow<Connection>(Connection.NoDevice)
+    val connection: StateFlow<Connection> = _connection.asStateFlow()
+    private val _fix = MutableStateFlow<GnssFix?>(null)
+    val fix: StateFlow<GnssFix?> = _fix.asStateFlow()
+    private val _sats = MutableStateFlow<List<SatInfo>>(emptyList())
+    val satellites: StateFlow<List<SatInfo>> = _sats.asStateFlow()
+    private val _stream = MutableStateFlow(StreamStats())
+    val stream: StateFlow<StreamStats> = _stream.asStateFlow()
+    private val _console = MutableStateFlow<List<String>>(emptyList())
+    val console: StateFlow<List<String>> = _console.asStateFlow()
+    private val _receiver = MutableStateFlow(ReceiverInfo())
+    val receiver: StateFlow<ReceiverInfo> = _receiver.asStateFlow()
+    private val _recording = MutableStateFlow(RecordingState())
+    val recording: StateFlow<RecordingState> = _recording.asStateFlow()
+    private val _track = MutableStateFlow<List<TrackPoint>>(emptyList())
+    val track: StateFlow<List<TrackPoint>> = _track.asStateFlow()
+    private val _points = MutableStateFlow<List<SurveyPoint>>(emptyList())
+    val points: StateFlow<List<SurveyPoint>> = _points.asStateFlow()
+    private val _survey = MutableStateFlow(SurveyState())
+    val survey: StateFlow<SurveyState> = _survey.asStateFlow()
+    private val _ttff = MutableStateFlow(TtffState())
+    val ttff: StateFlow<TtffState> = _ttff.asStateFlow()
+    private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 8)
+    val messages: SharedFlow<String> = _messages.asSharedFlow()
+
+    val ntripClient = NtripClient(scope, forward = { writeRaw(it) }, gga = { ggaForCaster() })
+    val mock = MockLocation(context)
+    val server = NmeaServer()
+
+    val sessionsRoot: File = File(context.getExternalFilesDir(null) ?: context.filesDir, "sessions").apply { mkdirs() }
+    private val pointStore = PointStore(File(File(context.getExternalFilesDir(null) ?: context.filesDir, "points"), "points.csv"))
+
+    @Volatile private var link: GnssLink? = null
+    private var readerJob: Job? = null
+    private var reconnectJob: Job? = null
+    private val writeLock = Any()
+    private var model = GnssModel()
+    private val rates = RateMeter()
+    private val consoleBuf = ArrayDeque<String>()
+    private var splitter = newSplitter()
+    private var bytes = 0L
+    private var lastDataMs = 0L
+    @Volatile private var lastGgaLine: String? = null
+    private var recorder: SessionRecorder? = null
+    private var lastLoggedMs = 0L
+    private val trackBuf = ArrayList<TrackPoint>()
+    private var lastTrackMs = 0L
+    private val surveySamples = ArrayList<DoubleArray>()
+    private var surveyMslSum = 0.0
+    private var surveyMslCount = 0
+    private var lastSurveyCalc = 0L
+    private var fixedLostAt: Long? = null
+    private var lastQuality = FixQuality.NONE
+    private val waiters = CopyOnWriteArrayList<Pair<(UbxFrame) -> Boolean, CompletableDeferred<UbxFrame>>>()
+
+    val simulator: SimulatedLink? get() = link as? SimulatedLink
+    val linkInfo: LinkInfo? get() = (connection.value as? Connection.Ready)?.info
+
+    init {
+        _points.value = pointStore.load()
+        scope.launch {
+            while (isActive) {
+                delay(300)
+                publish()
+            }
+        }
+        // Outputs follow the settings.
+        scope.launch {
+            store.settings.collect { s ->
+                simulator?.configure(s.simConfig)
+                if (s.mockLocation) { if (mock.status.value == MockStatus.OFF) mock.start() } else mock.stop()
+                if (s.nmeaServer) { if (!server.running) server.start(s.nmeaServerPort, s.nmeaServerLocalOnly) } else if (server.running) server.stop()
+            }
+        }
+    }
+
+    private fun newSplitter() = StreamSplitter(onNmea = ::onNmea, onUbx = ::onUbx)
+
+    // ---------------------------------------------------------------- connections
+
+    fun awaitingPermission() { _connection.value = Connection.AwaitingPermission }
+
+    fun disconnect(message: String? = null) {
+        reconnectJob?.cancel(); reconnectJob = null
+        closeLink()
+        _connection.value = if (message != null) Connection.Failed(message) else Connection.NoDevice
+    }
+
+    private fun closeLink() {
+        readerJob?.cancel(); readerJob = null
+        link?.close(); link = null
+        for (w in waiters) w.second.cancel()
+        waiters.clear()
+    }
+
+    fun connectUsb(manager: UsbManager, device: UsbDevice) {
+        val s = store.value
+        open(context.getString(R.string.conn_opening_usb)) {
+            val chip = UsbChip.of(device.vendorId)
+            val baud = if (chip == UsbChip.UBLOX) 115200 else (s.usbBaud.takeIf { it > 0 } ?: 115200)
+            UsbSerialLink.open(manager, device, baud)
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun connectBluetooth(device: BluetoothDevice) {
+        val name = try { device.name } catch (_: SecurityException) { null } ?: device.address
+        open(context.getString(R.string.conn_opening_bt, name), retry = true) { BluetoothSppLink.open(device) }
+    }
+
+    fun connectTcp(host: String, port: Int) {
+        open("$host:$port", retry = true) { TcpLink.open(host, port) }
+    }
+
+    fun connectSimulator() {
+        open(context.getString(R.string.conn_opening_sim)) { SimulatedLink(store.value.simConfig) }
+    }
+
+    private fun open(label: String, retry: Boolean = false, factory: () -> GnssLink) {
+        reconnectJob?.cancel(); reconnectJob = null
+        closeLink()
+        _connection.value = Connection.Connecting(label)
+        reconnectJob = scope.launch(Dispatchers.IO) {
+            var attempt = 0
+            while (isActive) {
+                try {
+                    val l = factory()
+                    attachLink(l)
+                    // Wait here while the link lives; on loss, fall through to a retry when wanted.
+                    readerJob?.join()
+                    if (!isActive) break
+                } catch (e: IOException) {
+                    _connection.value = Connection.Failed(e.message ?: "I/O error")
+                } catch (e: SecurityException) {
+                    _connection.value = Connection.Failed(context.getString(R.string.conn_bt_permission)); break
+                }
+                if (!retry || !store.value.autoReconnect) break
+                attempt++
+                delay(if (attempt < 3) 3000L else 8000L)
+                _connection.value = Connection.Connecting(label)
+            }
+        }
+    }
+
+    private fun attachLink(l: GnssLink) {
+        link = l
+        model = GnssModel(); rates.clear(); splitter = newSplitter(); bytes = 0; lastDataMs = 0
+        _receiver.value = ReceiverInfo(); _fix.value = null; _sats.value = emptyList()
+        _connection.value = Connection.Ready(l.info)
+        readerJob = scope.launch(Dispatchers.IO) { readLoop(l) }
+        scope.launch {
+            delay(1500)
+            pollVersion()
+        }
+        if (store.value.ntripEnabled && !ntripClient.running) ntripClient.start(store.value.ntrip)
+    }
+
+    private suspend fun readLoop(l: GnssLink) {
+        val buf = ByteArray(4096)
+        val start = System.currentTimeMillis()
+        val bauds = listOf(115200, 9600, 38400, 57600, 230400, 460800)
+        var baudIdx = 0
+        var baudSince = start
+        val autobaud = l.info.kind == LinkKind.USB && l.info.chip != UsbChip.UBLOX && store.value.usbBaud == 0
+        var currentBaud = l.info.baud
+        while (kotlinx.coroutines.currentCoroutineContext().isActive) {
+            val n = try { l.read(buf) } catch (e: IOException) {
+                if (link === l) {
+                    link = null
+                    _connection.value = Connection.Failed(context.getString(R.string.conn_lost, e.message ?: ""))
+                }
+                return
+            } catch (e: InterruptedException) { return }
+            val now = System.currentTimeMillis()
+            if (n > 0) {
+                bytes += n; lastDataMs = now
+                splitter.feed(buf, n)
+            }
+            if (autobaud && splitter.nmeaLines == 0L && now - baudSince > 2500) {
+                baudIdx = (baudIdx + 1) % bauds.size
+                currentBaud = bauds[baudIdx]
+                l.setBaud(currentBaud); splitter.reset(); baudSince = now
+                _stream.value = _stream.value.copy(baud = currentBaud)
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------- incoming data
+
+    private fun onNmea(line: String) {
+        val now = System.currentTimeMillis()
+        val s = Nmea.parse(line) ?: return
+        rates.mark(s.type, now)
+        synchronized(consoleBuf) { consoleBuf.addLast(line); while (consoleBuf.size > 300) consoleBuf.removeFirst() }
+        recorder?.line(line)
+        server.send(line)
+        if (s is NmeaSentence.Gga && s.quality != FixQuality.NONE) lastGgaLine = line
+        val f = model.accept(s) ?: return
+        _fix.value = f
+        mock.push(f)
+        onFix(f, now)
+    }
+
+    private fun onFix(f: GnssFix, now: Long) {
+        val st = store.value
+        recorder?.let { r ->
+            if (f.quality.rank >= st.logMinQuality.rank && (st.logIntervalSec <= 0 || now - lastLoggedMs >= st.logIntervalSec * 1000 - 20)) {
+                r.fix(f); lastLoggedMs = now
+            }
+        }
+        if (f.quality != FixQuality.NONE && now - lastTrackMs >= 500) {
+            synchronized(trackBuf) {
+                trackBuf.add(TrackPoint(now, f.latitude, f.longitude, f.ellipsoidHeight, f.quality))
+                if (trackBuf.size > 7200) trackBuf.subList(0, 1200).clear()
+            }
+            lastTrackMs = now
+        }
+        // Survey averaging.
+        val sv = _survey.value
+        if (sv.running) {
+            val h = f.ellipsoidHeight
+            if (f.quality.rank >= sv.minQuality.rank && h != null && surveySamples.size < 100_000) {
+                synchronized(surveySamples) { surveySamples.add(doubleArrayOf(f.latitude, f.longitude, h)) }
+                f.altitudeMsl?.let { surveyMslSum += it; surveyMslCount++ }
+            } else _survey.value = sv.copy(rejected = sv.rejected + 1)
+        }
+        // TTFF and RTK reacquisition.
+        val t = _ttff.value
+        var next = t
+        t.current?.let { run ->
+            val u = run.update(f.quality, now)
+            next = if (u.done || now - run.startMs > 300_000) next.copy(current = null, history = (listOf(u) + t.history).take(20)) else next.copy(current = u)
+        }
+        if (lastQuality == FixQuality.RTK_FIXED && f.quality != FixQuality.RTK_FIXED) fixedLostAt = now
+        if (f.quality == FixQuality.RTK_FIXED && fixedLostAt != null) {
+            next = next.copy(reacquisitions = (listOf((now - fixedLostAt!!) / 1000.0) + next.reacquisitions).take(30)); fixedLostAt = null
+        }
+        if (next != t) _ttff.value = next
+        lastQuality = f.quality
+    }
+
+    private fun onUbx(f: UbxFrame) {
+        for (w in waiters) if (w.first(f)) { w.second.complete(f); waiters.remove(w) }
+        if (f.cls == Ubx.CLS_MON && f.id == Ubx.ID_MON_VER) Ubx.parseMonVer(f.payload)?.let { v ->
+            _receiver.value = _receiver.value.copy(module = v.module, firmware = v.firmware ?: v.software, protocol = v.protocol, ubxAnswered = true)
+        }
+    }
+
+    private fun publish() {
+        val now = System.currentTimeMillis()
+        if (link != null) {
+            _sats.value = model.satellites()
+            _console.value = synchronized(consoleBuf) { consoleBuf.toList() }
+            _stream.value = StreamStats(bytes, splitter.nmeaLines, splitter.badChecksums, splitter.garbageBytes, splitter.ubxFrames,
+                rates.snapshot(now), lastDataMs, _stream.value.baud ?: link?.info?.baud)
+            val r = _receiver.value
+            if (r.datum != model.datum || r.lastText != model.lastText) _receiver.value = r.copy(datum = model.datum, lastText = model.lastText)
+            // Older than 5 s: the fix is stale (receiver stopped sending).
+            _fix.value?.let { if (now - it.receivedAtMs > 5000) _fix.value = null }
+        }
+        _track.value = synchronized(trackBuf) { trackBuf.toList() }
+        recorder?.let { _recording.value = _recording.value.copy(fixes = it.fixes, lines = it.lines) }
+        val sv = _survey.value
+        val n = synchronized(surveySamples) { surveySamples.size }
+        if (sv.running && n != sv.samples && now - lastSurveyCalc > (if (n > 5000) 3000 else 900)) {
+            val copy = synchronized(surveySamples) { ArrayList(surveySamples) }
+            _survey.value = sv.copy(samples = copy.size, stats = Statistics.compute(copy, sv.reference),
+                meanMsl = if (surveyMslCount > 0) surveyMslSum / surveyMslCount else null)
+            lastSurveyCalc = now
+        }
+    }
+
+    private fun ggaForCaster(): String? {
+        lastGgaLine?.let { return it }
+        val f = _fix.value ?: return null
+        val sod = f.time?.secondsOfDay ?: ((System.currentTimeMillis() / 1000.0) % 86400)
+        return Ntrip.gga(sod, f.latitude, f.longitude, f.altitudeMsl ?: 0.0)
+    }
+
+    // ---------------------------------------------------------------- writing / UBX
+
+    /** Writes raw bytes to the receiver (RTCM from the NTRIP client, UBX commands). */
+    fun writeRaw(data: ByteArray) {
+        val l = link ?: return
+        try { synchronized(writeLock) { l.write(data) } } catch (_: IOException) {}
+    }
+
+    /** Sends a UBX command and waits for the matching ACK/NAK or data reply. */
+    suspend fun ubx(frame: ByteArray, timeoutMs: Long = 1500, expectData: Pair<Int, Int>? = null): UbxResult {
+        val cls = frame[2].toInt() and 0xFF; val id = frame[3].toInt() and 0xFF
+        val d = CompletableDeferred<UbxFrame>()
+        val match: (UbxFrame) -> Boolean = { f ->
+            if (expectData != null) f.cls == expectData.first && f.id == expectData.second
+            else Ubx.ackedOf(f) == (cls to id)
+        }
+        waiters.add(match to d)
+        withContext(Dispatchers.IO) { writeRaw(frame) }
+        val r = withTimeoutOrNull(timeoutMs) { d.await() }
+        waiters.removeAll { it.second === d }
+        return when {
+            r == null -> UbxResult.Timeout
+            expectData != null -> UbxResult.Data(r)
+            r.id == Ubx.ID_ACK_ACK -> UbxResult.Ack
+            else -> UbxResult.Nak
+        }.also { if (it !is UbxResult.Timeout) _receiver.value = _receiver.value.copy(ubxAnswered = true) }
+    }
+
+    /** Applies configuration keys in messages of up to 60 pairs. Returns the first non-ACK result, or Ack. */
+    suspend fun ubxSet(values: List<Pair<Long, Long>>, layers: Int): UbxResult {
+        for (chunk in values.chunked(60)) {
+            val r = ubx(Ubx.valset(chunk, layers))
+            if (r != UbxResult.Ack) return r
+        }
+        return UbxResult.Ack
+    }
+
+    suspend fun ubxGet(keys: List<Long>): Map<Long, Long>? {
+        val out = HashMap<Long, Long>()
+        for (chunk in keys.chunked(60)) {
+            val r = ubx(Ubx.valget(chunk), expectData = Ubx.CLS_CFG to Ubx.ID_CFG_VALGET)
+            if (r !is UbxResult.Data) return null
+            out.putAll(Ubx.parseValget(r.frame.payload))
+        }
+        return out
+    }
+
+    suspend fun pollVersion(): Boolean = ubx(Ubx.pollMonVer(), expectData = Ubx.CLS_MON to Ubx.ID_MON_VER) is UbxResult.Data
+
+    /** Reads which NMEA messages are on for [port] and the navigation rate (Hz). */
+    suspend fun readNmeaConfig(port: UbxPort): Pair<Set<NmeaMsg>, Int>? {
+        val keys = NmeaMsg.entries.map { it.key(port) } + Ubx.KEY_RATE_MEAS
+        val v = ubxGet(keys) ?: return null
+        val on = NmeaMsg.entries.filter { (v[it.key(port)] ?: 0L) > 0 }.toSet()
+        val ms = v[Ubx.KEY_RATE_MEAS] ?: 1000L
+        return on to (1000 / ms.coerceAtLeast(1)).toInt()
+    }
+
+    // ---------------------------------------------------------------- recording, points, tools
+
+    fun startRecording() {
+        if (recorder != null) return
+        val r = SessionRecorder(SessionRecorder.newDir(sessionsRoot))
+        r.line("# PocketGNSS session ${r.dir.name} · ${linkInfo?.name ?: ""} · ${_receiver.value.module ?: ""}".trim())
+        recorder = r; lastLoggedMs = 0
+        _recording.value = RecordingState(true, r.dir, 0, 0, r.startedMs)
+    }
+
+    fun stopRecording() {
+        recorder?.close(); recorder = null
+        _recording.value = _recording.value.copy(active = false)
+    }
+
+    fun sessions(): List<File> = sessionsRoot.listFiles()?.filter { it.isDirectory }?.sortedByDescending { it.name } ?: emptyList()
+    fun sessionTrack(dir: File) = FixCsv.read(File(dir, "fixes.csv"))
+    fun clearTrack() = synchronized(trackBuf) { trackBuf.clear() }
+
+    fun startSurvey(minQuality: FixQuality, reference: Reference?) {
+        synchronized(surveySamples) { surveySamples.clear() }
+        surveyMslSum = 0.0; surveyMslCount = 0
+        _survey.value = SurveyState(true, minQuality, 0, 0, null, System.currentTimeMillis(), reference)
+    }
+
+    fun stopSurvey() { publishSurveyNow(); _survey.value = _survey.value.copy(running = false) }
+
+    private fun publishSurveyNow() {
+        val copy = synchronized(surveySamples) { ArrayList(surveySamples) }
+        val sv = _survey.value
+        _survey.value = sv.copy(samples = copy.size, stats = Statistics.compute(copy, sv.reference),
+            meanMsl = if (surveyMslCount > 0) surveyMslSum / surveyMslCount else null)
+    }
+
+    fun setSurveyReference(r: Reference?) {
+        _survey.value = _survey.value.copy(reference = r)
+        lastSurveyCalc = 0
+        if (!_survey.value.running) publishSurveyNow()
+    }
+
+    /** Saves the averaged survey as a named point. */
+    fun saveSurveyPoint(name: String, note: String = ""): SurveyPoint? {
+        val sv = _survey.value
+        val s = sv.stats ?: return null
+        val p = SurveyPoint(name, s.meanLatitude, s.meanLongitude, s.meanHeight, sv.meanMsl, s.sdEast, s.sdNorth, s.sdUp, s.count,
+            sv.minQuality, System.currentTimeMillis(), note)
+        pointStore.add(p); _points.value = pointStore.load()
+        return p
+    }
+
+    /** Saves the current single fix as a point (quick mark from the map or live screen). */
+    fun markPoint(name: String): SurveyPoint? {
+        val f = _fix.value ?: return null
+        val sd = f.horizontalAccuracy / Math.sqrt(2.0)
+        val p = SurveyPoint(name, f.latitude, f.longitude, f.ellipsoidHeight ?: f.altitudeMsl ?: 0.0, f.altitudeMsl, sd, sd, f.verticalAccuracy,
+            1, f.quality, System.currentTimeMillis())
+        pointStore.add(p); _points.value = pointStore.load()
+        return p
+    }
+
+    fun deletePoint(p: SurveyPoint) { pointStore.remove(p); _points.value = pointStore.load() }
+
+    fun nextPointName(prefix: String = "P"): String {
+        val used = _points.value.map { it.name }.toSet()
+        var i = _points.value.size + 1
+        while ("$prefix$i" in used) i++
+        return "$prefix$i"
+    }
+
+    /** Starts a time-to-first-fix run; restarts the GNSS with UBX when possible ([type] null = user power-cycles). */
+    fun startTtff(type: StartType?, label: String) {
+        _ttff.value = _ttff.value.copy(current = TtffRun(label, System.currentTimeMillis()))
+        if (type != null) scope.launch { writeRaw(Ubx.reset(type)) }
+    }
+
+    fun cancelTtff() { _ttff.value = _ttff.value.copy(current = null) }
+
+    fun setNtrip(on: Boolean) {
+        store.update { it.copy(ntripEnabled = on) }
+        if (on) ntripClient.start(store.value.ntrip) else ntripClient.stop()
+    }
+
+    fun toast(msg: String) { _messages.tryEmit(msg) }
+
+    /** True while something should keep running with the screen off (real receiver only). */
+    fun needsBackground(): Boolean {
+        val s = store.value
+        return connection.value is Connection.Ready && simulator == null &&
+            (recording.value.active || ntripClient.running || s.mockLocation || s.nmeaServer)
+    }
+
+    /** Stops background activity (notification "Stop" action). */
+    fun stopBackground() {
+        stopRecording()
+        if (ntripClient.running) setNtrip(false)
+        store.update { it.copy(mockLocation = false, nmeaServer = false) }
+    }
+
+    fun shutdown() {
+        stopRecording(); ntripClient.stop(); mock.stop(); server.stop()
+        disconnect()
+    }
+
+    fun close() { shutdown(); scope.cancel() }
+}

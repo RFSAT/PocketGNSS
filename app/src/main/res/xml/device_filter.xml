@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- USB serial bridges a GNSS receiver can present; GnssUsb decides whether it is a receiver.
+         0x1546 = 5446 u-blox ZED-F9x native USB, CDC-ACM (receiver's bottom port)
+         0x10C4 = 4292 Silicon Labs CP210x, ESP32-DevKitC V4 (receiver's upper data port, 115200 bd)
+         0x1A86 = 6790 WCH CH34x (ESP32 boards with CH340/CH9102)
+         0x303A = 12346 Espressif native USB (ESP32-S2/S3/C3)
+         0x0403 = 1027 FTDI (generic GNSS serial adapters) -->
+    <usb-device vendor-id="5446" />
+    <usb-device vendor-id="4292" />
+    <usb-device vendor-id="6790" />
+    <usb-device vendor-id="12346" />
+    <usb-device vendor-id="1027" />
+</resources>

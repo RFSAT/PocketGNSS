@@ -1,0 +1,211 @@
+package com.rfsat.pocketgnss.ui.map
+
+import androidx.annotation.StringRes
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.rfsat.pocketgnss.R
+import com.rfsat.pocketgnss.core.GnssFix
+import com.rfsat.pocketgnss.data.SurveyPoint
+import com.rfsat.pocketgnss.data.TrackPoint
+import com.rfsat.pocketgnss.protocol.Geodetic
+import com.rfsat.pocketgnss.ui.fixColorHex
+import org.maplibre.android.MapLibre
+import org.maplibre.android.camera.CameraPosition
+import org.maplibre.android.camera.CameraUpdateFactory
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.geometry.LatLngBounds
+import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.MapView
+import org.maplibre.android.maps.Style
+import org.maplibre.android.style.expressions.Expression
+import org.maplibre.android.style.layers.CircleLayer
+import org.maplibre.android.style.layers.LineLayer
+import org.maplibre.android.style.layers.Property
+import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.layers.SymbolLayer
+import org.maplibre.android.style.sources.GeoJsonSource
+import org.maplibre.geojson.Feature
+import org.maplibre.geojson.FeatureCollection
+import org.maplibre.geojson.LineString
+import org.maplibre.geojson.Point
+
+/** Base layers, the same three raster sources as DBM's navigation map and PocketSpectro (no API key needed). */
+enum class MapLayer(@StringRes val label: Int) { STREET(R.string.map_street), SATELLITE(R.string.map_satellite), TERRAIN(R.string.map_terrain) }
+
+object MapStyles {
+    private fun raster(tiles: String, attribution: String, maxZoom: Int = 19) = """
+{
+  "version": 8,
+  "glyphs": "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+  "sources": { "base": { "type": "raster", "tiles": ["$tiles"], "tileSize": 256,
+    "attribution": "$attribution", "maxzoom": $maxZoom } },
+  "layers": [ { "id": "base", "type": "raster", "source": "base" } ]
+}
+"""
+    private val STREET = raster("https://tile.openstreetmap.org/{z}/{x}/{y}.png", "© OpenStreetMap contributors")
+    private val SATELLITE = raster("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        "© Esri, Maxar, Earthstar Geographics")
+    private val TERRAIN = raster("https://a.tile.opentopomap.org/{z}/{x}/{y}.png", "© OpenTopoMap (CC-BY-SA)", 17)
+
+    fun styleFor(l: MapLayer) = when (l) { MapLayer.STREET -> STREET; MapLayer.SATELLITE -> SATELLITE; MapLayer.TERRAIN -> TERRAIN }
+}
+
+private const val TRACK_SRC = "r-track"; private const val TRACK_LYR = "r-track-l"
+private const val PTS_SRC = "r-pts"; private const val PTS_LYR = "r-pts-l"; private const val PTS_LBL = "r-pts-t"
+private const val POS_SRC = "r-pos"; private const val POS_LYR = "r-pos-l"
+private const val BASE_SRC = "r-base"; private const val BASE_LYR = "r-base-l"
+private const val TGT_SRC = "r-tgt"; private const val TGT_LYR = "r-tgt-l"
+
+/**
+ * MapLibre map of the live position (coloured by fix type), the recent track (segments coloured by fix
+ * type), saved survey points with names, the NTRIP base station and a stake-out target. As in DBM, the
+ * user's pan and zoom are never overridden: the camera moves on first load, on [fitKey] and [recenterKey]
+ * changes, and while [follow] is on.
+ */
+@Composable
+fun RtkMap(
+    layer: MapLayer,
+    track: List<TrackPoint>,
+    points: List<SurveyPoint>,
+    position: GnssFix?,
+    base: Geodetic?,
+    target: SurveyPoint?,
+    follow: Boolean,
+    fitKey: Int,
+    recenterKey: Int,
+    onPointTap: (SurveyPoint) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val mapView = remember { MapLibre.getInstance(context); MapView(context).apply { onCreate(null) } }
+    val mapHolder = remember { mutableStateOf<MapLibreMap?>(null) }
+    val styleHolder = remember { mutableStateOf<Style?>(null) }
+    val loadedLayer = remember { mutableStateOf<MapLayer?>(null) }
+    val didInitial = remember { mutableStateOf(false) }
+    val lastFit = remember { mutableStateOf(fitKey) }
+    val lastRecenter = remember { mutableStateOf(recenterKey) }
+    val currentPoints = remember { mutableStateOf(points) }
+    val currentTap = remember { mutableStateOf(onPointTap) }
+    currentPoints.value = points; currentTap.value = onPointTap
+
+    DisposableEffect(lifecycleOwner) {
+        val obs = LifecycleEventObserver { _, e ->
+            when (e) {
+                Lifecycle.Event.ON_START -> mapView.onStart()
+                Lifecycle.Event.ON_RESUME -> mapView.onResume()
+                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
+                Lifecycle.Event.ON_STOP -> mapView.onStop()
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(obs)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(obs); mapView.onStop(); mapView.onDestroy() }
+    }
+
+    AndroidView(factory = { mapView }, modifier = modifier) { mv ->
+        val map = mapHolder.value
+        if (map == null) {
+            mv.getMapAsync { m ->
+                mapHolder.value = m
+                m.uiSettings.isLogoEnabled = false
+                m.uiSettings.isAttributionEnabled = true
+                m.uiSettings.isCompassEnabled = true
+                m.uiSettings.isTiltGesturesEnabled = false
+                m.addOnMapClickListener { pt ->
+                    val hit = m.queryRenderedFeatures(m.projection.toScreenLocation(pt), PTS_LYR).firstOrNull()
+                    hit?.getNumberProperty("i")?.toInt()?.let { i -> currentPoints.value.getOrNull(i)?.let { currentTap.value(it) } }
+                    hit != null
+                }
+                m.setStyle(Style.Builder().fromJson(MapStyles.styleFor(layer))) { style ->
+                    styleHolder.value = style; loadedLayer.value = layer
+                    ensureLayers(style); updateData(style, track, points, position, base, target)
+                    if (!didInitial.value) { fitCamera(m, track, points, position, false); didInitial.value = true }
+                }
+            }
+        } else {
+            if (loadedLayer.value != layer) {
+                map.setStyle(Style.Builder().fromJson(MapStyles.styleFor(layer))) { style ->
+                    styleHolder.value = style; loadedLayer.value = layer
+                    ensureLayers(style); updateData(style, track, points, position, base, target)
+                }
+            } else styleHolder.value?.let { updateData(it, track, points, position, base, target) }
+            if (fitKey != lastFit.value) { fitCamera(map, track, points, position, true); lastFit.value = fitKey }
+            if (recenterKey != lastRecenter.value) {
+                position?.let { map.animateCamera(CameraUpdateFactory.newCameraPosition(CameraPosition.Builder()
+                    .target(LatLng(it.latitude, it.longitude)).zoom(19.0).build())) }
+                lastRecenter.value = recenterKey
+            } else if (follow && position != null) {
+                map.easeCamera(CameraUpdateFactory.newLatLng(LatLng(position.latitude, position.longitude)), 300)
+            }
+        }
+    }
+}
+
+private fun ensureLayers(style: Style) {
+    for (id in listOf(TRACK_SRC, PTS_SRC, POS_SRC, BASE_SRC, TGT_SRC)) if (style.getSource(id) == null) style.addSource(GeoJsonSource(id))
+    if (style.getLayer(TRACK_LYR) == null) style.addLayer(LineLayer(TRACK_LYR, TRACK_SRC).withProperties(
+        PropertyFactory.lineColor(Expression.toColor(Expression.get("c"))), PropertyFactory.lineWidth(3.5f), PropertyFactory.lineOpacity(0.9f),
+        PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND), PropertyFactory.lineCap(Property.LINE_CAP_ROUND)))
+    if (style.getLayer(TGT_LYR) == null) style.addLayer(CircleLayer(TGT_LYR, TGT_SRC).withProperties(
+        PropertyFactory.circleRadius(16f), PropertyFactory.circleColor("#00000000"),
+        PropertyFactory.circleStrokeColor("#FFC107"), PropertyFactory.circleStrokeWidth(4f)))
+    if (style.getLayer(PTS_LYR) == null) style.addLayer(CircleLayer(PTS_LYR, PTS_SRC).withProperties(
+        PropertyFactory.circleRadius(7f), PropertyFactory.circleColor("#FF7043"),
+        PropertyFactory.circleStrokeColor("#FFFFFF"), PropertyFactory.circleStrokeWidth(2f)))
+    if (style.getLayer(PTS_LBL) == null) style.addLayer(SymbolLayer(PTS_LBL, PTS_SRC).withProperties(
+        PropertyFactory.textField(Expression.get("n")), PropertyFactory.textSize(12f), PropertyFactory.textOffset(arrayOf(0f, 1.3f)),
+        PropertyFactory.textColor("#FFFFFF"), PropertyFactory.textHaloColor("#000000"), PropertyFactory.textHaloWidth(1.5f),
+        PropertyFactory.textAllowOverlap(false)))
+    if (style.getLayer(BASE_LYR) == null) style.addLayer(CircleLayer(BASE_LYR, BASE_SRC).withProperties(
+        PropertyFactory.circleRadius(9f), PropertyFactory.circleColor("#7B1FA2"),
+        PropertyFactory.circleStrokeColor("#FFFFFF"), PropertyFactory.circleStrokeWidth(3f)))
+    if (style.getLayer(POS_LYR) == null) style.addLayer(CircleLayer(POS_LYR, POS_SRC).withProperties(
+        PropertyFactory.circleRadius(9f), PropertyFactory.circleColor(Expression.toColor(Expression.get("c"))),
+        PropertyFactory.circleStrokeColor("#FFFFFF"), PropertyFactory.circleStrokeWidth(3f)))
+}
+
+private fun updateData(style: Style, track: List<TrackPoint>, points: List<SurveyPoint>, pos: GnssFix?, base: Geodetic?, target: SurveyPoint?) {
+    // One line feature per run of the same fix type, so the track shows where RTK was fixed, float or lost.
+    val segs = ArrayList<Feature>()
+    var i = 0
+    while (i < track.size - 1) {
+        val q = track[i].quality
+        var j = i
+        while (j < track.size - 1 && track[j + 1].quality == q) j++
+        val end = minOf(j + 1, track.size - 1)
+        if (end > i) segs.add(Feature.fromGeometry(LineString.fromLngLats(track.subList(i, end + 1).map { Point.fromLngLat(it.longitude, it.latitude) }))
+            .also { it.addStringProperty("c", fixColorHex(q)) })
+        i = end
+    }
+    style.getSourceAs<GeoJsonSource>(TRACK_SRC)?.setGeoJson(FeatureCollection.fromFeatures(segs))
+    style.getSourceAs<GeoJsonSource>(PTS_SRC)?.setGeoJson(FeatureCollection.fromFeatures(points.mapIndexed { k, p ->
+        Feature.fromGeometry(Point.fromLngLat(p.longitude, p.latitude)).also { it.addNumberProperty("i", k); it.addStringProperty("n", p.name) }
+    }))
+    style.getSourceAs<GeoJsonSource>(POS_SRC)?.setGeoJson(FeatureCollection.fromFeatures(listOfNotNull(pos?.let {
+        Feature.fromGeometry(Point.fromLngLat(it.longitude, it.latitude)).also { f -> f.addStringProperty("c", fixColorHex(it.quality)) }
+    })))
+    style.getSourceAs<GeoJsonSource>(BASE_SRC)?.setGeoJson(FeatureCollection.fromFeatures(listOfNotNull(base?.let {
+        Feature.fromGeometry(Point.fromLngLat(it.longitude, it.latitude)) })))
+    style.getSourceAs<GeoJsonSource>(TGT_SRC)?.setGeoJson(FeatureCollection.fromFeatures(listOfNotNull(target?.let {
+        Feature.fromGeometry(Point.fromLngLat(it.longitude, it.latitude)) })))
+}
+
+private fun fitCamera(map: MapLibreMap, track: List<TrackPoint>, points: List<SurveyPoint>, pos: GnssFix?, animate: Boolean) {
+    val pts = track.map { LatLng(it.latitude, it.longitude) } + points.map { LatLng(it.latitude, it.longitude) } +
+        listOfNotNull(pos?.let { LatLng(it.latitude, it.longitude) })
+    val update = when {
+        pts.distinct().size >= 2 -> CameraUpdateFactory.newLatLngBounds(LatLngBounds.Builder().apply { pts.forEach { include(it) } }.build(), 120)
+        pts.isNotEmpty() -> CameraUpdateFactory.newLatLngZoom(pts.first(), 18.0)
+        else -> CameraUpdateFactory.newLatLngZoom(LatLng(48.0, 10.0), 3.0)
+    }
+    if (animate) map.animateCamera(update) else map.moveCamera(update)
+}

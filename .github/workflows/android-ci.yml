@@ -1,0 +1,148 @@
+name: Android CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    # Pinned rather than ubuntu-latest, which moves to Ubuntu 26 from 19 Oct 2026.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          # Open-source cache on top of actions/cache (the default "enhanced" provider is proprietary).
+          cache-provider: basic
+
+      - name: Make Gradle wrapper executable
+        # Commits made on Windows store gradlew without the executable bit.
+        run: chmod +x gradlew
+
+      - name: Read app version
+        run: |
+          V=$(grep -oP 'val appVersion = "\K[^"]+' app/build.gradle.kts)
+          IFS=. read -r MA MI PA <<< "$V"
+          echo "APP_VERSION=$V" >> "$GITHUB_ENV"
+          echo "APP_BUILD=$((MA * 10000 + MI * 100 + PA))" >> "$GITHUB_ENV"
+
+      - name: Unit tests (NMEA, UBX, RTCM, NTRIP, statistics, simulator)
+        run: ./gradlew --no-daemon :app:testDebugUnitTest
+
+      - name: Check signing secrets
+        # Reports which secrets this run can see (never their values).
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          missing=""
+          for n in KEYSTORE_BASE64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -n "${!n}" ]; then echo "$n: set"; else echo "$n: NOT visible"; missing="$missing $n"; fi
+          done
+          if [ -z "$missing" ]; then
+            echo "HAS_KEYSTORE=true" >> "$GITHUB_ENV"
+          else
+            echo "HAS_KEYSTORE=false" >> "$GITHUB_ENV"
+            echo "::warning::Not visible to this run (repo ${{ github.repository }}, event ${{ github.event_name }}):${missing}. They must be Repository secrets (Settings > Secrets and variables > Actions > Secrets tab) of this repository. The signed Google Play bundle (AAB) was not built."
+          fi
+
+      - name: Decode release keystore
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+
+      - name: Build signed Google Play bundle (AAB) and release APK
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          KEYSTORE_FILE: ${{ runner.temp }}/release.jks
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          mkdir -p dist
+          ./gradlew --no-daemon :app:bundleRelease :app:assembleRelease
+          AAB=app/build/outputs/bundle/release/app-release.aab
+          # Refuse to publish an unsigned bundle: Play rejects it.
+          jarsigner -verify "$AAB" | tee /tmp/verify.txt
+          grep -q "jar verified" /tmp/verify.txt
+          cp "$AAB" "dist/PocketGNSS_v${APP_VERSION}_build${APP_BUILD}.aab"
+          cp app/build/outputs/apk/release/app-release.apk "dist/PocketGNSS_v${APP_VERSION}-release.apk"
+          # R8 mapping (also inside the bundle, where Play reads it); kept for decoding stack traces later.
+          cp app/build/outputs/mapping/release/mapping.txt "dist/PocketGNSS_v${APP_VERSION}_build${APP_BUILD}-mapping.txt"
+          # Native libraries (MapLibre) as Play's "native debug symbols" file; upload this zip by hand in
+          # Play Console (App bundle explorer > this version > Downloads > Native debug symbols).
+          rm -rf "$RUNNER_TEMP/syms" && mkdir -p "$RUNNER_TEMP/syms"
+          unzip -q "$AAB" 'base/lib/*' -d "$RUNNER_TEMP/syms"
+          (cd "$RUNNER_TEMP/syms/base/lib" && zip -qr "$GITHUB_WORKSPACE/dist/PocketGNSS_v${APP_VERSION}_build${APP_BUILD}-native-debug-symbols.zip" .)
+          # "What's new" text for Play: this version's section of CHANGELOG.md.
+          awk -v v="## ${APP_VERSION} " 'index($0, v) == 1 {on = 1; next} /^## / {on = 0} on' CHANGELOG.md \
+            | sed '/^$/d' > "dist/PocketGNSS_v${APP_VERSION}_whats-new.txt"
+          echo "### Google Play bundle ready: PocketGNSS_v${APP_VERSION}_build${APP_BUILD}.aab" >> "$GITHUB_STEP_SUMMARY"
+          { echo; echo "What's new:"; echo '```'; cat "dist/PocketGNSS_v${APP_VERSION}_whats-new.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks"
+
+      - uses: actions/upload-artifact@v7
+        # Signed release APK only (no debug APK is built).
+        if: env.HAS_KEYSTORE == 'true'
+        with:
+          name: PocketGNSS-v${{ env.APP_VERSION }}-apk
+          path: dist/*-release.apk
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        if: env.HAS_KEYSTORE == 'true'
+        with:
+          name: PocketGNSS-v${{ env.APP_VERSION }}-play-bundle
+          path: |
+            dist/*.aab
+            dist/*-mapping.txt
+            dist/*-native-debug-symbols.zip
+            dist/*_whats-new.txt
+          if-no-files-found: error
+
+  screenshots:
+    # Renders every screen with the simulated receiver (Robolectric + Roborazzi), including the Google Play set.
+    # Map screens download real tiles, so a network hiccup here never fails the build.
+    if: ${{ github.event_name != 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+          cache-read-only: true
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+      - name: Render screenshots
+        run: ./gradlew --no-daemon :app:testDebugUnitTest -Pscreenshots --tests '*ScreenshotTest*'
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: PocketGNSS-screenshots
+          path: app/build/screenshots/*.png
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          # 1080 x 1920, no version shown: ready for the Play listing.
+          name: PocketGNSS-play-screenshots
+          path: app/build/screenshots/play/*.png

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Everything is HTTPS-only except the receiver's own Wi-Fi hotspot (ESPrtk web server at 192.168.4.1)
+         and NTRIP casters, which speak plain TCP on their own ports (sockets are not affected by this file). -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">192.168.4.1</domain>
+    </domain-config>
+</network-security-config>
