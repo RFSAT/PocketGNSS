@@ -20,7 +20,7 @@ Two hardware versions exist and the app supports both (Setup > Receiver version)
 In both, the receiver applies the corrections itself; the app reads the corrected position. How to set up each route,
 with the D3.5 timings and availability, is in **[docs/rtk-connectivity.md](docs/rtk-connectivity.md)**.
 
-RFSAT Limited. Version 1.1.1 (build 10101).
+RFSAT Limited. Version 1.0.0 (build 10000).
 
 ## Connections
 
@@ -29,7 +29,6 @@ RFSAT Limited. Version 1.1.1 (build 10101).
 | USB | **Upper micro-USB = data / COM port** (D3.3 §4.7.1): the ESP32-DevKitC's CP210x bridge, carrying the NMEA ESPrtk sends to TX_UART0 (§4.7.7), 115200 bd as in D3.5 GNSS-test-11 | Middle port = power (5 V, min 1 A); bottom port = the ZED-F9x's own CDC-ACM USB, "not normally used" but the one that takes UBX configuration directly (u-center, §4.7.22). Both are recognised by vendor ID and open the app (`res/xml/device_filter.xml`). On the ESP32 port DTR/RTS are left alone because they drive EN/IO0 and would reset it; baud 115200 or automatic search. |
 | Bluetooth | Classic SPP to "BTU-ESPrtk : <ID>_<suffix>" (D3.3 §4.7.14), same NMEA as the USB port (GNSS-test-12, verified with a Galaxy S10) | Paired devices only (pair in Android settings), so only BLUETOOTH_CONNECT is needed; auto-reconnect. |
 | TCP | NMEA over the network (ESPrtk Wi-Fi stream, EOS Tools Pro on port 3967, any NMEA server) | Auto-reconnect. |
-| Phone GNSS | The phone's own GNSS chip (`link/PhoneGnssLink.kt`), for use without the receiver or for comparison | Android Location + GnssStatus converted to NMEA (`link/PhoneNmea.kt`: GGA, RMC, VTG, GST with Android's accuracy, GSA, GSV with L1/L5 signal IDs), so every screen works. Autonomous only: RTCM and UBX cannot be sent to the chip, so phone NTRIP, NMEA output configuration and mock location are disabled; mock positions are ignored so the app never reads back its own output. Needs location permission. |
 | Simulator | Synthetic ZED-F9P (`sim/SimReceiver.kt`) | Behaves like the D3.5 results: TTFF ~26 s cold, SBAS, float, RTK fixed 25-30 s after corrections; correction link per receiver version (LTE: ~57 s to RTK data, 16-25 s outages, ~95 %; Wi-Fi: ~15 s, short drop-outs, ~99 %); static or tractor-on-swaths; answers UBX VALSET/VALGET/RST/MON-VER. Every screen and tool works with it (and Play review needs it). |
 
 ## Screens
@@ -37,10 +36,10 @@ RFSAT Limited. Version 1.1.1 (build 10101).
 | Tab | Purpose |
 |---|---|
 | Home | Connection card with quick actions, receiver version (asked once if not set), receiver module (from UBX MON-VER), description, RFSAT / AgriBIT credits, Claude AI acknowledgement |
-| Live | Source name with a Disconnect button, fix banner coloured by fix type with accuracy (GST-measured or estimated), position, height MSL / ellipsoid, satellites, DOP, speed, correction age and station, receiver version with what to check when no corrections arrive, per-constellation RTK mode (GNS), phone NTRIP status and base distance, NTRIP / Recording / Mark point buttons, sky plot and C/N0 bars |
+| Live | Fix banner coloured by fix type with accuracy (GST-measured or estimated), position, height MSL / ellipsoid, satellites, DOP, speed, correction age and station, receiver version with what to check when no corrections arrive, per-constellation RTK mode (GNS), phone NTRIP status and base distance, NTRIP / Recording / Mark point buttons, sky plot and C/N0 bars |
 | Map | MapLibre with Street / Satellite / Terrain (same raster sources as DBM and PocketSpectro): position coloured by fix, track coloured by fix type, saved points with names, NTRIP base station, follow / recenter / fit / mark / clear |
 | Tools | Survey point · Stake out · Corrections (NTRIP) · NMEA output (UBX) · Receiver settings (web) · Time to fix · Data stream |
-| Log | Recording (raw NMEA + fixes CSV, minimum fix and interval), live NMEA viewer (filter by sentence type, pause, show more, copy, share the shown lines as .nmea; last 2000 sentences, nothing saved unless shared), saved points (KML / CSV / GeoJSON), sessions (NMEA / CSV / GPX / KML, delete) |
+| Log | Recording (raw NMEA + fixes CSV, minimum fix and interval), saved points (KML / CSV / GeoJSON), sessions (NMEA / CSV / GPX / KML, delete) |
 | Setup | Connection source and its options, phone NTRIP caster, outputs (mock location, NMEA TCP server), receiver ID and device number, display units, simulator |
 | Exit | Confirms, stops recording, closes the link and outputs |
 
@@ -71,7 +70,7 @@ RFSAT Limited. Version 1.1.1 (build 10101).
 * **Time to fix**: cold / warm / hot start with UBX CFG-RST (GNSS-only reset, the USB link stays up) or a manual
   power-cycle; times to first fix, DGNSS, float and RTK fixed; RTK re-fix times (D3.5 GNSS-test-07).
 * **Data stream**: sentences per second, totals and largest gap per NMEA type, bad checksums, other bytes,
-  baud rate, and the same live NMEA viewer as the Log tab (D3.5 GNSS-test-08).
+  baud rate, and the raw console (D3.5 GNSS-test-08).
 
 ### Outputs to other apps
 
@@ -102,7 +101,7 @@ All text is in `res/values/strings.xml` (debug builds have pseudo-locales to che
 ## Build
 
 GitHub Actions (`.github/workflows/android-ci.yml`), as for PocketSpectro: unit tests, a **debug APK** on every run
-(artifact `PocketGNSS-v<version>-debug-apk`; package `com.PocketGNSS.debug`, launcher label "PocketGNSS debug", signed with the
+(artifact `PocketGNSS-v<version>-debug-apk`; package `com.PocketGNSS.debug`, label "PocketGNSS debug", signed with the
 fixed key `app/debug.keystore` so it updates in place and installs next to the Play version), then the signed Play bundle
 (AAB) and release APK when the repository secrets `KEYSTORE_BASE64`, `STORE_PASSWORD`, `KEY_ALIAS`,
 `KEY_PASSWORD` are set (same names as the other RFSAT apps). A second job renders all screens with the simulator
@@ -116,7 +115,7 @@ Versioning 1.MINOR.PATCH; only `appVersion` in `app/build.gradle.kts` is edited,
 (1*10000 + MINOR*100 + PATCH). `CHANGELOG.md` holds one paragraph per version for Play's "What's new".
 
 Tests: `ProtocolTest` (the D3.5 recorded sentences, UBX reference frames, RTCM CRC and 1005, NTRIP, geodesy),
-`SimulatorTest` (TTFF and fix progression, receiver versions, UBX round trip, reset, motion, exports), `PhoneGnssTest` (phone data to NMEA), `ScreenshotTest`.
+`SimulatorTest` (TTFF and fix progression, UBX round trip, reset, motion, exports), `ScreenshotTest`.
 
 ## Google Play notes
 
