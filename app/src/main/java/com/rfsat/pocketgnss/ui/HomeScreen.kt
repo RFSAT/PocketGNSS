@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -47,6 +48,8 @@ fun HomeScreen(engine: GnssEngine, onOpenTab: (Tab) -> Unit, onReconnect: () -> 
     fun openUrl(url: String) = try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } catch (_: Exception) {}
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
 
+    // Short labels: a fixed label column (fits "Receiver version") instead of 42 % of the width.
+    androidx.compose.runtime.CompositionLocalProvider(LocalKeyWidth provides HOME_KEY_WIDTH) {
     Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(stringResource(R.string.app_name), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 28.sp)
@@ -123,7 +126,10 @@ fun HomeScreen(engine: GnssEngine, onOpenTab: (Tab) -> Unit, onReconnect: () -> 
         HorizontalDivider()
         Text(stringResource(R.string.home_ai_ack), Modifier.fillMaxWidth(), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall, color = muted)
     }
+    }
 }
+
+private val HOME_KEY_WIDTH = KEY_WIDTH
 
 fun sourceHelp(s: AppSettings) = when (s.source) {
     LinkKind.USB -> R.string.help_usb
@@ -136,8 +142,8 @@ fun sourceHelp(s: AppSettings) = when (s.source) {
 @Composable
 private fun LinkRow(label: String, value: String, url: String, onOpen: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable(onClick = onOpen)) {
-        Text(label, Modifier.weight(0.42f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Column(Modifier.weight(0.58f)) {
+        Text(label, Modifier.width(HOME_KEY_WIDTH).padding(end = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.weight(1f)) {
             Text(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
             Text(url, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
         }

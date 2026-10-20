@@ -51,6 +51,8 @@ fun ToggleButton(
     enabled: Boolean = true,
     icon: ImageVector? = null,
     compact: Boolean = false,
+    /** Narrow side padding at full height, for several buttons sharing one row. */
+    narrow: Boolean = false,
 ) {
     val bg = if (on) OnGreen else OffRed
     val edge = if (on) OnGreenEdge else OffRedEdge
@@ -61,10 +63,15 @@ fun ToggleButton(
             disabledContainerColor = bg.copy(alpha = 0.40f), disabledContentColor = Color.White.copy(alpha = 0.85f),
         ),
         border = BorderStroke(2.dp, if (enabled) edge else edge.copy(alpha = 0.6f)),
-        contentPadding = if (compact) PaddingValues(horizontal = 10.dp, vertical = 2.dp) else ButtonDefaults.ContentPadding,
+        contentPadding = when {
+            compact -> PaddingValues(horizontal = 10.dp, vertical = 2.dp)
+            narrow -> PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+            else -> ButtonDefaults.ContentPadding
+        },
     ) {
         if (icon != null) { Icon(icon, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)) }
-        Text(label, fontWeight = FontWeight.SemiBold, style = if (compact) MaterialTheme.typography.labelMedium else LocalTextStyle.current)
+        Text(label, fontWeight = FontWeight.SemiBold, style = if (compact) MaterialTheme.typography.labelMedium else LocalTextStyle.current,
+            maxLines = 1, softWrap = false)
     }
 }
 
@@ -76,6 +83,7 @@ fun ActionButton(
     enabled: Boolean = true,
     emphasis: Boolean = false,
     compact: Boolean = false,
+    narrow: Boolean = false,
     content: @Composable RowScope.() -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
@@ -92,7 +100,11 @@ fun ActionButton(
             disabledContainerColor = cs.onSurface.copy(alpha = 0.06f),
             disabledContentColor = cs.onSurface.copy(alpha = 0.50f),
         ),
-        contentPadding = if (compact) PaddingValues(horizontal = 12.dp, vertical = 4.dp) else ButtonDefaults.ContentPadding,
+        contentPadding = when {
+            compact -> PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+            narrow -> PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+            else -> ButtonDefaults.ContentPadding
+        },
         content = content,
     )
 }

@@ -93,10 +93,8 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
                 }
                 LinkKind.PHONE -> {}
                 LinkKind.SIMULATOR -> {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        ChoiceChip(s.simMotion == SimMotion.STATIC, stringResource(R.string.sim_static), { upd { it.copy(simMotion = SimMotion.STATIC) } })
-                        ChoiceChip(s.simMotion == SimMotion.SWATHS, stringResource(R.string.sim_swaths), { upd { it.copy(simMotion = SimMotion.SWATHS) } })
-                    }
+                    ChoiceRow(stringResource(R.string.sim_motion), listOf(SimMotion.STATIC to stringResource(R.string.sim_static),
+                        SimMotion.SWATHS to stringResource(R.string.sim_swaths)), s.simMotion) { v -> upd { it.copy(simMotion = v) } }
                     SwitchRow(stringResource(R.string.sim_corrections), s.simCorrections, { v -> upd { it.copy(simCorrections = v) } }, stringResource(R.string.sim_corrections_help))
                 }
             }
@@ -156,14 +154,10 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
         }
 
         Section(stringResource(R.string.setup_display)) {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ChoiceChip(s.coordFormat == CoordFormat.DECIMAL, stringResource(R.string.disp_decimal), { upd { it.copy(coordFormat = CoordFormat.DECIMAL) } })
-                ChoiceChip(s.coordFormat == CoordFormat.DMS, stringResource(R.string.disp_dms), { upd { it.copy(coordFormat = CoordFormat.DMS) } })
-            }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ChoiceChip(s.heightRef == HeightRef.MSL, stringResource(R.string.disp_msl), { upd { it.copy(heightRef = HeightRef.MSL) } })
-                ChoiceChip(s.heightRef == HeightRef.ELLIPSOID, stringResource(R.string.disp_ellipsoid), { upd { it.copy(heightRef = HeightRef.ELLIPSOID) } })
-            }
+            ChoiceRow(stringResource(R.string.disp_coords), listOf(CoordFormat.DECIMAL to stringResource(R.string.disp_decimal),
+                CoordFormat.DMS to stringResource(R.string.disp_dms)), s.coordFormat) { v -> upd { it.copy(coordFormat = v) } }
+            ChoiceRow(stringResource(R.string.disp_height), listOf(HeightRef.MSL to stringResource(R.string.disp_msl),
+                HeightRef.ELLIPSOID to stringResource(R.string.disp_ellipsoid)), s.heightRef) { v -> upd { it.copy(heightRef = v) } }
             SwitchRow(stringResource(R.string.disp_screen_on), s.keepScreenOn, { v -> upd { it.copy(keepScreenOn = v) } })
         }
     }

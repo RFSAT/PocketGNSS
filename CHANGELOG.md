@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.1.1 (build 10101)
+More compact screens: details start right after their labels, the connection choices fit one row (BT for Bluetooth), display options and the Live correction buttons take one row each. The map opens at a zoom where all map layers have tiles, centres on the first position, and no longer zooms past the tiles when fitting a static track.
+
 ## 1.1.0 (build 10100)
 The phone's own GNSS can now be used as a source, without the RTK receiver. The Log tab shows the receiver's NMEA messages live, with filters, pause, copy and share, without saving a file. The Live tab has a Disconnect button, and the Home shortcuts no longer look like a main action.
 

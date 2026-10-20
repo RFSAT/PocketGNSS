@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -134,10 +135,33 @@ fun <T> Picker(label: String, options: List<T>, selected: T, text: (T) -> String
 /** Key and value; live = true keeps a changing value on one line so rows below never jump. */
 @Composable
 fun KeyValue(key: String, value: String, live: Boolean = false, valueColor: Color = Color.Unspecified) {
+    val keyWidth = LocalKeyWidth.current
     Row(Modifier.fillMaxWidth()) {
-        Text(key, Modifier.weight(0.42f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        if (live) FitText(value, Modifier.weight(0.58f), MaterialTheme.typography.bodySmall, color = valueColor)
-        else Text(value, Modifier.weight(0.58f), style = MaterialTheme.typography.bodySmall, color = valueColor)
+        val keyMod = if (keyWidth != null) Modifier.width(keyWidth).padding(end = 8.dp) else Modifier.weight(0.42f)
+        val valMod = if (keyWidth != null) Modifier.weight(1f) else Modifier.weight(0.58f)
+        Text(key, keyMod, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (live) FitText(value, valMod, MaterialTheme.typography.bodySmall, color = valueColor)
+        else Text(value, valMod, style = MaterialTheme.typography.bodySmall, color = valueColor)
+    }
+}
+
+/**
+ * Width of the label column of [KeyValue] rows: a fixed width so values start right after their labels and use the
+ * rest of the line. A screen can provide null to split rows 42 / 58 % instead.
+ */
+val LocalKeyWidth = androidx.compose.runtime.compositionLocalOf<androidx.compose.ui.unit.Dp?> { KEY_WIDTH }
+
+/** Label column width used app-wide: fits labels such as "Receiver version"; longer ones wrap. */
+val KEY_WIDTH = 112.dp
+
+/** A labelled single-choice row: the label in the label column, the options as chips beside it (one line). */
+@Composable
+fun <T> ChoiceRow(label: String, options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, Modifier.width(LocalKeyWidth.current ?: KEY_WIDTH).padding(end = 8.dp), style = MaterialTheme.typography.bodyMedium)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            for ((v, text) in options) ChoiceChip(selected == v, text, { onSelect(v) })
+        }
     }
 }
 

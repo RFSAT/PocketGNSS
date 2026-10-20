@@ -20,7 +20,7 @@ Two hardware versions exist and the app supports both (Setup > Receiver version)
 In both, the receiver applies the corrections itself; the app reads the corrected position. How to set up each route,
 with the D3.5 timings and availability, is in **[docs/rtk-connectivity.md](docs/rtk-connectivity.md)**.
 
-RFSAT Limited. Version 1.1.0 (build 10100).
+RFSAT Limited. Version 1.1.1 (build 10101).
 
 ## Connections
 

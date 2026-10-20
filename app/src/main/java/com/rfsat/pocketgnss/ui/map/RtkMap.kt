@@ -51,12 +51,19 @@ object MapStyles {
 }
 """
     private val STREET = raster("https://tile.openstreetmap.org/{z}/{x}/{y}.png", "© OpenStreetMap contributors")
+    // Esri imagery is sparse above z18 in rural areas: deeper zooms enlarge z18 tiles instead of fetching blank ones.
     private val SATELLITE = raster("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-        "© Esri, Maxar, Earthstar Geographics")
+        "© Esri, Maxar, Earthstar Geographics", 18)
     private val TERRAIN = raster("https://a.tile.opentopomap.org/{z}/{x}/{y}.png", "© OpenTopoMap (CC-BY-SA)", 17)
 
     fun styleFor(l: MapLayer) = when (l) { MapLayer.STREET -> STREET; MapLayer.SATELLITE -> SATELLITE; MapLayer.TERRAIN -> TERRAIN }
 }
+
+/**
+ * Zoom used when the app moves the camera (first view, fit, recenter): every base layer has tiles there
+ * (OpenTopoMap stops at 17). The user can still zoom in further; MapLibre then enlarges the deepest tiles.
+ */
+private const val VIEW_ZOOM = 17.0
 
 private const val TRACK_SRC = "r-track"; private const val TRACK_LYR = "r-track-l"
 private const val PTS_SRC = "r-pts"; private const val PTS_LYR = "r-pts-l"; private const val PTS_LBL = "r-pts-t"
@@ -91,6 +98,8 @@ fun RtkMap(
     val styleHolder = remember { mutableStateOf<Style?>(null) }
     val loadedLayer = remember { mutableStateOf<MapLayer?>(null) }
     val didInitial = remember { mutableStateOf(false) }
+    // True once the camera has shown real data; until then the first position that arrives is centred once.
+    val placed = remember { mutableStateOf(false) }
     val lastFit = remember { mutableStateOf(fitKey) }
     val lastRecenter = remember { mutableStateOf(recenterKey) }
     val currentPoints = remember { mutableStateOf(points) }
@@ -128,7 +137,10 @@ fun RtkMap(
                 m.setStyle(Style.Builder().fromJson(MapStyles.styleFor(layer))) { style ->
                     styleHolder.value = style; loadedLayer.value = layer
                     ensureLayers(style); updateData(style, track, points, position, base, target)
-                    if (!didInitial.value) { fitCamera(m, track, points, position, false); didInitial.value = true }
+                    if (!didInitial.value) {
+                        fitCamera(m, track, points, position, false); didInitial.value = true
+                        placed.value = track.isNotEmpty() || points.isNotEmpty() || position != null
+                    }
                 }
             }
         } else {
@@ -138,10 +150,14 @@ fun RtkMap(
                     ensureLayers(style); updateData(style, track, points, position, base, target)
                 }
             } else styleHolder.value?.let { updateData(it, track, points, position, base, target) }
+            if (!placed.value && didInitial.value && position != null) {
+                map.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(position.latitude, position.longitude), VIEW_ZOOM))
+                placed.value = true
+            }
             if (fitKey != lastFit.value) { fitCamera(map, track, points, position, true); lastFit.value = fitKey }
             if (recenterKey != lastRecenter.value) {
                 position?.let { map.animateCamera(CameraUpdateFactory.newCameraPosition(CameraPosition.Builder()
-                    .target(LatLng(it.latitude, it.longitude)).zoom(19.0).build())) }
+                    .target(LatLng(it.latitude, it.longitude)).zoom(VIEW_ZOOM).build())) }
                 lastRecenter.value = recenterKey
             } else if (follow && position != null) {
                 map.easeCamera(CameraUpdateFactory.newLatLng(LatLng(position.latitude, position.longitude)), 300)
@@ -202,9 +218,14 @@ private fun updateData(style: Style, track: List<TrackPoint>, points: List<Surve
 private fun fitCamera(map: MapLibreMap, track: List<TrackPoint>, points: List<SurveyPoint>, pos: GnssFix?, animate: Boolean) {
     val pts = track.map { LatLng(it.latitude, it.longitude) } + points.map { LatLng(it.latitude, it.longitude) } +
         listOfNotNull(pos?.let { LatLng(it.latitude, it.longitude) })
+    val bounds = if (pts.distinct().size >= 2) LatLngBounds.Builder().apply { pts.forEach { include(it) } }.build() else null
+    // A static RTK track spans centimetres: fitting it would zoom far past any tile level, so small extents use VIEW_ZOOM.
+    val small = bounds == null || com.rfsat.pocketgnss.protocol.Geo.distance(bounds.latitudeSouth, bounds.longitudeWest,
+        bounds.latitudeNorth, bounds.longitudeEast) < 400.0
     val update = when {
-        pts.distinct().size >= 2 -> CameraUpdateFactory.newLatLngBounds(LatLngBounds.Builder().apply { pts.forEach { include(it) } }.build(), 120)
-        pts.isNotEmpty() -> CameraUpdateFactory.newLatLngZoom(pts.first(), 18.0)
+        bounds != null && !small -> CameraUpdateFactory.newLatLngBounds(bounds, 120)
+        bounds != null -> CameraUpdateFactory.newLatLngZoom(bounds.center, VIEW_ZOOM)
+        pts.isNotEmpty() -> CameraUpdateFactory.newLatLngZoom(pts.first(), VIEW_ZOOM)
         else -> CameraUpdateFactory.newLatLngZoom(LatLng(48.0, 10.0), 3.0)
     }
     if (animate) map.animateCamera(update) else map.moveCamera(update)

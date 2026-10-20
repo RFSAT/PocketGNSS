@@ -48,10 +48,12 @@
     <string name="corr_mountpoints">Mountpoints</string>
     <string name="corr_state">State</string>
     <string name="corr_status">Phone NTRIP client</string>
-    <string name="disp_decimal">Decimal degrees</string>
-    <string name="disp_dms">Deg min sec</string>
-    <string name="disp_ellipsoid">Ellipsoid height (WGS-84)</string>
-    <string name="disp_msl">Height above sea level</string>
+    <string name="disp_coords">Coordinates</string>
+    <string name="disp_decimal">Decimal °</string>
+    <string name="disp_dms">D° M′ S″</string>
+    <string name="disp_ellipsoid">Ellipsoid</string>
+    <string name="disp_height">Height</string>
+    <string name="disp_msl">Sea level</string>
     <string name="disp_screen_on">Keep the screen on while connected</string>
     <string name="exit_idle">The receiver link, corrections and outputs are closed.</string>
     <string name="exit_logging">Recording is in progress (%1$d fixes). It will be stopped and the files closed.</string>
@@ -71,7 +73,7 @@
     <string name="fixhint_float">Converging to RTK: decimetres</string>
     <string name="fixhint_none">Waiting for satellites</string>
     <string name="fixhint_single">Expected ~1 m (no corrections)</string>
-    <string name="help_bt">The receiver sends the same NMEA over Bluetooth Classic. Pair the phone with its adapter (BTU-ESPrtk : &lt;ID&gt;) in Android settings, then choose it below.</string>
+    <string name="help_bt">Bluetooth Classic (SPP), as the receiver\'s adapter uses; BLE is not used. The receiver sends the same NMEA as over USB. Pair the phone with its adapter (BTU-ESPrtk : &lt;ID&gt;) in Android settings, then choose it below.</string>
     <string name="help_phone">The phone\'s own GNSS chip, without the RFSAT receiver: metre-level accuracy (no RTK), handy for trying the app, mapping roughly or comparing with the receiver. Needs location access and location turned on.</string>
     <string name="help_sim">A simulated RTK receiver: every screen and tool works without hardware.</string>
     <string name="help_tcp">NMEA over TCP from the receiver\'s Wi-Fi stream or another relay (for example EOS Tools Pro on port 3967).</string>
@@ -117,6 +119,7 @@
     <string name="live_legend">%1$s %2$d/%3$d</string>
     <string name="live_lon">Longitude</string>
     <string name="live_mark">Mark point</string>
+    <string name="live_mark_short">Mark</string>
     <string name="live_no_gsv">No satellite data: enable GSV (Tools &gt; NMEA output) to see the sky plot and signal levels.</string>
     <string name="live_ntrip">Phone NTRIP (fallback)</string>
     <string name="live_ntrip_off">NTRIP OFF</string>
@@ -126,6 +129,8 @@
     <string name="live_ntrip_value">%1$s · %2$s · %3$.0f B/s</string>
     <string name="live_phone_no_rtk">Phone GNSS: corrections cannot be applied to the phone\'s chip, so the position stays autonomous (no RTK).</string>
     <string name="live_position">Position</string>
+    <string name="live_rec_off">Rec OFF</string>
+    <string name="live_rec_on">Rec ON</string>
     <string name="live_route">Receiver version</string>
     <string name="live_sats">Satellites</string>
     <string name="live_sats_value">%1$d used / %2$d in view</string>
@@ -231,10 +236,11 @@
     <string name="setup_variant">Receiver version</string>
     <string name="sim_corrections">Simulated RTK corrections</string>
     <string name="sim_corrections_help">Off: the simulated receiver stays on SBAS unless the phone\'s NTRIP client sends RTCM</string>
-    <string name="sim_static">Static antenna</string>
+    <string name="sim_motion">Antenna</string>
+    <string name="sim_static">Static</string>
     <string name="sim_swaths">Tractor on swaths</string>
-    <string name="src_bt">Bluetooth</string>
-    <string name="src_phone">Phone GNSS</string>
+    <string name="src_bt">BT</string>
+    <string name="src_phone">Phone</string>
     <string name="src_sim">Simulator</string>
     <string name="src_tcp">TCP</string>
     <string name="src_usb">USB</string>

@@ -122,13 +122,16 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
                 val dist = f?.let { Geo.distance(it.latitude, it.longitude, g.latitude, g.longitude) }
                 KeyValue(stringResource(R.string.live_base), stringResource(R.string.live_base_value, b.stationId, dist?.let { formatDistance(it) } ?: "—"), live = true)
             }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // One row: three equal buttons with short labels; the colour shows the state.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ToggleButton(on = s.ntripEnabled, label = stringResource(if (s.ntripEnabled) R.string.live_ntrip_on else R.string.live_ntrip_off),
-                    onClick = { engine.setNtrip(!s.ntripEnabled) }, enabled = phoneChip.not() && (s.ntrip.usable || s.ntripEnabled))
-                ToggleButton(on = rec.active, label = stringResource(if (rec.active) R.string.log_recording_on else R.string.log_recording_off),
-                    onClick = { if (rec.active) engine.stopRecording() else engine.startRecording() })
-                ActionButton(onClick = { engine.markPoint(engine.nextPointName())?.let { engine.toast(it.name) } }, enabled = f != null) {
-                    Text(stringResource(R.string.live_mark))
+                    onClick = { engine.setNtrip(!s.ntripEnabled) }, enabled = phoneChip.not() && (s.ntrip.usable || s.ntripEnabled),
+                    modifier = Modifier.weight(1f), narrow = true)
+                ToggleButton(on = rec.active, label = stringResource(if (rec.active) R.string.live_rec_on else R.string.live_rec_off),
+                    onClick = { if (rec.active) engine.stopRecording() else engine.startRecording() }, modifier = Modifier.weight(1f), narrow = true)
+                ActionButton(onClick = { engine.markPoint(engine.nextPointName())?.let { engine.toast(it.name) } }, enabled = f != null,
+                    modifier = Modifier.weight(1f), narrow = true) {
+                    Text(stringResource(R.string.live_mark_short), maxLines = 1, softWrap = false)
                 }
             }
             if (phoneChip) Text(stringResource(R.string.live_phone_no_rtk), style = MaterialTheme.typography.bodySmall, color = muted)
