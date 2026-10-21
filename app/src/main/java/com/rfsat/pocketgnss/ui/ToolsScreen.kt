@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CellTower
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Navigation
@@ -72,6 +73,7 @@ enum class ToolId(@StringRes val title: Int, @StringRes val summary: Int, val ic
     SURVEY(R.string.tool_survey, R.string.tool_survey_sum, Icons.Filled.MyLocation),
     STAKEOUT(R.string.tool_stakeout, R.string.tool_stakeout_sum, Icons.Filled.Navigation),
     CORRECTIONS(R.string.tool_corrections, R.string.tool_corrections_sum, Icons.Filled.CellTower),
+    HISTORY(R.string.tool_history, R.string.tool_history_sum, Icons.Filled.History),
     RAW(R.string.tool_raw, R.string.tool_raw_sum, Icons.Filled.SatelliteAlt),
     NMEA_CONFIG(R.string.tool_nmea, R.string.tool_nmea_sum, Icons.Filled.Tune),
     RECEIVER_WEB(R.string.tool_web, R.string.tool_web_sum, Icons.Filled.Language),
@@ -115,6 +117,7 @@ fun ToolsTab(engine: GnssEngine, initialTool: ToolId? = null) {
             ToolId.STAKEOUT -> StakeoutTool(engine)
             ToolId.CORRECTIONS -> CorrectionsTool(engine)
             ToolId.RAW -> RawTool(engine)
+            ToolId.HISTORY -> HistoryTool(engine)
             ToolId.NMEA_CONFIG -> NmeaConfigTool(engine)
             ToolId.RECEIVER_WEB -> ReceiverWebTool(engine)
             ToolId.TTFF -> TtffTool(engine)

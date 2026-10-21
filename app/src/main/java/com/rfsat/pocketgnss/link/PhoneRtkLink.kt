@@ -37,6 +37,8 @@ data class PhoneRtkState(
     val message: String = "",
     /** True while measurements arrive without carrier phase (code-only phone or duty cycling). */
     val noPhase: Boolean = false,
+    /** Method of the last position emitted: "RTK fixed", "RTK float", "Code DGNSS", "Single (RTKLIB)", "Android location". */
+    val source: String = "",
 )
 
 /**
@@ -140,7 +142,7 @@ class PhoneRtkLink private constructor(private val context: Context, private val
         }
         val withPhase = e.obs.count { it.phase != null }
         _state.value = PhoneRtkState(if (status != 0) sol else _state.value.solution, base, _state.value.epochs + 1, e.obs.size, withPhase,
-            msg.trim().lineSequence().lastOrNull { it.isNotBlank() } ?: "", noPhase = withPhase == 0)
+            msg.trim().lineSequence().lastOrNull { it.isNotBlank() } ?: "", noPhase = withPhase == 0, source = _state.value.source)
         if (status == RtkStatus.NONE.code) return
         lastSolutionMs = System.currentTimeMillis()
         emitSolution(sol, base)
@@ -157,7 +159,7 @@ class PhoneRtkLink private constructor(private val context: Context, private val
             speed = s.speed.toFloat(), bearing = s.courseDeg?.toFloat(), quality = s.status.ggaQuality,
             diffAgeSec = if (differential) s.age else null, stationId = if (differential) base.stationId else null,
             stdEast = s.stdEast, stdNorth = s.stdNorth, stdUp = s.stdUp, satellitesUsed = s.satellites)
-        emit(fix, now)
+        if (emit(fix, now)) _state.value = _state.value.copy(source = methodName(s.status))
     }
 
     private fun emitLocation(l: Location) {
@@ -166,13 +168,15 @@ class PhoneRtkLink private constructor(private val context: Context, private val
             if (Build.VERSION.SDK_INT >= 34 && l.hasMslAltitude()) l.mslAltitudeMeters else null,
             if (l.hasAccuracy()) l.accuracy else null, if (l.hasVerticalAccuracy()) l.verticalAccuracyMeters else null,
             if (l.hasSpeed()) l.speed else null, if (l.hasBearing()) l.bearing else null)
-        emit(fix, System.currentTimeMillis())
+        if (emit(fix, System.currentTimeMillis())) _state.value = _state.value.copy(source = METHOD_ANDROID)
     }
 
-    private fun emit(fix: PhoneFix, now: Long) {
-        if (closed || now - lastEmitMs < 200) return // at most 5 epochs per second
+    /** Queues one NMEA epoch; false when dropped (at most 5 epochs per second). */
+    private fun emit(fix: PhoneFix, now: Long): Boolean {
+        if (closed || now - lastEmitMs < 200) return false
         lastEmitMs = now
         queue.offer(PhoneNmea.epoch(fix, sats).joinToString("") { it + "\r\n" }.toByteArray(Charsets.US_ASCII))
+        return true
     }
 
     private var rest: ByteArray? = null
@@ -207,6 +211,17 @@ class PhoneRtkLink private constructor(private val context: Context, private val
     private data class Quad(val a: Int, val b: RtkSolution, val c: RtkBase, val d: String)
 
     companion object {
+        const val METHOD_ANDROID = "Android location"
+
+        fun methodName(st: RtkStatus) = when (st) {
+            RtkStatus.FIX -> "RTK fixed"
+            RtkStatus.FLOAT -> "RTK float"
+            RtkStatus.DGPS -> "Code DGNSS"
+            RtkStatus.SBAS -> "SBAS"
+            RtkStatus.SINGLE -> "Single (RTKLIB)"
+            RtkStatus.NONE -> "none"
+        }
+
         /** 6 Jan 1980 00:00:00 UTC in Unix milliseconds. */
         private const val GPS_EPOCH_MS = 315_964_800_000L
 

@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.5.0 (build 10500)
+New Position history tool: every computed position with the method that produced it and the accuracy it reported, plotted around a reference point, with reported accuracy compared against the actual scatter, the latest positions with phone RTK details, and a CSV log. Phone RTK: each position now shows its own accuracy (it could show the previous one's), and Live names the method in use.
+
 ## 1.4.0 (build 10400)
 Phone RTK: the phone's own GNSS chip can now be used as an RTK rover. Its raw measurements are combined on the phone with corrections from your NTRIP caster (RTKLIB engine), and Live shows the fix type, accuracy and how many signals carry the carrier phase that RTK needs. Accuracy depends on the phone. Phones without a GNSS receiver now get a notice that an external receiver is needed.
 

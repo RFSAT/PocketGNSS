@@ -20,7 +20,7 @@ Two hardware versions exist and the app supports both (Setup > Receiver version)
 In both, the receiver applies the corrections itself; the app reads the corrected position. How to set up each route,
 with the D3.5 timings and availability, is in **[docs/rtk-connectivity.md](docs/rtk-connectivity.md)**.
 
-RFSAT Limited. Version 1.4.0 (build 10400).
+RFSAT Limited. Version 1.5.0 (build 10500).
 
 ## Background: the AgriBIT project
 
@@ -62,7 +62,7 @@ agricultural GNSS enabled services*) are listed on the same CORDIS Results page.
 | Home | Connection card with quick actions, receiver version (asked once if not set), receiver module (from UBX MON-VER), description, RFSAT / AgriBIT credits, Claude AI acknowledgement |
 | Live | Source name with a Disconnect button, fix banner coloured by fix type with accuracy (GST-measured or estimated), position, height MSL / ellipsoid, satellites, DOP, speed, correction age and station, receiver version with what to check when no corrections arrive, per-constellation RTK mode (GNS), phone NTRIP status and base distance, NTRIP / Recording / Mark point buttons, sky plot and C/N0 bars |
 | Map | MapLibre with Street / Satellite / Terrain (same raster sources as DBM and PocketSpectro): position coloured by fix, track coloured by fix type, saved points with names, NTRIP base station, follow / recenter / fit / mark / clear |
-| Tools | Survey point · Stake out · Corrections (NTRIP) · Phone raw GNSS (RTK test) · NMEA output (UBX) · Receiver settings (web) · Time to fix · Data stream |
+| Tools | Survey point · Stake out · Corrections (NTRIP) · Position history · Phone raw GNSS (RTK test) · NMEA output (UBX) · Receiver settings (web) · Time to fix · Data stream |
 | Log | Recording (raw NMEA + fixes CSV, minimum fix and interval), live NMEA viewer (filter by sentence type, pause, show more, copy, share the shown lines as .nmea; last 2000 sentences, nothing saved unless shared), saved points (KML / CSV / GeoJSON), sessions (NMEA / CSV / GPX / KML; phone raw sessions as RINEX / GnssLog / RTCM / ZIP; delete) |
 | Setup | Connection source and its options (Phone: Phone RTK on/off, moving or still), phone NTRIP caster, outputs (mock location, NMEA TCP server), receiver ID and device number, display units, simulator |
 | Exit | Confirms, stops recording, closes the link and outputs |
@@ -93,6 +93,11 @@ agricultural GNSS enabled services*) are listed on the same CORDIS Results page.
   GST from the filter), so every screen works unchanged. Any phone with a GNSS receiver is a potential client; the
   Live tab shows what this phone achieves (signals with carrier phase, AR ratio, base data). Phones without a GNSS
   receiver get a notice that only an external receiver is useful. See `docs/phone-rtk.md`.
+* **Position history**: every computed position with its method (for phone RTK: RTK fixed / float, code DGNSS,
+  RTKLIB single, Android location) and reported accuracy; scatter plot around a reference (mean of the best method,
+  or set here), per-method table of reported accuracy against actual scatter (RMS from the reference, precision,
+  share within 2 sigma), the latest positions with engine internals (satellites, signals with carrier phase, AR
+  ratio), CSV export and a continuous CSV log (`core/History.kt`).
 * **Phone raw GNSS (RTK test)**: stage A of phone RTK (`docs/phone-rtk.md`). Reads Android's raw measurements
   (GnssMeasurement API, full tracking on Android 12+ so duty cycling does not break the carrier phase) and reports,
   per system and band, satellites, share of usable code and carrier phase (ADR), C/N0, cycle slips, epoch gaps and

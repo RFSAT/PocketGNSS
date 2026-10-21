@@ -111,6 +111,19 @@ fun LogScreen(engine: GnssEngine) {
         Section(stringResource(R.string.log_sessions, sessions.size)) {
             if (sessions.isEmpty()) Text(stringResource(R.string.log_no_sessions), style = MaterialTheme.typography.bodySmall, color = muted)
             for (d in sessions) {
+                if (d.name.startsWith("history_")) {
+                    val csv = File(d, "positions.csv")
+                    val live = engine.history.logging && engine.history.fileName == d.name
+                    Text(stringResource(R.string.log_history_title, d.name.removePrefix("history_")) + if (live) "  ●" else "", fontWeight = FontWeight.SemiBold,
+                        color = if (live) SafeGreen else MaterialTheme.colorScheme.onSurface)
+                    Text("%.1f kB".format(Locale.US, csv.length() / 1024.0), style = MaterialTheme.typography.bodySmall, color = muted)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        ActionButton(onClick = { share(context, csv, "text/csv") }, compact = true, enabled = csv.exists()) { Text("CSV") }
+                        ActionButton(onClick = { confirmDelete = d }, compact = true, enabled = !live) { Text(stringResource(R.string.action_delete)) }
+                    }
+                    HorizontalDivider()
+                    continue
+                }
                 if (d.name.startsWith("raw_")) {
                     RawSessionRow(d, live = rawSt.recording && rawSt.dir == d, onDelete = { confirmDelete = d })
                     HorizontalDivider()

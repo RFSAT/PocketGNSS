@@ -69,11 +69,14 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
         // Fix banner: the colour and the expected accuracy class, readable at arm's length on a tractor.
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).background(fixColor(q), RoundedCornerShape(14.dp)).padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(fixLabel(q)), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 26.sp, modifier = Modifier.weight(1f))
+                val method = if (phoneRtk) rtkState.source.takeIf { it.isNotEmpty() } else null
+                Text(method ?: stringResource(fixLabel(q)), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 26.sp, modifier = Modifier.weight(1f),
+                    maxLines = 1)
                 Text(if (f != null) formatAccuracy(f.horizontalAccuracy) else "—", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 26.sp)
             }
             Row {
-                Text(stringResource(fixHint(q)), color = Color.White.copy(alpha = 0.9f), fontSize = 13.sp, modifier = Modifier.weight(1f))
+                Text(stringResource(if (phoneRtk && rtkState.source.isNotEmpty()) phoneMethodHint(rtkState.source) else fixHint(q)),
+                    color = Color.White.copy(alpha = 0.9f), fontSize = 13.sp, modifier = Modifier.weight(1f))
                 if (f != null) Text(stringResource(if (f.measuredAccuracy) R.string.acc_measured else R.string.acc_estimated),
                     color = Color.White.copy(alpha = 0.9f), fontSize = 13.sp)
             }
@@ -237,4 +240,14 @@ fun Cn0Bars(sats: List<SatInfo>, modifier: Modifier) {
             drawContext.canvas.nativeCanvas.drawText(s.label, i * w + w / 2, size.height - 2, paint)
         }
     }
+}
+
+/** What each phone RTK method means for accuracy (the receiver classes of [fixHint] do not apply to phones). */
+private fun phoneMethodHint(method: String): Int = when (method) {
+    "RTK fixed" -> R.string.phint_fixed
+    "RTK float" -> R.string.phint_float
+    "Code DGNSS" -> R.string.phint_dgnss
+    "Single (RTKLIB)" -> R.string.phint_single
+    com.rfsat.pocketgnss.link.PhoneRtkLink.METHOD_ANDROID -> R.string.phint_android
+    else -> R.string.phint_single
 }

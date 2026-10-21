@@ -92,6 +92,7 @@ class ScreenshotTest {
     @Test fun home_unset() { simulatorAtFix(variant = com.rfsat.pocketgnss.link.ReceiverVariant.UNSET); shot("01b_home_version_not_set", Tab.HOME) }
     @Test fun corrections_wifi() { simulatorAtFix(variant = com.rfsat.pocketgnss.link.ReceiverVariant.WIFI); shot("09b_tool_corrections_wifi", Tab.TOOLS, ToolId.CORRECTIONS) }
     @Test fun raw() { simulatorAtFix(); shot("09c_tool_phone_raw", Tab.TOOLS, ToolId.RAW) }
+    @Test fun history() { simulatorAtFix(); Thread.sleep(4000); shot("09d_tool_history", Tab.TOOLS, ToolId.HISTORY, scrollTo = "Reported accuracy against actual scatter") }
     @Test fun ttff() { simulatorAtFix(); shot("11_tool_ttff", Tab.TOOLS, ToolId.TTFF) }
     @Test fun stream() { simulatorAtFix(); shot("12_tool_stream", Tab.TOOLS, ToolId.STREAM) }
     @Test fun log() { simulatorAtFix(); engine.markPoint("P1"); shot("13_log", Tab.LOG) }

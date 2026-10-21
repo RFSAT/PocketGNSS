@@ -81,6 +81,37 @@
     <string name="help_sim">A simulated RTK receiver: every screen and tool works without hardware.</string>
     <string name="help_tcp">NMEA over TCP from the receiver\'s Wi-Fi stream or another relay (for example EOS Tools Pro on port 3967).</string>
     <string name="help_usb">Connect the receiver\'s upper micro-USB port (data / COM port, NMEA at 115200 bd) with an OTG cable; the middle port is for power. The app opens automatically when it is plugged in.</string>
+    <string name="hist_all">All</string>
+    <string name="hist_clear">Clear</string>
+    <string name="hist_col_acc">Acc.</string>
+    <string name="hist_col_actual">Actual</string>
+    <string name="hist_col_debug">Engine</string>
+    <string name="hist_col_en">E / N (m)</string>
+    <string name="hist_col_method">Method</string>
+    <string name="hist_col_n">N</string>
+    <string name="hist_col_precision">Precision</string>
+    <string name="hist_col_reported">Reported</string>
+    <string name="hist_col_time">UTC</string>
+    <string name="hist_col_within">In 2σ</string>
+    <string name="hist_count">Positions</string>
+    <string name="hist_count_value">%1$d in the last %2$.1f min</string>
+    <string name="hist_export">Export CSV</string>
+    <string name="hist_help">Every position the source computes, with the method (for phone RTK: RTK fixed / float, code DGNSS, single, or Android\'s own location) and the accuracy it reported. Offsets are east / north from the reference: by default the mean of the best method present, or the current position (Reference here) – best on a known, still point.</string>
+    <string name="hist_latest">Latest positions</string>
+    <string name="hist_latest_help">Engine: n = satellites in the solution, φ = signals with carrier phase, r = ambiguity ratio (a fix needs about 3 or more).</string>
+    <string name="hist_log">Log every position to a CSV file</string>
+    <string name="hist_log_help">Saved under Log &gt; Sessions (\"Position history\"), with all columns including the engine\'s internals.</string>
+    <string name="hist_log_on">%1$s · %2$d rows</string>
+    <string name="hist_ref_auto">mean of %1$s</string>
+    <string name="hist_ref_auto_btn">Automatic</string>
+    <string name="hist_ref_here">Reference here</string>
+    <string name="hist_ref_user">set by you</string>
+    <string name="hist_reference">Reference</string>
+    <string name="hist_scatter">Positions around the reference</string>
+    <string name="hist_show">Show</string>
+    <string name="hist_stats">Reported accuracy against actual scatter</string>
+    <string name="hist_stats_help" formatted="false">Reported = mean accuracy the method claimed (1 sigma). Actual = RMS distance from the reference. Precision = RMS around the method\'s own mean. Within 2σ = share of positions no further from the reference than twice their reported accuracy: well below 95 % means the method is over-optimistic (or the reference is off).</string>
+    <string name="hist_title">Position history</string>
     <string name="home_about">PocketGNSS manages RFSAT\'s centimetre-accuracy GNSS receiver, developed in the AgriBIT project: a u-blox ZED-F9P / ZED-F9R multi-band receiver with an ESP32 running the ESPrtk firmware and an optional LTE modem. It shows the position and RTK status in real time, over USB or Bluetooth, and lets you configure the receiver.</string>
     <string name="home_about_2">With RTK corrections, from the receiver\'s own NTRIP client or from the phone, the position reaches 1–2 cm. The app records and exports tracks and surveyed points, averages points with accuracy statistics, stakes out, measures time to fix and can publish the RTK position to other apps on the phone.</string>
     <string name="home_ai_ack">Developed with support from Claude AI (Anthropic).</string>
@@ -156,6 +187,7 @@
     <string name="log_delete_title">Delete this session?</string>
     <string name="log_every_epoch">Every epoch</string>
     <string name="log_help">Recording saves to files. Each session keeps the complete NMEA stream (raw.nmea, replayable in u-center) and a CSV of fixes with accuracy, filtered by the minimum fix and interval above. Export tracks as GPX or KML.</string>
+    <string name="log_history_title">Position history %1$s</string>
     <string name="log_min_quality">Log fixes of at least</string>
     <string name="log_no_points">No points yet: use Mark point, or average one with Tools &gt; Survey point.</string>
     <string name="log_no_sessions">No recorded sessions.</string>
@@ -240,6 +272,11 @@
     <string name="out_server_local">This phone only</string>
     <string name="out_server_local_help">Off: PCs on the same network can connect too</string>
     <string name="out_server_port">Server port</string>
+    <string name="phint_android">Android\'s own position; its accuracy is the phone\'s estimate</string>
+    <string name="phint_dgnss">Code with corrections (too little carrier phase): metre level</string>
+    <string name="phint_fixed">Carrier phase, ambiguities fixed: centimetres if the fix is right</string>
+    <string name="phint_float">Carrier phase, not fixed: decimetres</string>
+    <string name="phint_single">No corrections used: metres</string>
     <string name="raw_android">Android</string>
     <string name="raw_api_adr">Carrier phase</string>
     <string name="raw_api_meas">Raw data</string>
@@ -398,6 +435,8 @@
     <string name="tab_tools">Tools</string>
     <string name="tool_corrections">Corrections (NTRIP)</string>
     <string name="tool_corrections_sum">NTRIP relay through the phone, RTCM messages, base distance, mountpoints</string>
+    <string name="tool_history">Position history</string>
+    <string name="tool_history_sum">Every computed position with its method and accuracy; reported vs actual scatter; CSV log</string>
     <string name="tool_nmea">NMEA output</string>
     <string name="tool_nmea_sum">Choose messages, ports and rate (1–20 Hz) on the u-blox chip, like u-center</string>
     <string name="tool_raw">Phone raw GNSS (RTK test)</string>

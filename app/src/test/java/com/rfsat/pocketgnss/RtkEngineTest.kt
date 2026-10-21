@@ -100,4 +100,43 @@ class RtkEngineTest {
         assertEquals(com.rfsat.pocketgnss.protocol.FixQuality.RTK_FIXED, f?.quality)
         assertEquals(1.2, f?.diffAgeSec ?: 0.0, 1e-9)
     }
+
+    @Test fun eachFixCarriesItsOwnAccuracy() {
+        // Android's location (0.5 m) one second, an RTK fixed solution (1 cm) the next: the fix of each epoch must
+        // carry that epoch's accuracy, not the previous one's (GST is sent before GGA for this reason).
+        val m = com.rfsat.pocketgnss.core.GnssModel()
+        fun fixOf(lines: List<String>) = lines.mapNotNull { com.rfsat.pocketgnss.protocol.Nmea.parse(it)?.let(m::accept) }.single()
+        val t0 = 1_792_576_000_000L
+        val a = fixOf(PhoneNmea.epoch(PhoneFix(t0, 37.98, 23.73, 180.0, 140.0, 0.5f, 1f, 0f, null), emptyList()))
+        val b = fixOf(PhoneNmea.epoch(PhoneFix(t0 + 1000, 37.98, 23.73, 180.0, 140.0, 0.012f, 0.03f, 0f, null, quality = 4, diffAgeSec = 1.0,
+            stationId = 27, stdEast = 0.008, stdNorth = 0.009, stdUp = 0.02), emptyList()))
+        val c = fixOf(PhoneNmea.epoch(PhoneFix(t0 + 2000, 37.98, 23.73, 180.0, 140.0, 0.5f, 1f, 0f, null), emptyList()))
+        assertEquals(0.5, a.horizontalAccuracy, 1e-3)
+        assertEquals(Math.hypot(0.008, 0.009), b.horizontalAccuracy, 1e-3)
+        assertEquals(com.rfsat.pocketgnss.protocol.FixQuality.RTK_FIXED, b.quality)
+        assertEquals(0.5, c.horizontalAccuracy, 1e-3)
+    }
+
+    @Test fun historyStatistics() {
+        val h = com.rfsat.pocketgnss.core.SolutionHistory(java.io.File(System.getProperty("java.io.tmpdir")))
+        val lat0 = 38.0; val lon0 = 23.7
+        val mPerDegLat = Math.toRadians(1.0) * Geo.A
+        // 50 fixed positions within 1 cm, 50 "Android" positions 1 m east claiming 0.4 m.
+        for (i in 0 until 50) h.add(com.rfsat.pocketgnss.core.SolutionRecord(i * 1000L, "RTK fixed", com.rfsat.pocketgnss.protocol.FixQuality.RTK_FIXED,
+            lat0 + (if (i % 2 == 0) 0.005 else -0.005) / mPerDegLat, lon0, 100.0, 0.01, 0.02, true, 20, 0.8, 1.0))
+        for (i in 0 until 50) h.add(com.rfsat.pocketgnss.core.SolutionRecord(i * 1000L, "Android location", com.rfsat.pocketgnss.protocol.FixQuality.SINGLE,
+            lat0, lon0 + 1.0 / (mPerDegLat * Math.cos(Math.toRadians(lat0))), 100.0, 0.4, 1.0, true, 20, 0.8, null))
+        val ref = h.referencePoint()!!
+        assertEquals(lat0, ref.first, 1e-9); assertEquals(lon0, ref.second, 1e-9) // mean of the best method (fixed)
+        val st = com.rfsat.pocketgnss.core.SolutionHistory.stats(h.records(), ref)
+        assertEquals("RTK fixed", st[0].method)
+        assertEquals(0.005, st[0].rmsDist, 1e-4); assertEquals(1.0, st[0].within2Sigma, 1e-9)
+        assertEquals(1.0, st[1].rmsDist, 1e-3); assertEquals(0.0, st[1].within2Sigma, 1e-9) // 1 m off while claiming 0.4 m
+        assertEquals(0.0, st[1].rmsOwn, 1e-6)
+        val csv = h.csv().lines()
+        assertEquals(com.rfsat.pocketgnss.core.SolutionHistory.HEADER, csv[0])
+        assertEquals(101, csv.count { it.isNotBlank() })
+        val east = csv[60].split(',')[12].toDouble()
+        assertEquals(1.0, east, 1e-3)
+    }
 }

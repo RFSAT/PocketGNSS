@@ -101,8 +101,8 @@ object PhoneNmea {
             add("GNVTG,$course,T,,M,%.3f,N,%.3f,K,$mode".format(Locale.US, kn, kn * 1.852f))
             val age = if (fix.quality != 1 && fix.diffAgeSec != null) "%.1f".format(Locale.US, fix.diffAgeSec) else ""
             val station = if (age.isNotEmpty() && fix.stationId != null && fix.stationId > 0) "%04d".format(Locale.US, fix.stationId % 10000) else ""
-            add("GNGGA,$tm,$la,$ns,$lo,$ew,${fix.quality},%02d,%.2f,%s,M,%.3f,M,$age,$station".format(Locale.US, nUsed.coerceAtMost(99), hdop,
-                msl?.let { "%.3f".format(Locale.US, it) } ?: "", sep))
+            // GST before GGA: the fix is assembled when GGA arrives, so its accuracy must already be there
+            // (otherwise each fix would carry the previous epoch's accuracy, possibly from another method).
             if (fix.stdEast != null && fix.stdNorth != null) {
                 val rms = sqrt(fix.stdEast * fix.stdEast + fix.stdNorth * fix.stdNorth)
                 add("GNGST,$tm,%.3f,%.3f,%.3f,0.0,%.3f,%.3f,%s".format(Locale.US, rms, maxOf(fix.stdEast, fix.stdNorth), minOf(fix.stdEast, fix.stdNorth),
@@ -112,6 +112,8 @@ object PhoneNmea {
                 add("GNGST,$tm,,%.3f,%.3f,0.0,%.3f,%.3f,%s".format(Locale.US, sd, sd, sd, sd,
                     fix.verticalAccuracy?.let { "%.3f".format(Locale.US, it) } ?: ""))
             }
+            add("GNGGA,$tm,$la,$ns,$lo,$ew,${fix.quality},%02d,%.2f,%s,M,%.3f,M,$age,$station".format(Locale.US, nUsed.coerceAtMost(99), hdop,
+                msl?.let { "%.3f".format(Locale.US, it) } ?: "", sep))
         } else {
             add("GNRMC,$tm,V,,,,,,,$date,,,N,V")
             add("GNGGA,$tm,,,,,0,00,99.99,,,,,,")

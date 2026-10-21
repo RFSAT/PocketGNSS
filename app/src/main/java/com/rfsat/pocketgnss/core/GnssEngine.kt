@@ -136,6 +136,8 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     val phoneHasGnss: Boolean get() = context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LOCATION_GPS)
 
     val sessionsRoot: File = File(context.getExternalFilesDir(null) ?: context.filesDir, "sessions").apply { mkdirs() }
+    /** Last positions with method and accuracy (Tools > Position history), optionally logged to CSV. */
+    val history = SolutionHistory(sessionsRoot)
     private val pointStore = PointStore(File(File(context.getExternalFilesDir(null) ?: context.filesDir, "points"), "points.csv"))
 
     @Volatile private var link: GnssLink? = null
@@ -329,9 +331,25 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         if (s is NmeaSentence.Gga && s.quality != FixQuality.NONE) lastGgaLine = line
         val f = model.accept(s) ?: return
         _fix.value = f
+        recordHistory(f, now)
         // Mock location from the phone's own chip would only feed the phone its own position back.
         if (link?.info?.kind != LinkKind.PHONE) mock.push(f)
         onFix(f, now)
+    }
+
+    /** Every fix into the position history, with the method and, for phone RTK, the engine's state. */
+    private fun recordHistory(f: GnssFix, now: Long) {
+        if (f.quality == FixQuality.NONE) return
+        val rtk = if (link?.info?.phoneRtk == true) com.rfsat.pocketgnss.link.PhoneRtkLink.state.value else null
+        val method = rtk?.source?.takeIf { it.isNotEmpty() } ?: when (f.quality) {
+            FixQuality.RTK_FIXED -> "RTK fixed"; FixQuality.RTK_FLOAT -> "RTK float"; FixQuality.DGNSS -> "DGNSS / SBAS"
+            FixQuality.DEAD_RECKONING -> "Dead reckoning"; else -> "Autonomous"
+        }
+        history.add(SolutionRecord(now, method, f.quality, f.latitude, f.longitude, f.ellipsoidHeight, f.horizontalAccuracy, f.verticalAccuracy,
+            f.measuredAccuracy, f.satellitesUsed, f.hdop, f.diffAgeSec,
+            ratio = rtk?.solution?.ratio, signals = rtk?.signals, phaseSignals = rtk?.withPhase, baseSatellites = rtk?.base?.satellites,
+            ephemerides = rtk?.base?.let { it.ephemerides + it.glonassEphemerides }, baselineM = rtk?.solution?.baseline?.takeIf { it > 0 },
+            engineMessage = rtk?.message))
     }
 
     private fun onFix(f: GnssFix, now: Long) {
@@ -583,6 +601,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     }
 
     fun shutdown() {
+        history.stopFile()
         if (raw.state.value.running) raw.stop()
         stopRecording(); ntripClient.stop(); mock.stop(); server.stop()
         disconnect()
