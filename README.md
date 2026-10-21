@@ -20,7 +20,7 @@ Two hardware versions exist and the app supports both (Setup > Receiver version)
 In both, the receiver applies the corrections itself; the app reads the corrected position. How to set up each route,
 with the D3.5 timings and availability, is in **[docs/rtk-connectivity.md](docs/rtk-connectivity.md)**.
 
-RFSAT Limited. Version 1.5.0 (build 10500).
+RFSAT Limited. Version 1.6.0 (build 10600).
 
 ## Background: the AgriBIT project
 
@@ -123,6 +123,17 @@ agricultural GNSS enabled services*) are listed on the same CORDIS Results page.
   power-cycle; times to first fix, DGNSS, float and RTK fixed; RTK re-fix times (D3.5 GNSS-test-07).
 * **Data stream**: sentences per second, totals and largest gap per NMEA type, bad checksums, other bytes,
   baud rate, and the same live NMEA viewer as the Log tab (D3.5 GNSS-test-08).
+
+### Phone as GNSS receiver (Bluetooth)
+
+The phone serves NMEA over a Bluetooth Classic serial-port (SPP) service, "PocketGNSS NMEA", like a Bluetooth GNSS
+receiver (`core/BtServer.kt`). Paired devices connect to it: Windows through the paired phone's outgoing COM port,
+Android tablets and field controllers through their external Bluetooth GNSS setting. It carries whatever the current
+source computes (RFSAT receiver, any external receiver, phone RTK), with fix type, GST accuracy and correction age;
+all NMEA or position sentences only (GGA, RMC, GST, GSA, VTG, GNS, ZDA, GLL). Several devices at once, each with its
+own sender queue. Home has a card: before the first set-up it opens Setup > Phone as GNSS receiver; afterwards one
+button switches it on and off. Runs with the screen off (foreground service). Permissions: BLUETOOTH_CONNECT, and
+BLUETOOTH_ADVERTISE only for "Make visible for pairing".
 
 ### Outputs to other apps
 

@@ -128,6 +128,11 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     @Volatile private var rtcmCapture = false
     val mock = MockLocation(context)
     val server = NmeaServer()
+    /** The phone as a Bluetooth GNSS receiver (Home > Phone as GNSS receiver, Setup > Share position). */
+    val btServer = BtNmeaServer(context)
+
+    /** Re-tries the Bluetooth server after a permission was granted or Bluetooth switched on. */
+    fun restartBtServer() { btServer.stop(); if (store.value.btServer) btServer.start() }
 
     /**
      * True when the phone has a GNSS receiver of its own. Without one, PocketGNSS is only useful with an external
@@ -180,6 +185,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
                 simulator?.configure(s.simConfig)
                 if (s.mockLocation) { if (mock.status.value == MockStatus.OFF) mock.start() } else mock.stop()
                 if (s.nmeaServer) { if (!server.running) server.start(s.nmeaServerPort, s.nmeaServerLocalOnly) } else if (server.running) server.stop()
+                if (s.btServer) { if (!btServer.running) btServer.start() } else if (btServer.running || btServer.state.value.status != BtServerStatus.OFF) btServer.stop()
             }
         }
     }
@@ -328,6 +334,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         synchronized(consoleBuf) { consoleBuf.addLast(line); while (consoleBuf.size > 2000) consoleBuf.removeFirst() }
         recorder?.line(line)
         server.send(line)
+        if (!store.value.btServerPositionOnly || BtNmeaServer.typeOf(line) in BtNmeaServer.POSITION_SENTENCES) btServer.send(line)
         if (s is NmeaSentence.Gga && s.quality != FixQuality.NONE) lastGgaLine = line
         val f = model.accept(s) ?: return
         _fix.value = f
@@ -589,7 +596,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         val s = store.value
         if (raw.state.value.recording) return true
         return connection.value is Connection.Ready && simulator == null &&
-            (recording.value.active || ntripClient.running || s.mockLocation || s.nmeaServer)
+            (recording.value.active || ntripClient.running || s.mockLocation || s.nmeaServer || (s.btServer && btServer.running))
     }
 
     /** Stops background activity (notification "Stop" action). */
@@ -597,13 +604,13 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         if (raw.state.value.running) raw.stop()
         stopRecording()
         if (ntripClient.running) setNtrip(false)
-        store.update { it.copy(mockLocation = false, nmeaServer = false) }
+        store.update { it.copy(mockLocation = false, nmeaServer = false, btServer = false) }
     }
 
     fun shutdown() {
         history.stopFile()
         if (raw.state.value.running) raw.stop()
-        stopRecording(); ntripClient.stop(); mock.stop(); server.stop()
+        stopRecording(); ntripClient.stop(); mock.stop(); server.stop(); btServer.stop()
         disconnect()
     }
 

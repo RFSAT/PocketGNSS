@@ -237,6 +237,8 @@ internal fun AppRoot(
 ) {
     var tabName by rememberSaveable { mutableStateOf(Tab.entries[initialTab].name) }
     var confirmExit by remember { mutableStateOf(showExitDialog) }
+    // Set by Home's "Phone as GNSS receiver" card: open Setup at the Bluetooth sharing section.
+    var setupFocusBt by remember { mutableStateOf(false) }
     val conn by engine.connection.collectAsState()
     val fix by engine.fix.collectAsState()
     val tab = Tab.entries.firstOrNull { it.name == tabName } ?: Tab.HOME
@@ -297,12 +299,13 @@ internal fun AppRoot(
         }
         Box(Modifier.fillMaxSize().padding(pad).consumeWindowInsets(pad).imePadding()) {
             when (tab) {
-                Tab.HOME -> HomeScreen(engine, onOpenTab = { tabName = it.name }, onReconnect = onReconnect)
+                Tab.HOME -> HomeScreen(engine, onOpenTab = { tabName = it.name }, onReconnect = onReconnect,
+                    onConfigureBt = { setupFocusBt = true; tabName = Tab.SETUP.name })
                 Tab.LIVE -> LiveScreen(engine, onReconnect)
                 Tab.MAP -> MapScreen(engine)
                 Tab.TOOLS -> ToolsTab(engine, initialTool)
                 Tab.LOG -> LogScreen(engine)
-                Tab.SETUP -> SetupScreen(engine, onReconnect, onNeedLocation)
+                Tab.SETUP -> SetupScreen(engine, onReconnect, onNeedLocation, focusBluetooth = setupFocusBt, onFocused = { setupFocusBt = false })
             }
         }
     }

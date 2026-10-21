@@ -99,6 +99,7 @@ class LinkService : Service() {
         if (engine.ntripClient.running) parts.add(getString(R.string.notif_ntrip, engine.ntripClient.ntrip.value.status.name.lowercase()))
         if (engine.store.value.mockLocation) parts.add(getString(R.string.notif_mock))
         if (engine.store.value.nmeaServer) parts.add(getString(R.string.notif_server, engine.server.clientCount.value))
+        if (engine.btServer.running) parts.add(getString(R.string.notif_bt, engine.btServer.state.value.clients.size))
         val title = if (f != null) getString(R.string.notif_title_fix, getString(fixLabel(f.quality)), formatAccuracy(f.horizontalAccuracy))
             else getString(R.string.notif_title_nofix)
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),

@@ -12,6 +12,8 @@
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- Making the phone visible for pairing when it serves NMEA as a Bluetooth GNSS receiver. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
 
     <!-- Phone position on the map / NTRIP caster distance; and the receiver's position published as mock location. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />

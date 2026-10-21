@@ -23,6 +23,8 @@ its position to the centimetre.
 • Configure the u-blox NMEA messages, ports and rate (1-20 Hz) without a PC
 • Open the receiver's own web settings over its Wi-Fi hotspot
 • Time-to-fix and data-rate tests
+• Use the phone as a Bluetooth GNSS receiver: laptops, tablets and field controllers pair with it and receive the
+  RTK position as NMEA
 • Provide the RTK position to other apps (mock location) or over a local NMEA TCP server
 • Phone RTK: use the phone's own GNSS chip with your NTRIP corrections (accuracy depends on the phone; best with
   dual-frequency phones)
@@ -41,7 +43,8 @@ Made by RFSAT Limited, a non-profit R&D company in Dublin and Athens. Developed 
 
 **Foreground service types** (Play Console > App content > Foreground services):
 * `connectedDevice`: keeps the USB / Bluetooth link to the user's GNSS receiver open while recording, forwarding
-  NTRIP corrections or serving NMEA with the screen off. User-initiated; ongoing notification with Stop.
+  NTRIP corrections or serving NMEA (TCP, or Bluetooth to paired devices using the phone as their GNSS receiver)
+  with the screen off. User-initiated; ongoing notification with Stop.
 * `location`: keeps providing the receiver's position as mock location to other apps (e.g. agricultural guidance
   and field mapping) with the screen off, and keeps a user-started phone raw GNSS recording (20–30 min static
   session) running with the screen off. User-initiated; ongoing notification with Stop.
@@ -50,7 +53,8 @@ Made by RFSAT Limited, a non-profit R&D company in Dublin and Athens. Developed 
 **Permissions:** `ACCESS_FINE_LOCATION` (the location foreground service type, and the phone's own GNSS when the
 user chooses it as a source or runs the phone raw GNSS test / recording; positions and measurements stay on the
 phone unless the user shares a file), `ACCESS_MOCK_LOCATION` (provider for the mock location feature, active only when the user
-selects the app in Developer options), `BLUETOOTH_CONNECT` (paired receiver), `POST_NOTIFICATIONS`.
+selects the app in Developer options), `BLUETOOTH_CONNECT` (paired receiver; serving NMEA to paired devices), `BLUETOOTH_ADVERTISE` (only when the user
+makes the phone visible for pairing), `POST_NOTIFICATIONS`.
 No background location access is requested.
 
 **Data safety:**

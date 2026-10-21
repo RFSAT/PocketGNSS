@@ -93,6 +93,8 @@ class ScreenshotTest {
     @Test fun corrections_wifi() { simulatorAtFix(variant = com.rfsat.pocketgnss.link.ReceiverVariant.WIFI); shot("09b_tool_corrections_wifi", Tab.TOOLS, ToolId.CORRECTIONS) }
     @Test fun raw() { simulatorAtFix(); shot("09c_tool_phone_raw", Tab.TOOLS, ToolId.RAW) }
     @Test fun history() { simulatorAtFix(); Thread.sleep(4000); shot("09d_tool_history", Tab.TOOLS, ToolId.HISTORY, scrollTo = "Reported accuracy against actual scatter") }
+    @Test fun setup_bt_share() { simulatorAtFix(); shot("14d_setup_bt_share", Tab.SETUP, scrollTo = "Share the position over Bluetooth") }
+    @Test fun home_bt_card() { simulatorAtFix(); shot("01c_home_bt_card", Tab.HOME, scrollTo = "Phone as GNSS receiver (Bluetooth)") }
     @Test fun ttff() { simulatorAtFix(); shot("11_tool_ttff", Tab.TOOLS, ToolId.TTFF) }
     @Test fun stream() { simulatorAtFix(); shot("12_tool_stream", Tab.TOOLS, ToolId.STREAM) }
     @Test fun log() { simulatorAtFix(); engine.markPoint("P1"); shot("13_log", Tab.LOG) }

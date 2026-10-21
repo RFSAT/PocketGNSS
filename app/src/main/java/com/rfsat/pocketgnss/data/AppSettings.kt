@@ -38,6 +38,12 @@ data class AppSettings(
     // Outputs
     val mockLocation: Boolean = false,
     val nmeaServer: Boolean = false,
+    /** The phone as a Bluetooth GNSS receiver (SPP server streaming NMEA). */
+    val btServer: Boolean = false,
+    /** Set once the user has gone through the Bluetooth sharing set-up (Home then switches it on directly). */
+    val btServerConfigured: Boolean = false,
+    /** Send only the position sentences (GGA, RMC, GST, GSA, VTG, GNS, ZDA, GLL), not satellites in view. */
+    val btServerPositionOnly: Boolean = false,
     val nmeaServerPort: Int = 10110,
     val nmeaServerLocalOnly: Boolean = true,
     // Display
@@ -104,6 +110,9 @@ class SettingsStore(context: Context, private val cipher: SecretCipher = Keystor
             ),
             mockLocation = prefs.getBoolean("mock", d.mockLocation),
             nmeaServer = prefs.getBoolean("server", d.nmeaServer),
+            btServer = prefs.getBoolean("btServer", d.btServer),
+            btServerConfigured = prefs.getBoolean("btServerConfigured", d.btServerConfigured),
+            btServerPositionOnly = prefs.getBoolean("btServerPosOnly", d.btServerPositionOnly),
             nmeaServerPort = prefs.getInt("serverPort", d.nmeaServerPort),
             nmeaServerLocalOnly = prefs.getBoolean("serverLocal", d.nmeaServerLocalOnly),
             coordFormat = enumOr(prefs.getString("coordFormat", null), d.coordFormat),
@@ -136,6 +145,8 @@ class SettingsStore(context: Context, private val cipher: SecretCipher = Keystor
             .putString("casterProfiles", CasterProfiles.encode(s.profiles, cipher)).putString("casterActive", s.activeProfile)
             .putBoolean("ntripV2", s.ntrip.version2).putBoolean("ntripTls", s.ntrip.tls).putInt("ntripGga", s.ntrip.ggaIntervalSec)
             .putBoolean("mock", s.mockLocation)
+            .putBoolean("btServer", s.btServer).putBoolean("btServerConfigured", s.btServerConfigured)
+            .putBoolean("btServerPosOnly", s.btServerPositionOnly)
             .putBoolean("server", s.nmeaServer).putInt("serverPort", s.nmeaServerPort).putBoolean("serverLocal", s.nmeaServerLocalOnly)
             .putString("coordFormat", s.coordFormat.name).putString("heightRef", s.heightRef.name)
             .putBoolean("screenOn", s.keepScreenOn).putString("mapLayer", s.mapLayer.name)

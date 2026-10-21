@@ -16,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -24,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -45,7 +47,11 @@ private val bauds = listOf(0, 9600, 38400, 57600, 115200, 230400, 460800)
 
 @SuppressLint("MissingPermission")
 @Composable
-fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () -> Unit) {
+fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () -> Unit, focusBluetooth: Boolean = false, onFocused: () -> Unit = {}) {
+    val btRequester = remember { androidx.compose.foundation.relocation.BringIntoViewRequester() }
+    LaunchedEffect(focusBluetooth) {
+        if (focusBluetooth) { kotlinx.coroutines.delay(150); btRequester.bringIntoView(); onFocused() }
+    }
     val context = LocalContext.current
     val s by engine.store.settings.collectAsState()
     val conn by engine.connection.collectAsState()
@@ -119,6 +125,8 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
                 if (conn !is Connection.NoDevice) ActionButton(onClick = { engine.disconnect() }) { Text(stringResource(R.string.action_disconnect)) }
             }
         }
+
+        BtShareSection(engine, Modifier.bringIntoViewRequester(btRequester))
 
         val noProfile = stringResource(R.string.ntrip_profile_none)
         var profileName by remember(s.activeProfile) { mutableStateOf(s.activeProfile) }

@@ -37,7 +37,7 @@ import com.rfsat.pocketgnss.link.LinkKind
 
 /** Home / About: identity, connection status and quick actions, description, credits. */
 @Composable
-fun HomeScreen(engine: GnssEngine, onOpenTab: (Tab) -> Unit, onReconnect: () -> Unit) {
+fun HomeScreen(engine: GnssEngine, onOpenTab: (Tab) -> Unit, onReconnect: () -> Unit, onConfigureBt: () -> Unit = { onOpenTab(Tab.SETUP) }) {
     val conn by engine.connection.collectAsState()
     val fix by engine.fix.collectAsState()
     val rx by engine.receiver.collectAsState()
@@ -111,6 +111,9 @@ fun HomeScreen(engine: GnssEngine, onOpenTab: (Tab) -> Unit, onReconnect: () -> 
                 }
             }
         }
+
+        // The phone as a (high-precision) GNSS receiver for other devices, one tap away.
+        BtShareCard(engine, onConfigure = onConfigureBt)
 
         Text(stringResource(R.string.home_about), textAlign = TextAlign.Justify, style = MaterialTheme.typography.bodyMedium)
         Text(stringResource(R.string.home_about_2), textAlign = TextAlign.Justify, style = MaterialTheme.typography.bodyMedium)

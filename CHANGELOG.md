@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.6.0 (build 10600)
+The phone can now act as a Bluetooth GNSS receiver for other devices: laptops, tablets and field controllers pair with it and receive the position as NMEA, including the RTK fix type and accuracy, from the RFSAT receiver, any external receiver or phone RTK. Set it up once in Setup; afterwards a button on the Home screen switches it on and off. It keeps running with the screen off.
+
 ## 1.5.0 (build 10500)
 New Position history tool: every computed position with the method that produced it and the accuracy it reported, plotted around a reference point, with reported accuracy compared against the actual scatter, the latest positions with phone RTK details, and a CSV log. Phone RTK: each position now shows its own accuracy (it could show the previous one's), and Live names the method in use.
 
