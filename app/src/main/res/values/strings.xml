@@ -41,13 +41,13 @@
     <string name="corr_data_value">%1$.1f kB · %2$.0f B/s · %3$d frames · %4$d bad</string>
     <string name="corr_fetch">Get mountpoints</string>
     <string name="corr_gga">Last GGA sent</string>
-    <string name="corr_intro">Normally the receiver collects corrections itself with its own NTRIP client, set in Tools &gt; Receiver settings (sections 4 and 7): over the mobile network (LTE version) or through Wi-Fi (both versions). This phone client is a fallback: it fetches RTCM over the phone\'s data and forwards it to the receiver over USB or Bluetooth.</string>
+    <string name="corr_intro">Three routes bring corrections to the receiver: its own NTRIP client over the mobile network (LTE version) or over Wi-Fi (both versions), set in Tools &gt; Receiver settings (sections 4 and 7); or this relay: the phone fetches RTCM over its mobile data and forwards it to the receiver over Bluetooth or USB, sending the receiver\'s GGA to the caster.</string>
     <string name="corr_last">Last data</string>
     <string name="corr_messages">RTCM messages received</string>
     <string name="corr_mount_help">Downloads the caster\'s sourcetable (caster and port from Setup). Tap a mountpoint to select it; the nearest are listed first. GGA = the caster needs your position (network RTK).</string>
     <string name="corr_mountpoints">Mountpoints</string>
     <string name="corr_state">State</string>
-    <string name="corr_status">Phone NTRIP client</string>
+    <string name="corr_status">NTRIP relay through the phone</string>
     <string name="disp_coords">Coordinates</string>
     <string name="disp_decimal">Decimal °</string>
     <string name="disp_dms">D° M′ S″</string>
@@ -121,11 +121,12 @@
     <string name="live_mark">Mark point</string>
     <string name="live_mark_short">Mark</string>
     <string name="live_no_gsv">No satellite data: enable GSV (Tools &gt; NMEA output) to see the sky plot and signal levels.</string>
-    <string name="live_ntrip">Phone NTRIP (fallback)</string>
+    <string name="live_ntrip">Phone relay</string>
+    <string name="live_ntrip_last">last data %1$.0f s ago</string>
     <string name="live_ntrip_off">NTRIP OFF</string>
     <string name="live_ntrip_on">NTRIP ON</string>
-    <string name="live_ntrip_receiver">off: the receiver uses its own NTRIP client over Wi-Fi</string>
-    <string name="live_ntrip_setup">Corrections normally come through the receiver\'s own Wi-Fi link to the RTK service. To send them from the phone instead, enter an NTRIP caster in Setup.</string>
+    <string name="live_ntrip_receiver">off (the receiver uses its own NTRIP client)</string>
+    <string name="live_ntrip_setup">Without Wi-Fi or a SIM at the receiver, the phone can relay the corrections: choose a caster profile in Setup &gt; NTRIP relay, then switch NTRIP on.</string>
     <string name="live_ntrip_value">%1$s · %2$s · %3$.0f B/s</string>
     <string name="live_phone_no_rtk">Phone GNSS: corrections cannot be applied to the phone\'s chip, so the position stays autonomous (no RTK).</string>
     <string name="live_position">Position</string>
@@ -188,10 +189,18 @@
     <string name="notif_title_nofix">No fix</string>
     <string name="ntrip_gga">Send GGA every (0 = never)</string>
     <string name="ntrip_host">Caster host</string>
+    <string name="ntrip_kind">Mountpoint</string>
+    <string name="ntrip_kind_single">Single base</string>
+    <string name="ntrip_kind_vrs">VRS / network</string>
     <string name="ntrip_mount">Mountpoint</string>
     <string name="ntrip_pass">Password</string>
     <string name="ntrip_port">Port</string>
-    <string name="ntrip_store_note">The password is stored only in this app\'s private settings on the phone.</string>
+    <string name="ntrip_profile">Caster profile</string>
+    <string name="ntrip_profile_delete">Delete profile</string>
+    <string name="ntrip_profile_name">Profile name (e.g. Metrica VRS, EOS base)</string>
+    <string name="ntrip_profile_none">— none —</string>
+    <string name="ntrip_profile_save">Save profile</string>
+    <string name="ntrip_store_note">Passwords are encrypted with a key kept in the phone\'s Android Keystore; they are not backed up and never leave this phone except to the caster you choose.</string>
     <string name="ntrip_tls">TLS (encrypted caster)</string>
     <string name="ntrip_user">User name</string>
     <string name="ntrip_v2">NTRIP version 2</string>
@@ -211,7 +220,7 @@
     <string name="out_server_port">Server port</string>
     <string name="route_lte">Three boards: ESP32, LTE modem with nano-SIM (and SD card slot), u-blox F9x. The receiver\'s own NTRIP client gets corrections over the mobile network (data-only SIM, 4G/LTE recommended) or, if set, over Wi-Fi. Power on the middle micro-USB. D3.5: ~60 s from power-up to RTK data, re-connects in 16–25 s.</string>
     <string name="route_unset">Choose the receiver version in Setup to see how it gets RTK corrections.</string>
-    <string name="route_wifi" formatted="false">Two boards: ESP32 and u-blox F9x, no modem or SD slot. The receiver\'s own NTRIP client gets corrections only through a Wi-Fi access point: a router in the field (or a mobile-broadband router) or this phone\'s hotspot. D3.5: fastest re-connection and ~99 % RTK availability over a fibre-fed router.</string>
+    <string name="route_wifi" formatted="false">Two boards: ESP32 and u-blox F9x, no modem or SD slot. The receiver\'s own NTRIP client gets corrections only through a Wi-Fi access point (a field router, a mobile-broadband router or this phone\'s hotspot); anywhere with mobile coverage, the phone can also relay them over Bluetooth or USB (NTRIP relay). D3.5: fastest re-connection and ~99 % RTK availability over a fibre-fed router.</string>
     <string name="setup_autoreconnect">Reconnect automatically</string>
     <string name="setup_baud">Baud rate</string>
     <string name="setup_baud_auto">Automatic</string>
@@ -223,8 +232,8 @@
     <string name="setup_bt_receiver">receiver</string>
     <string name="setup_device_number">Device number (on the case)</string>
     <string name="setup_display">Display</string>
-    <string name="setup_ntrip">Fallback: NTRIP corrections from the phone</string>
-    <string name="setup_ntrip_help">Only needed when the receiver cannot reach the RTK service itself (no Wi-Fi router or SIM in the field). Caster, mountpoint and account from your RTK provider (e.g. METRICA / HxGN SmartNet in Greece, EUREF-IP). Switch it on from Live or Tools &gt; Corrections.</string>
+    <string name="setup_ntrip">NTRIP relay through the phone</string>
+    <string name="setup_ntrip_help">The phone fetches the corrections over its mobile data, sends the receiver\'s GGA to the caster (needed by VRS / network services such as Metrica) and forwards the RTCM stream to the receiver over Bluetooth or USB. This gives the compact receiver (no SIM board) RTK anywhere with mobile coverage. Not needed when the receiver reaches the service itself over Wi-Fi or its own SIM. Switch it on from Live or Tools &gt; Corrections.</string>
     <string name="setup_outputs">Outputs to other apps</string>
     <string name="setup_receiver">Receiver web settings</string>
     <string name="setup_receiver_help">Used to find the receiver\'s hotspot (ESPrtk : &lt;ID&gt;, ID shown on its LCD) and to show its login (RTKrover + device number).</string>
@@ -312,7 +321,7 @@
     <string name="tab_setup">Setup</string>
     <string name="tab_tools">Tools</string>
     <string name="tool_corrections">Corrections (NTRIP)</string>
-    <string name="tool_corrections_sum">Phone NTRIP client, RTCM messages, base distance, mountpoints</string>
+    <string name="tool_corrections_sum">NTRIP relay through the phone, RTCM messages, base distance, mountpoints</string>
     <string name="tool_nmea">NMEA output</string>
     <string name="tool_nmea_sum">Choose messages, ports and rate (1–20 Hz) on the u-blox chip, like u-center</string>
     <string name="tool_stakeout">Stake out</string>
@@ -332,7 +341,7 @@
     <string name="top_no_receiver">No receiver connected</string>
     <string name="trouble_lte">No corrections reach the receiver. Check on its LCD the mobile signal bars and the NTRIP data mark; check the SIM (data enabled, no PIN) and APN in section 16, the caster in section 7; allow about a minute after power-up.</string>
     <string name="trouble_unset">No corrections reach the receiver. Choose the receiver version in Setup for what to check, or send corrections from the phone (Setup &gt; NTRIP).</string>
-    <string name="trouble_wifi">No corrections reach the receiver. It needs a Wi-Fi access point in range: check the router (or turn on this phone\'s hotspot with the same name and password as set in section 4) and the Wi-Fi bars on its LCD, and the caster in section 7.</string>
+    <string name="trouble_wifi">No corrections reach the receiver. It needs a Wi-Fi access point in range (router or this phone\'s hotspot, with the SSID and password set in section 4) and the caster in section 7 — or switch on the NTRIP relay through the phone.</string>
     <string name="ttff_cold">Cold start</string>
     <string name="ttff_elapsed">Elapsed</string>
     <string name="ttff_first_dgnss">First DGNSS / SBAS</string>

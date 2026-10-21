@@ -28,6 +28,9 @@ data class AppSettings(
     // Corrections from the phone
     val ntripEnabled: Boolean = false,
     val ntrip: NtripConfig = NtripConfig(),
+    /** Saved caster accounts; [activeProfile] is the one last loaded into [ntrip] ("" = none). */
+    val profiles: List<CasterProfile> = emptyList(),
+    val activeProfile: String = "",
     // Outputs
     val mockLocation: Boolean = false,
     val nmeaServer: Boolean = false,
@@ -57,7 +60,7 @@ data class AppSettings(
 }
 
 /** SharedPreferences-backed settings exposed as a StateFlow (same pattern as PocketSpectro). */
-class SettingsStore(context: Context) {
+class SettingsStore(context: Context, private val cipher: SecretCipher = KeystoreCipher) {
     private val prefs: SharedPreferences = context.getSharedPreferences("pocketgnss", Context.MODE_PRIVATE)
     private val state = MutableStateFlow(load())
     val settings: StateFlow<AppSettings> = state.asStateFlow()
@@ -81,12 +84,14 @@ class SettingsStore(context: Context) {
             tcpPort = prefs.getInt("tcpPort", d.tcpPort),
             autoReconnect = prefs.getBoolean("autoReconnect", d.autoReconnect),
             ntripEnabled = prefs.getBoolean("ntripOn", d.ntripEnabled),
+            profiles = CasterProfiles.decode(prefs.getString("casterProfiles", null), cipher),
+            activeProfile = prefs.getString("casterActive", "") ?: "",
             ntrip = NtripConfig(
                 host = prefs.getString("ntripHost", n.host) ?: "",
                 port = prefs.getInt("ntripPort", n.port),
                 mountpoint = prefs.getString("ntripMount", n.mountpoint) ?: "",
                 user = prefs.getString("ntripUser", n.user) ?: "",
-                password = prefs.getString("ntripPass", n.password) ?: "",
+                password = loadPassword(),
                 version2 = prefs.getBoolean("ntripV2", n.version2),
                 tls = prefs.getBoolean("ntripTls", n.tls),
                 ggaIntervalSec = prefs.getInt("ntripGga", n.ggaIntervalSec),
@@ -118,7 +123,10 @@ class SettingsStore(context: Context) {
             .putBoolean("autoReconnect", s.autoReconnect)
             .putBoolean("ntripOn", s.ntripEnabled)
             .putString("ntripHost", s.ntrip.host).putInt("ntripPort", s.ntrip.port)
-            .putString("ntripMount", s.ntrip.mountpoint).putString("ntripUser", s.ntrip.user).putString("ntripPass", s.ntrip.password)
+            .putString("ntripMount", s.ntrip.mountpoint).putString("ntripUser", s.ntrip.user)
+            .putString("ntripPassEnc", if (s.ntrip.password.isEmpty()) "" else cipher.encrypt(s.ntrip.password) ?: "")
+            .remove("ntripPass")
+            .putString("casterProfiles", CasterProfiles.encode(s.profiles, cipher)).putString("casterActive", s.activeProfile)
             .putBoolean("ntripV2", s.ntrip.version2).putBoolean("ntripTls", s.ntrip.tls).putInt("ntripGga", s.ntrip.ggaIntervalSec)
             .putBoolean("mock", s.mockLocation)
             .putBoolean("server", s.nmeaServer).putInt("serverPort", s.nmeaServerPort).putBoolean("serverLocal", s.nmeaServerLocalOnly)
@@ -129,6 +137,16 @@ class SettingsStore(context: Context) {
             .putString("variant", s.receiverVariant.name)
             .putString("simMotion", s.simMotion.name).putBoolean("simCorr", s.simCorrections)
             .apply()
+    }
+
+    /** The caster password, decrypted; a plain-text one from version 1.1.x is moved into encrypted storage. */
+    private fun loadPassword(): String {
+        prefs.getString("ntripPass", null)?.let { old ->
+            prefs.edit().remove("ntripPass").putString("ntripPassEnc", if (old.isEmpty()) "" else cipher.encrypt(old) ?: "").apply()
+            return old
+        }
+        val enc = prefs.getString("ntripPassEnc", "") ?: ""
+        return if (enc.isEmpty()) "" else cipher.decrypt(enc) ?: ""
     }
 
     private inline fun <reified E : Enum<E>> enumOr(name: String?, default: E): E =

@@ -2,6 +2,8 @@ package com.rfsat.pocketgnss
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.rfsat.pocketgnss.core.Connection
 import com.rfsat.pocketgnss.core.GnssEngine
@@ -46,10 +48,11 @@ class ScreenshotTest {
         Thread.sleep(if (survey) 6000 else 1500) // satellites (GSV once a second) and survey samples
     }
 
-    private fun shot(name: String, tab: Tab, tool: ToolId? = null, store: Boolean = false, exit: Boolean = false) {
+    private fun shot(name: String, tab: Tab, tool: ToolId? = null, store: Boolean = false, exit: Boolean = false, scrollTo: String? = null) {
         StoreShots.hideVersion = store
         compose.setContent { RtkTheme { AppRoot(engine, {}, initialTab = tab.ordinal, initialTool = tool, showExitDialog = exit) } }
         compose.waitForIdle()
+        if (scrollTo != null) { compose.onNodeWithText(scrollTo).performScrollTo(); compose.waitForIdle() }
         val path = "build/screenshots/${if (store) "play/" else ""}$name.png"
         compose.onRoot().captureRoboImage(path)
         // Google Play wants 24-bit PNG without alpha.
@@ -85,5 +88,6 @@ class ScreenshotTest {
     @Test fun log() { simulatorAtFix(); engine.markPoint("P1"); shot("13_log", Tab.LOG) }
     @Test fun live_disconnect_row() { simulatorAtFix(); shot("02b_live_top", Tab.LIVE) }
     @Test fun setup() { simulatorAtFix(); shot("14_setup", Tab.SETUP) }
+    @Test fun setup_relay() { simulatorAtFix(); engine.store.update { it.copy(ntrip = com.rfsat.pocketgnss.data.CasterProfiles.presets[0].config, activeProfile = com.rfsat.pocketgnss.data.CasterProfiles.presets[0].name) }; shot("14b_setup_relay", Tab.SETUP, scrollTo = "NTRIP relay through the phone") }
     @Test fun exit() { simulatorAtFix(); shot("15_exit", Tab.HOME, exit = true) }
 }

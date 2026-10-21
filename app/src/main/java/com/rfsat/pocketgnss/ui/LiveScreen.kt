@@ -116,7 +116,9 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
             }
             val phone = s.ntripEnabled || ntrip.status != NtripStatus.OFF
             KeyValue(stringResource(R.string.live_ntrip), if (!phone) stringResource(R.string.live_ntrip_receiver) else
-                stringResource(R.string.live_ntrip_value, ntrip.status.name.lowercase(), ntrip.mountpoint, ntrip.bytesPerSec), live = true)
+                stringResource(R.string.live_ntrip_value, ntrip.status.name.lowercase(), ntrip.mountpoint, ntrip.bytesPerSec) +
+                    (if (ntrip.lastDataMs > 0) " · " + stringResource(R.string.live_ntrip_last, (System.currentTimeMillis() - ntrip.lastDataMs) / 1000.0) else ""),
+                live = true)
             ntrip.base?.let { b ->
                 val g = b.geodetic
                 val dist = f?.let { Geo.distance(it.latitude, it.longitude, g.latitude, g.longitude) }

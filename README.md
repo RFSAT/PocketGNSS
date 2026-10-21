@@ -1,7 +1,7 @@
 # PocketGNSS (com.PocketGNSS)
 
 Android app (Samsung Galaxy S24, Android 8.0+, target API 36) that manages **RFSAT's centimetre-accuracy GNSS
-receiver** developed in the AgriBIT project (EU H2020, GA 101004259) and receives its position over **USB-OTG**
+receiver** developed in the [AgriBIT project](https://cordis.europa.eu/project/id/101004259) (EU H2020, GA 101004259) and receives its position over **USB-OTG**
 or **Bluetooth**, in the same style as TinyRAD and PocketSpectro.
 
 The receiver (AgriBIT D3.3 §4.6): u-blox **ZED-F9P / ZED-F9R** (L1/L2/L5, RTK), an **ESP32-DevKitC V4** running
@@ -20,7 +20,30 @@ Two hardware versions exist and the app supports both (Setup > Receiver version)
 In both, the receiver applies the corrections itself; the app reads the corrected position. How to set up each route,
 with the D3.5 timings and availability, is in **[docs/rtk-connectivity.md](docs/rtk-connectivity.md)**.
 
-RFSAT Limited. Version 1.0.0 (build 10000).
+RFSAT Limited. Version 1.2.0 (build 10200).
+
+## Background: the AgriBIT project
+
+The receiver was developed by RFSAT Limited in **AgriBIT** — *Artificial Intelligence applied to Precision Farming by
+the use of GNSS and Integrated Technologies*, an EU Horizon 2020 Innovation Action (grant agreement 101004259, call
+SU-SPACE-EGNSS-3, 1 July 2021 – 30 June 2024, coordinated by Engineering – Ingegneria Informatica SpA). The project's
+own web portal has been discontinued; its official record, with the public deliverables, is on CORDIS:
+<https://cordis.europa.eu/project/id/101004259> (deliverables under
+[Results](https://cordis.europa.eu/project/id/101004259/results)).
+
+The design, implementation and validation of the GNSS receiver are described in the deliverables of **Work Package 3**:
+
+| Deliverable | Content | Availability |
+|---|---|---|
+| D3.1 State of the Art in GNSS Solutions for Agriculture (M9) | GNSS market and state of the art, receiver specifications | [Public (CORDIS)](https://ec.europa.eu/research/participants/documents/downloadPublic?documentIds=080166e5ebab5626&appId=PPGMS) |
+| D3.2 GNSS Baseline Prototype & Foreground Results, rev. 1 (M12) | First receiver prototype, architecture, KPIs | Consortium only |
+| D3.3 GNSS Baseline Prototype & Foreground Results, rev. 2 (M24) | Final receiver: ESP_F9x (u-blox ZED-F9x), ESP32 (ESPrtk), ESP_BG95 LTE modem; assembly, power, user and configuration guide of the embedded web server, NMEA set-up | Confidential |
+| D3.4 GNSS Customization Options (M30) | Receiver variants for GNSS-enabled services (with AGENSO) | [Public (CORDIS)](https://ec.europa.eu/research/participants/documents/downloadPublic?documentIds=080166e50716ec89&appId=PPGMS) |
+| D3.5 Technical GNSS Validation Report (M24) | Validation against the 24 GNSS specifications: accuracy (1 cm RTK, < 30 cm SBAS, < 1 m autonomous), TTFF, 20 Hz output, Wi-Fi / LTE correction links, power | Consortium only |
+
+References in this README and in the app to "D3.3 §…" and "D3.5 …" point to those documents. Other public AgriBIT
+results related to GNSS-enabled services (*GNSS enablers and GNSS enabled services*, *Multi layered model for
+agricultural GNSS enabled services*) are listed on the same CORDIS Results page.
 
 ## Connections
 
@@ -29,6 +52,7 @@ RFSAT Limited. Version 1.0.0 (build 10000).
 | USB | **Upper micro-USB = data / COM port** (D3.3 §4.7.1): the ESP32-DevKitC's CP210x bridge, carrying the NMEA ESPrtk sends to TX_UART0 (§4.7.7), 115200 bd as in D3.5 GNSS-test-11 | Middle port = power (5 V, min 1 A); bottom port = the ZED-F9x's own CDC-ACM USB, "not normally used" but the one that takes UBX configuration directly (u-center, §4.7.22). Both are recognised by vendor ID and open the app (`res/xml/device_filter.xml`). On the ESP32 port DTR/RTS are left alone because they drive EN/IO0 and would reset it; baud 115200 or automatic search. |
 | Bluetooth | Classic SPP to "BTU-ESPrtk : <ID>_<suffix>" (D3.3 §4.7.14), same NMEA as the USB port (GNSS-test-12, verified with a Galaxy S10) | Paired devices only (pair in Android settings), so only BLUETOOTH_CONNECT is needed; auto-reconnect. |
 | TCP | NMEA over the network (ESPrtk Wi-Fi stream, EOS Tools Pro on port 3967, any NMEA server) | Auto-reconnect. |
+| Phone GNSS | The phone's own GNSS chip (`link/PhoneGnssLink.kt`), for use without the receiver or for comparison | Android Location + GnssStatus converted to NMEA (`link/PhoneNmea.kt`: GGA, RMC, VTG, GST with Android's accuracy, GSA, GSV with L1/L5 signal IDs), so every screen works. Autonomous only: RTCM and UBX cannot be sent to the chip, so phone NTRIP, NMEA output configuration and mock location are disabled; mock positions are ignored so the app never reads back its own output. Needs location permission. |
 | Simulator | Synthetic ZED-F9P (`sim/SimReceiver.kt`) | Behaves like the D3.5 results: TTFF ~26 s cold, SBAS, float, RTK fixed 25-30 s after corrections; correction link per receiver version (LTE: ~57 s to RTK data, 16-25 s outages, ~95 %; Wi-Fi: ~15 s, short drop-outs, ~99 %); static or tractor-on-swaths; answers UBX VALSET/VALGET/RST/MON-VER. Every screen and tool works with it (and Play review needs it). |
 
 ## Screens
@@ -36,10 +60,10 @@ RFSAT Limited. Version 1.0.0 (build 10000).
 | Tab | Purpose |
 |---|---|
 | Home | Connection card with quick actions, receiver version (asked once if not set), receiver module (from UBX MON-VER), description, RFSAT / AgriBIT credits, Claude AI acknowledgement |
-| Live | Fix banner coloured by fix type with accuracy (GST-measured or estimated), position, height MSL / ellipsoid, satellites, DOP, speed, correction age and station, receiver version with what to check when no corrections arrive, per-constellation RTK mode (GNS), phone NTRIP status and base distance, NTRIP / Recording / Mark point buttons, sky plot and C/N0 bars |
+| Live | Source name with a Disconnect button, fix banner coloured by fix type with accuracy (GST-measured or estimated), position, height MSL / ellipsoid, satellites, DOP, speed, correction age and station, receiver version with what to check when no corrections arrive, per-constellation RTK mode (GNS), phone NTRIP status and base distance, NTRIP / Recording / Mark point buttons, sky plot and C/N0 bars |
 | Map | MapLibre with Street / Satellite / Terrain (same raster sources as DBM and PocketSpectro): position coloured by fix, track coloured by fix type, saved points with names, NTRIP base station, follow / recenter / fit / mark / clear |
 | Tools | Survey point · Stake out · Corrections (NTRIP) · NMEA output (UBX) · Receiver settings (web) · Time to fix · Data stream |
-| Log | Recording (raw NMEA + fixes CSV, minimum fix and interval), saved points (KML / CSV / GeoJSON), sessions (NMEA / CSV / GPX / KML, delete) |
+| Log | Recording (raw NMEA + fixes CSV, minimum fix and interval), live NMEA viewer (filter by sentence type, pause, show more, copy, share the shown lines as .nmea; last 2000 sentences, nothing saved unless shared), saved points (KML / CSV / GeoJSON), sessions (NMEA / CSV / GPX / KML, delete) |
 | Setup | Connection source and its options, phone NTRIP caster, outputs (mock location, NMEA TCP server), receiver ID and device number, display units, simulator |
 | Exit | Confirms, stops recording, closes the link and outputs |
 
@@ -49,12 +73,16 @@ RFSAT Limited. Version 1.0.0 (build 10000).
   largest deviation, scatter plot; with a known reference (e.g. the EOS Arrow Gold coordinate) also bias and RMS
   error, and a pass/fail against the AgriBIT static spec (D3.5 GNSS-test-03/04/05). Save as a named point.
 * **Stake out**: distance, east/north/up offsets and an arrow (north-up, or heading-up while moving) to a saved point.
-* **Corrections (NTRIP)**: normally the receiver collects corrections itself: its ESPrtk NTRIP client reaches the RTK
-  service through Wi-Fi to the field router (or its LTE modem), configured in its web settings (sections 4 and 7);
-  the Live tab shows the resulting correction age and base station ID from GGA. As a fallback, the phone's NTRIP client (v1 and v2/chunked, TLS, GGA upload for network RTK) forwards
-  RTCM to the receiver over USB or Bluetooth. Shows data rate, frame CRC errors, RTCM message types, the base
-  station (1005/1006) and baseline length (warning above 50 km, D3.3 §4.2), and browses the caster's sourcetable
-  sorted by distance, for fields without a router or SIM coverage for the receiver.
+* **Corrections (NTRIP)**: three routes. The receiver's own ESPrtk NTRIP client, over Wi-Fi (both versions) or its
+  SIM (LTE version), configured in its web settings (sections 4 and 7). Or the **NTRIP relay through the phone**:
+  PocketGNSS connects over the phone's mobile data (v1 and v2/chunked, TLS), sends the receiver's GGA to the caster
+  (VRS / network services such as Metrica) and forwards the RTCM stream to the receiver over Bluetooth or USB, giving
+  the compact receiver RTK anywhere with mobile coverage. **Caster profiles** (saved accounts plus EUREF-IP, IGS-IP
+  and RTK2go starting points; VRS or single base), passwords **encrypted with an Android Keystore key**
+  (`data/Secrets.kt`, AES-256-GCM, never stored in plain text). Shows state, data rate, seconds since the last RTCM,
+  frame CRC errors, RTCM message types, the base station (1005/1006) and baseline length (warning above 50 km, D3.3
+  §4.2); browses the caster's sourcetable sorted by distance; reconnects with a 5–30 s back-off. The Live tab shows
+  the correction age and station from the receiver's GGA. See `docs/rtk-connectivity.md`.
 * **NMEA output**: replaces the u-center procedure of D3.3 §4.7.22. Choose messages (presets: AgriBIT default
   DTM/GGA/GLL/GNS/GSA/RMC, AGENSO GGA+RMC, full with GSV/GST), u-blox ports (I2C, UART1, USB, SPI as in the guide),
   navigation rate 1-20 Hz, and save to RAM + BBR + Flash; UBX CFG-VALSET with ACK per message, read-back with
@@ -70,7 +98,7 @@ RFSAT Limited. Version 1.0.0 (build 10000).
 * **Time to fix**: cold / warm / hot start with UBX CFG-RST (GNSS-only reset, the USB link stays up) or a manual
   power-cycle; times to first fix, DGNSS, float and RTK fixed; RTK re-fix times (D3.5 GNSS-test-07).
 * **Data stream**: sentences per second, totals and largest gap per NMEA type, bad checksums, other bytes,
-  baud rate, and the raw console (D3.5 GNSS-test-08).
+  baud rate, and the same live NMEA viewer as the Log tab (D3.5 GNSS-test-08).
 
 ### Outputs to other apps
 
@@ -101,7 +129,7 @@ All text is in `res/values/strings.xml` (debug builds have pseudo-locales to che
 ## Build
 
 GitHub Actions (`.github/workflows/android-ci.yml`), as for PocketSpectro: unit tests, a **debug APK** on every run
-(artifact `PocketGNSS-v<version>-debug-apk`; package `com.PocketGNSS.debug`, label "PocketGNSS debug", signed with the
+(artifact `PocketGNSS-v<version>-debug-apk`; package `com.PocketGNSS.debug`, launcher label "PocketGNSS debug", signed with the
 fixed key `app/debug.keystore` so it updates in place and installs next to the Play version), then the signed Play bundle
 (AAB) and release APK when the repository secrets `KEYSTORE_BASE64`, `STORE_PASSWORD`, `KEY_ALIAS`,
 `KEY_PASSWORD` are set (same names as the other RFSAT apps). A second job renders all screens with the simulator
@@ -115,7 +143,7 @@ Versioning 1.MINOR.PATCH; only `appVersion` in `app/build.gradle.kts` is edited,
 (1*10000 + MINOR*100 + PATCH). `CHANGELOG.md` holds one paragraph per version for Play's "What's new".
 
 Tests: `ProtocolTest` (the D3.5 recorded sentences, UBX reference frames, RTCM CRC and 1005, NTRIP, geodesy),
-`SimulatorTest` (TTFF and fix progression, UBX round trip, reset, motion, exports), `ScreenshotTest`.
+`SimulatorTest` (TTFF and fix progression, receiver versions, UBX round trip, reset, motion, exports), `PhoneGnssTest` (phone data to NMEA), `CasterProfileTest` (profiles, encrypted passwords), `ScreenshotTest`.
 
 ## Google Play notes
 

@@ -55,18 +55,35 @@ Where a Wi-Fi router is available, section 4 can be switched to Wi-Fi on this ve
    hotspot and a Wi-Fi client at the same time. Keep the position link on Bluetooth or USB.
 4. The LCD shows the Wi-Fi bars and the NTRIP data mark; the Live tab shows the correction age and RTK fix.
 
-## Fallback for both versions: corrections through the phone
+## Third route, both versions: NTRIP relay through the phone
 
-When the receiver cannot reach the service itself (no SIM coverage, no router, no hotspot), PocketGNSS's own NTRIP
-client can fetch the corrections over the phone's data and send them to the receiver over USB or Bluetooth
-(Setup > Fallback: NTRIP corrections from the phone; switch on from Live or Tools > Corrections). This relies on the
-receiver accepting RTCM on that link: always true on the bottom (u-blox) USB port; through the ESP32 (upper port or
-Bluetooth) it depends on the ESPrtk configuration and is still to be confirmed on hardware.
+PocketGNSS can itself be the NTRIP client for the receiver: it connects to the caster over the **phone's mobile
+data**, sends the receiver's GGA position to the caster every 10 s (required by VRS / network services such as
+Metrica / HxGN SmartNet, which compute corrections for that position), and forwards the RTCM stream to the receiver
+over **Bluetooth or USB**. This gives the compact (Wi-Fi) version RTK anywhere with mobile coverage, without a
+router or hotspot, and serves the LTE version where its own SIM has no coverage.
+
+Set-up in the app:
+
+1. Setup > **NTRIP relay through the phone**: choose a **caster profile** or enter host, port, mountpoint, user and
+   password; set **Mountpoint: VRS / network** (sends GGA) or **Single base** (EUREF-IP / BKG stations, our own EOS
+   Arrow Gold base). **Save profile** under a name; profiles cover Metrica VRS, EUREF-IP, IGS-IP, the EOS base, etc.
+   Passwords are encrypted with a key in the phone's Android Keystore and never stored in plain text.
+2. Tools > Corrections > **Get mountpoints** lists the caster's sourcetable, nearest first; tap one to select it.
+3. Switch **NTRIP ON** (Live or Tools > Corrections). Live shows the relay state, data rate and seconds since the
+   last RTCM; the receiver's own GGA then reports the correction age and station, and the fix goes float, then fixed.
+   The relay reconnects by itself (5–30 s back-off) after a lost mobile connection.
+
+On the receiver side this relies on ESPrtk accepting RTCM on the link: the u-blox (bottom) USB port always does; over
+Bluetooth, D3.3 §4.7.14 configures "RTK Radio Over: Bluetooth Classic – BTU", the route ESPrtk uses for corrections
+over Bluetooth. Whether the default mode "5/17 NTRIP_Rover" (section 3) takes RTCM from Bluetooth while its own
+NTRIP client has no internet is still to be confirmed on the hardware.
 
 ## In the app
 
 * Choose the version once: Home (when not set) or Setup > Receiver web settings > Receiver version.
-* Live > Corrections shows the version and, when no corrections arrive, what to check for that version.
+* Live > Corrections shows the version and, when no corrections arrive, what to check for that version, and the
+  relay's state, data rate and age of the last RTCM.
 * Tools > Receiver settings shows the steps for the chosen version; Tools > Corrections explains the route.
 * The simulator follows the chosen version: LTE takes about a minute to RTK data and has occasional 16–25 s outages
   (about 95 % RTK availability); Wi-Fi gets corrections sooner with short, rarer drop-outs (about 99 %).

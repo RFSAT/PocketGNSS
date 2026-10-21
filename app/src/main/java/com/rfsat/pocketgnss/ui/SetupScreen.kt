@@ -20,6 +20,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -33,6 +35,8 @@ import com.rfsat.pocketgnss.core.GnssEngine
 import com.rfsat.pocketgnss.core.MockStatus
 import com.rfsat.pocketgnss.data.CoordFormat
 import com.rfsat.pocketgnss.data.HeightRef
+import com.rfsat.pocketgnss.data.CasterProfile
+import com.rfsat.pocketgnss.data.CasterProfiles
 import com.rfsat.pocketgnss.link.BluetoothSppLink
 import com.rfsat.pocketgnss.link.LinkKind
 import com.rfsat.pocketgnss.sim.SimMotion
@@ -106,12 +110,29 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
             }
         }
 
+        val noProfile = stringResource(R.string.ntrip_profile_none)
+        var profileName by remember(s.activeProfile) { mutableStateOf(s.activeProfile) }
         Section(stringResource(R.string.setup_ntrip)) {
             Text(stringResource(R.string.setup_ntrip_help), style = MaterialTheme.typography.bodySmall, color = muted)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ActionButton(onClick = { upd { it.copy(ntrip = it.ntrip.copy(host = "euref-ip.net", port = 2101)) } }, compact = true) { Text("EUREF-IP") }
-                ActionButton(onClick = { upd { it.copy(ntrip = it.ntrip.copy(host = "rtk2go.com", port = 2101)) } }, compact = true) { Text("RTK2go") }
+            // Caster profiles: saved accounts first, then public starting points.
+            val choices = s.profiles + CasterProfiles.presets.filter { p -> s.profiles.none { it.name == p.name } }
+            Picker(stringResource(R.string.ntrip_profile), listOf<CasterProfile?>(null) + choices,
+                choices.firstOrNull { it.name == s.activeProfile }, { it?.name ?: noProfile }, { p ->
+                    if (p != null) upd { it.copy(ntrip = p.config, activeProfile = p.name) } else upd { it.copy(activeProfile = "") }
+                })
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                TextSetting(stringResource(R.string.ntrip_profile_name), profileName, { profileName = it }, Modifier.weight(1f))
             }
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ActionButton(onClick = {
+                    val n = profileName.trim()
+                    if (n.isNotEmpty()) upd { st -> st.copy(profiles = st.profiles.filterNot { it.name == n } + CasterProfile(n, st.ntrip), activeProfile = n) }
+                }, compact = true, enabled = profileName.isNotBlank() && s.ntrip.host.isNotBlank()) { Text(stringResource(R.string.ntrip_profile_save)) }
+                ActionButton(onClick = { upd { st -> st.copy(profiles = st.profiles.filterNot { it.name == st.activeProfile }, activeProfile = "") } },
+                    compact = true, enabled = s.profiles.any { it.name == s.activeProfile }) { Text(stringResource(R.string.ntrip_profile_delete)) }
+            }
+            ChoiceRow(stringResource(R.string.ntrip_kind), listOf(true to stringResource(R.string.ntrip_kind_vrs), false to stringResource(R.string.ntrip_kind_single)),
+                s.ntrip.ggaIntervalSec > 0) { vrs -> upd { it.copy(ntrip = it.ntrip.copy(ggaIntervalSec = if (vrs) 10 else 0)) } }
             TextSetting(stringResource(R.string.ntrip_host), s.ntrip.host, { v -> upd { it.copy(ntrip = it.ntrip.copy(host = v)) } }, keyboard = KeyboardType.Uri)
             NumberField(stringResource(R.string.ntrip_port), s.ntrip.port.toDouble(), { v -> upd { it.copy(ntrip = it.ntrip.copy(port = v.toInt())) } }, Modifier.fillMaxWidth(), min = 1.0, max = 65535.0)
             TextSetting(stringResource(R.string.ntrip_mount), s.ntrip.mountpoint, { v -> upd { it.copy(ntrip = it.ntrip.copy(mountpoint = v)) } })

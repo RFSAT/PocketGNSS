@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.2.0 (build 10200)
+NTRIP relay through the phone: PocketGNSS fetches RTK corrections over the phone's mobile data, sends the receiver's position to the caster (needed by VRS services) and forwards the corrections over Bluetooth or USB, so the compact receiver gets RTK anywhere with mobile coverage. Caster profiles can be saved, passwords are encrypted on the phone, and Live shows how recent the corrections are.
+
 ## 1.1.1 (build 10101)
 More compact screens: details start right after their labels, the connection choices fit one row (BT for Bluetooth), display options and the Live correction buttons take one row each. The map opens at a zoom where all map layers have tiles, centres on the first position, and no longer zooms past the tiles when fitting a static track.
 
