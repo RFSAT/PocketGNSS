@@ -1,2 +1,16 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# Text files are stored with LF in the repository and kept with LF on checkout on every
+# computer, so Windows (core.autocrlf) and the Linux CI see the same files.
+* text=auto eol=lf
+
+# Windows batch scripts need CRLF.
+*.bat text eol=crlf
+
+# Binary files: never converted.
+*.png binary
+*.jpg binary
+*.jar binary
+*.zip binary
+*.mbtiles binary
+*.so binary
+*.jks binary
+*.keystore binary

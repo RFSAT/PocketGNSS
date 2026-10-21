@@ -115,6 +115,54 @@ object Rtcm {
 data class Geodetic(val latitude: Double, val longitude: Double, val height: Double)
 
 /** WGS-84 geodesy: geodetic <-> ECEF <-> local east/north/up, distances and bearings. */
+/** Frames of an RTCM 3 byte stream (a recorded base.rtcm3) and the observation epoch of MSM / legacy observation frames. */
+object RtcmFrames {
+    /** Whole frames (preamble to CRC) with a valid CRC, in order; bytes between frames are skipped. */
+    fun split(b: ByteArray): List<ByteArray> {
+        val out = ArrayList<ByteArray>()
+        var i = 0
+        while (i + 6 <= b.size) {
+            if ((b[i].toInt() and 0xFF) != Rtcm.PREAMBLE) { i++; continue }
+            val len = ((b[i + 1].toInt() and 0x03) shl 8) or (b[i + 2].toInt() and 0xFF)
+            val end = i + 3 + len + 3
+            if (end > b.size) break
+            val crc = ((b[end - 3].toInt() and 0xFF) shl 16) or ((b[end - 2].toInt() and 0xFF) shl 8) or (b[end - 1].toInt() and 0xFF)
+            if (Rtcm.crc24q(b, i, end - 3) == crc) { out.add(b.copyOfRange(i, end)); i = end } else i++
+        }
+        return out
+    }
+
+    fun type(frame: ByteArray): Int = Rtcm.bits(frame, 24, 12).toInt()
+
+    /**
+     * GPS time of week (ms) of an observation frame: MSM 1071-1137 and legacy 1001-1004 / 1009-1012; null for others
+     * (ephemerides, station data). GLONASS times need [nearTowMs] (the rover's time) to resolve the day.
+     */
+    fun epochTowMs(frame: ByteArray, nearTowMs: Long): Long? {
+        val t = type(frame)
+        val week = 604_800_000L
+        fun wrap(x: Long): Long { var v = x; while (v - nearTowMs > week / 2) v -= week; while (nearTowMs - v > week / 2) v += week; return v }
+        return when (t) {
+            in 1001..1004, in 1071..1077, in 1091..1097, in 1101..1107, in 1111..1117, in 1131..1137 -> wrap(Rtcm.bits(frame, 48, 30))
+            in 1121..1127 -> wrap(Rtcm.bits(frame, 48, 30) + 14_000)  // BDT = GPST - 14 s
+            in 1081..1087 -> {
+                // DF416 day of week (0 = Sunday, 7 = unknown) + DF034 time of day in Moscow time (UTC + 3 h)
+                val dow = Rtcm.bits(frame, 48, 3); val tod = Rtcm.bits(frame, 51, 27)
+                val utcTod = tod - 10_800_000L + 18_000L
+                if (dow < 7) wrap(dow * 86_400_000L + utcTod) else glonassNear(utcTod, nearTowMs)
+            }
+            in 1009..1012 -> glonassNear(Rtcm.bits(frame, 48, 27) - 10_800_000L + 18_000L, nearTowMs)
+            else -> null
+        }
+    }
+
+    private fun glonassNear(todMs: Long, nearTowMs: Long): Long {
+        val day = 86_400_000L
+        val base = Math.floorDiv(nearTowMs, day) * day
+        return listOf(base - day, base, base + day).map { it + todMs }.minByOrNull { kotlin.math.abs(it - nearTowMs) }!!
+    }
+}
+
 object Geo {
     const val A = 6378137.0
     const val F = 1 / 298.257223563
@@ -152,6 +200,17 @@ object Geo {
         val n = -Math.sin(la) * Math.cos(lo) * dx - Math.sin(la) * Math.sin(lo) * dy + Math.cos(la) * dz
         val u = Math.cos(la) * Math.cos(lo) * dx + Math.cos(la) * Math.sin(lo) * dy + Math.sin(la) * dz
         return doubleArrayOf(e, n, u)
+    }
+
+    /** Exact inverse of [enu] on the tangent plane (up = 0): latitude / longitude of the point at east / north from the reference. */
+    fun fromEnu(refLat: Double, refLon: Double, east: Double, north: Double): Pair<Double, Double> {
+        val r = geodeticToEcef(refLat, refLon, 0.0)
+        val la = Math.toRadians(refLat); val lo = Math.toRadians(refLon)
+        val x = r[0] - Math.sin(lo) * east - Math.sin(la) * Math.cos(lo) * north
+        val y = r[1] + Math.cos(lo) * east - Math.sin(la) * Math.sin(lo) * north
+        val z = r[2] + Math.cos(la) * north
+        val g = ecefToGeodetic(x, y, z)
+        return g.latitude to g.longitude
     }
 
     /** Point at east/north offsets (metres) from a reference (inverse of [enu] for small offsets, used by the simulator). */

@@ -101,6 +101,33 @@ class ScreenshotTest {
     @Test fun log() { simulatorAtFix(); engine.markPoint("P1"); shot("13_log", Tab.LOG) }
     @Test fun live_grid() { simulatorAtFix(); engine.store.update { it.copy(gridSystem = com.rfsat.pocketgnss.protocol.GridSystem.UTM) }; shot("02c_live_grid", Tab.LIVE) }
     @Test fun setup_grid() { simulatorAtFix(); engine.store.update { it.copy(gridSystem = com.rfsat.pocketgnss.protocol.GridSystem.UTM) }; shot("14f_setup_grid", Tab.SETUP, scrollTo = "Keep the screen on while connected") }
+    private fun demoFields() {
+        val f = engine.fix.value!!
+        val dLat = 1 / 111_000.0; val dLon = 1 / (111_320.0 * Math.cos(Math.toRadians(f.latitude)))
+        fun v(n: Double, e: Double) = com.rfsat.pocketgnss.data.Vertex(f.latitude + n * dLat, f.longitude + e * dLon)
+        val ring = listOf(v(-40.0, -60.0), v(-45.0, 150.0), v(120.0, 170.0), v(140.0, -50.0))
+        engine.importFile(com.rfsat.pocketgnss.data.Exporters.fieldsGeoJson(listOf(com.rfsat.pocketgnss.data.Field("North plot", ring, 0))).toByteArray(), "plots.geojson")
+        engine.fieldCapture.start(com.rfsat.pocketgnss.core.CaptureMode.CORNERS, FixQuality.RTK_FIXED, 1.0, 0)
+        for ((k, p) in listOf(v(-10.0, -10.0), v(-12.0, 60.0), v(30.0, 65.0)).withIndex()) {
+            engine.fieldCapture.onFix(p.latitude, p.longitude, 100.0, FixQuality.RTK_FIXED, 1000L * k); engine.fieldCapture.addCorner(1000L * k + 10)
+        }
+    }
+    @Test fun tool_field() { simulatorAtFix(); demoFields(); shot("07_tool_field", Tab.TOOLS, ToolId.FIELD) }
+    @Test fun tool_field_list() { simulatorAtFix(); demoFields(); engine.fieldCapture.cancel(); shot("07b_tool_field_list", Tab.TOOLS, ToolId.FIELD) }
+    @Test fun tool_guidance() {
+        simulatorAtFix()
+        val f = engine.fix.value!!
+        val a = com.rfsat.pocketgnss.protocol.Geo.offset(f.latitude, f.longitude, -40.0, 18.12)
+        val l = com.rfsat.pocketgnss.core.AbLine.fromBearing("Wheat 2026", a.first, a.second, 90.0, 6.0, 1)
+        engine.guidance.add(l); engine.guidance.activate(l)
+        Thread.sleep(1500)
+        shot("08_tool_guidance", Tab.TOOLS, ToolId.GUIDANCE)
+    }
+    @Test fun tool_guidance_setup() { simulatorAtFix(); shot("08b_tool_guidance_setup", Tab.TOOLS, ToolId.GUIDANCE) }
+    @Config(qualifiers = "el-" + PHONE) @Test fun live_greek() { simulatorAtFix(); shot("20_live_el", Tab.LIVE) }
+    @Config(qualifiers = "de-" + PHONE) @Test fun live_german() { simulatorAtFix(); shot("21_live_de", Tab.LIVE) }
+    @Config(qualifiers = "pl-" + PHONE) @Test fun field_polish() { simulatorAtFix(); demoFields(); engine.fieldCapture.cancel(); shot("22_field_pl", Tab.TOOLS, ToolId.FIELD) }
+    @Config(qualifiers = "fr-" + PHONE) @Test fun guide_french() { simulatorAtFix(); shot("23_guide_fr", Tab.TOOLS, ToolId.GUIDANCE) }
     @Test fun live_disconnect_row() { simulatorAtFix(); shot("02b_live_top", Tab.LIVE) }
     @Test fun setup() { simulatorAtFix(); shot("14_setup", Tab.SETUP) }
     @Test fun setup_relay() { simulatorAtFix(); engine.store.update { it.copy(ntrip = com.rfsat.pocketgnss.data.CasterProfiles.presets[0].config, activeProfile = com.rfsat.pocketgnss.data.CasterProfiles.presets[0].name) }; shot("14b_setup_relay", Tab.SETUP, scrollTo = "NTRIP relay through the phone") }

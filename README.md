@@ -20,7 +20,7 @@ Two hardware versions exist and the app supports both (Setup > Receiver version)
 In both, the receiver applies the corrections itself; the app reads the corrected position. How to set up each route,
 with the D3.5 timings and availability, is in **[docs/rtk-connectivity.md](docs/rtk-connectivity.md)**.
 
-RFSAT Limited. Version 1.7.0 (build 10700).
+RFSAT Limited. Version 1.10.0 (build 11000).
 
 ## Background: the AgriBIT project
 
@@ -61,9 +61,9 @@ agricultural GNSS enabled services*) are listed on the same CORDIS Results page.
 |---|---|
 | Home | Connection card with quick actions, receiver version (asked once if not set), receiver module (from UBX MON-VER), description, RFSAT / AgriBIT credits, Claude AI acknowledgement |
 | Live | Source name with a Disconnect button, fix banner coloured by fix type with accuracy (GST-measured or estimated), fix-loss alert strip, position (with grid easting / northing when a grid is chosen), height MSL / ellipsoid, satellites, DOP, speed, correction age and station, receiver version with what to check when no corrections arrive, per-constellation RTK mode (GNS), phone NTRIP status and base distance, NTRIP / Recording / Mark point buttons, sky plot and C/N0 bars |
-| Map | MapLibre with Street / Satellite / Terrain (same raster sources as DBM and PocketSpectro): position coloured by fix, track coloured by fix type, saved points with names, NTRIP base station, follow / recenter / fit / mark / clear |
-| Tools | Survey point · Stake out · Corrections (NTRIP) · Position history · Phone raw GNSS (RTK test) · NMEA output (UBX) · Receiver settings (web) · Time to fix · Data stream |
-| Log | Recording (raw NMEA + fixes CSV, minimum fix and interval), live NMEA viewer (filter by sentence type, pause, show more, copy, share the shown lines as .nmea; last 2000 sentences, nothing saved unless shared), saved points (KML / CSV / GeoJSON), sessions (NMEA / CSV / GPX / KML; phone raw sessions as RINEX / GnssLog / RTCM / ZIP; delete) |
+| Map | MapLibre with Street / Satellite / Terrain (same raster sources as DBM and PocketSpectro): position coloured by fix, track coloured by fix type, field boundaries with name and area, the boundary being captured, the A-B guidance passes, saved points with names, NTRIP base station, follow / recenter / fit / mark / clear |
+| Tools | Survey point · Stake out · Field boundary · A-B guidance · Corrections (NTRIP) · Position history · Phone raw GNSS (RTK test) · NMEA output (UBX) · Receiver settings (web) · Time to fix · Data stream |
+| Log | Recording (raw NMEA + fixes CSV, minimum fix and interval), live NMEA viewer (filter by sentence type, pause, show more, copy, share the shown lines as .nmea; last 2000 sentences, nothing saved unless shared), saved points (KML / CSV / GeoJSON / shapefile; import), fields (KML / GeoJSON / shapefile / CSV; import), sessions (NMEA / CSV / GPX / KML; phone raw sessions as RINEX / GnssLog / RTCM / ZIP; delete) |
 | Setup | Connection source and its options (Phone: Phone RTK on/off, moving or still), phone NTRIP caster, outputs (mock location, NMEA TCP server, phone as Bluetooth GNSS receiver), fix-loss alert, receiver ID and device number, display units and grid, simulator |
 | Exit | Confirms, stops recording, closes the link and outputs |
 
@@ -72,7 +72,28 @@ agricultural GNSS enabled services*) are listed on the same CORDIS Results page.
 * **Survey point**: averages fixes of at least a chosen fix type; mean position, σE/σN/σU, CEP50/CEP95, 2DRMS,
   largest deviation, scatter plot; with a known reference (e.g. the EOS Arrow Gold coordinate) also bias and RMS
   error, and a pass/fail against the AgriBIT static spec (D3.5 GNSS-test-03/04/05). Save as a named point.
-* **Stake out**: distance, east/north/up offsets and an arrow (north-up, or heading-up while moving) to a saved point.
+* **Stake out**: distance, east/north/up offsets and an arrow (north-up, or heading-up while moving) to a saved or
+  imported point (imported points with only a height above sea level are compared with the receiver's MSL height).
+* **Field boundary**: capture a field by walking / driving its edge (a vertex every 0.5–5 m, extra vertices at
+  corners, pause round obstacles; the walked line is simplified to 2 cm on saving) or corner by corner (each corner
+  averaged over 0–30 s). Only fixes of a chosen quality are used; the worst one is stored with the field. Area and
+  perimeter are computed in a Transverse Mercator projection centred on the field (within 2 ppm of the geodesic
+  values, checked against PROJ), crossing edges are flagged. Fields show on the map and export as KML, GeoJSON,
+  zipped shapefile (polygon, attributes NAME / AREA_HA / PERIM_M / VERTICES / QUALITY / DATE / NOTE) and a vertex CSV
+  with grid coordinates (`data/Fields.kt`, `core/FieldCapture.kt`, `data/Shapefile.kt`).
+* **A-B guidance**: straight parallel passes for spraying, spreading, sowing. The line is set from the current
+  position (A at the start of the first pass, B at its end), from saved / imported points, or from A and a bearing;
+  passes run one working width apart on both sides. A 15-segment lightbar ("chase the lights", 2–20 cm per segment)
+  and a large offset show which way to steer as seen in the direction of travel (it works driving A→B or B→A), with
+  the pass number, heading error, distance along the line and the area worked (width × distance driven on a pass).
+  The whole pattern can be shifted in 5 cm steps (e.g. onto last season's tramlines); an optional beep sounds when
+  off the line by 10–50 cm. Lines are saved; the map draws the current pass and its neighbours. Computed in the
+  local east / north plane at A (`core/Guidance.kt`, unit-tested to the millimetre).
+* **Import** (Log > Saved points, Tools > Field boundary): CSV (latitude / longitude, or easting / northing in the
+  grid chosen in Setup; header names in several EU languages, `;` with decimal commas), GeoJSON (its `crs` EPSG
+  code is honoured), KML (points, polygons, closed lines), GPX waypoints and zipped shapefiles (points and polygons;
+  the `.prj` is recognised for ETRS89 / WGS 84 UTM and the national grids above, holes are left out). Grid
+  coordinates are converted by inverting the projections (Newton iteration, sub-millimetre). `data/Importer.kt`.
 * **Corrections (NTRIP)**: three routes. The receiver's own ESPrtk NTRIP client, over Wi-Fi (both versions) or its
   SIM (LTE version), configured in its web settings (sections 4 and 7). Or the **NTRIP relay through the phone**:
   PocketGNSS connects over the phone's mobile data (v1 and v2/chunked, TLS), sends the receiver's GGA to the caster
@@ -161,6 +182,58 @@ corrections from a European RTK network, WGS 84 / ITRF without (about 0.9 m apar
 grid coordinates are as good as the fix. Grids needing a datum grid file (Netherlands RD, Czech / Slovak S-JTSK,
 Hungary EOV, Romania Stereo 70, UK OSGB36) are not included. A position outside the grid's area gets a warning.
 
+### Points: codes, notes, photos
+
+Survey point and Log > Saved points > Edit give each point a code / category (the codes used so far are offered as
+chips), a note and a photo taken with the camera app (stored with the points, no camera permission needed). Exports
+carry them: CSV and shapefile columns, GeoJSON properties, KML extended data, and a KMZ with the photos shown in the
+placemark balloons. Imports read `code` / `note` columns and properties back.
+
+### Session replay
+
+Log > Sessions > Replay plays a recorded session as the source (1×, 5×, 20× or as fast as possible), so Live, Map,
+the tools and the position history work on it; nothing is sent to the outputs as mock location. NMEA sessions play
+as recorded (paced by GGA / RMC time). Phone raw sessions (`raw.obs` + `base.rtcm3`) go through phone RTK again with
+the current settings: the RINEX is read back (`raw/RinexReader.kt`), and the base stream is fed up to each rover
+epoch by the epoch time of its MSM / legacy observation messages (`RtcmFrames`), so settings can be compared on the
+same field data. `ReplayTest` replays the RTKLIB two-station hour and must reach the same fix as the live engine.
+
+### Offline maps
+
+The map keeps the tiles you have viewed (50 MB – 2 GB, Setup > Offline maps) and shows them without a connection.
+The online base maps (OpenStreetMap, Esri, OpenTopoMap) do not allow bulk downloading, so there is no "download
+area" button; instead you can load your own raster MBTiles file (drone orthophoto, national orthophoto or topographic
+map exported from QGIS or `gdal_translate`), shown over the base map and fully offline (`ui/map/OwnMap.kt`,
+MapLibre's MBTiles source).
+
+### Ephemeris stream (phone RTK)
+
+Some casters send broadcast ephemerides only every few minutes, so phone RTK waits for orbits. Setup > Phone >
+Ephemeris stream opens a second NTRIP connection with the account of a saved caster profile (default mountpoint
+`BCEP00BKG0` on `igs-ip.net`, free with BKG registration) and feeds only its navigation messages to the engine
+(`prtk_input_rtcm_nav`), never base observations.
+
+### Local NTRIP caster
+
+Setup > NTRIP caster for other rovers serves the corrections the phone receives to other receivers on the same Wi-Fi
+or on the phone's hotspot (port 2101, one mountpoint, NTRIP 1 and 2 with chunked transfer, optional Basic login,
+password stored encrypted). Rovers' GGA is read and ignored. Many correction subscriptions allow one rover per
+account, and a relayed VRS stream is computed for the phone's position: the screen says so (`core/NtripCaster.kt`,
+tested on localhost).
+
+### Interface for your own apps
+
+A JSON line per position on TCP port 10111 (local or LAN) and a broadcast intent for Android apps holding the
+"dangerous" permission `com.PocketGNSS.permission.POSITION`. Fields and examples for MATLAB, Python and Kotlin in
+`docs/app-interface.md`.
+
+### Languages
+
+English, Greek, German, French, Spanish, Italian, Polish and Portuguese (European) in `res/values-*/strings.xml`,
+offered in Android's per-app language setting (`res/xml/locales_config.xml`). Placeholders are checked to match
+English; lint's MissingTranslation keeps every language complete. GNSS terms such as RTK fixed / float, mountpoint
+and caster follow common usage in each language; menu paths in the texts use the translated tab names.
+
 ### Outputs to other apps
 
 * **Mock location**: the receiver's position (ellipsoid height, accuracy, speed, bearing) becomes the phone's GPS
@@ -175,17 +248,20 @@ With a real receiver, recording, NTRIP, mock location and the NMEA server keep r
 ## Code layout
 
 ```
-protocol/   Grid (UTM, LAEA, national grids), Nmea (NMEA 4.10/4.11 incl. signal IDs), Ubx (CFG-VALSET/VALGET/RST, MON-VER, F9 keys), Rtcm (CRC-24Q,
+protocol/   Grid (UTM, LAEA, national grids, inverse, EPSG / WKT recognition), Nmea (NMEA 4.10/4.11 incl. signal IDs), Ubx (CFG-VALSET/VALGET/RST, MON-VER, F9 keys), Rtcm (CRC-24Q,
             1005/1006, WGS-84 geodesy), Ntrip (requests, replies, sourcetable, dechunker), StreamSplitter (NMEA/UBX/RTCM)
 core/       GnssModel (epoch assembly, satellites), Statistics (CEP, 2DRMS, TTFF, rates), GnssEngine (link, parsing,
             UBX requests, recording, survey, TTFF), NtripClient, Outputs (MockLocation, NmeaServer), LinkService,
-            History (position history), BtServer (Bluetooth NMEA server), Alerts (fix-loss alert)
+            History (position history), BtServer (Bluetooth NMEA server), Alerts (fix-loss alert), FieldCapture,
+            Guidance (A-B lines), NtripCaster (local caster, JSON position)
 link/       GnssLink, UsbSerialLink (usb-serial-for-android), BluetoothSppLink, TcpLink, SimulatedLink
 sim/        SimReceiver
+link/       ReplayLink (NMEA and phone raw replays)
 rtk/        RtkNative (JNI), PhoneRtk (options, solution, rover arrays, FixGate, phone profile and tuning); native engine in src/main/cpp (prtk.c over RTKLIB)
 raw/        RawConvert (GnssClock/GnssMeasurement -> pseudorange, phase, Doppler, RINEX codes), Rinex (3.04 obs writer),
             GnssLog (GnssLogger "Raw," format), RawAnalyzer (phone RTK capability verdict), PhoneRawLogger (Android side)
-data/       AppSettings (SharedPreferences StateFlow), Records (points CSV, session recorder, KML/GPX/GeoJSON/CSV)
+data/       AppSettings (SharedPreferences StateFlow), Records (points CSV, session recorder, KML/GPX/GeoJSON/CSV), Fields
+            (boundaries, area), Shapefile (writer), Importer (CSV/GeoJSON/KML/GPX/shapefile)
 ui/         Compose screens; Buttons/Controls shared with PocketSpectro (bordered buttons, green ON / red OFF)
 ```
 

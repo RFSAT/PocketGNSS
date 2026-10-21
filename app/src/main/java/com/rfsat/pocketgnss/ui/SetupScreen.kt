@@ -111,9 +111,11 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
                         if (s.phoneRtk) ChoiceRow(stringResource(R.string.setup_phone_rtk_mode), listOf(false to stringResource(R.string.setup_phone_rtk_moving),
                             true to stringResource(R.string.setup_phone_rtk_static)), s.phoneRtkStatic) { v -> upd { it.copy(phoneRtkStatic = v) } }
                         if (s.phoneRtk) PhoneProfileRows(engine)
+                        if (s.phoneRtk) EphStreamRows(engine)
                         Text(stringResource(R.string.setup_phone_rtk_apply), style = MaterialTheme.typography.bodySmall, color = muted)
                     }
                 }
+                LinkKind.REPLAY -> {}
                 LinkKind.SIMULATOR -> {
                     ChoiceRow(stringResource(R.string.sim_motion), listOf(SimMotion.STATIC to stringResource(R.string.sim_static),
                         SimMotion.SWATHS to stringResource(R.string.sim_swaths)), s.simMotion) { v -> upd { it.copy(simMotion = v) } }
@@ -206,6 +208,8 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
             SwitchRow(stringResource(R.string.out_server_local), s.nmeaServerLocalOnly, { v -> upd { it.copy(nmeaServerLocalOnly = v, nmeaServer = false) } },
                 stringResource(R.string.out_server_local_help))
         }
+        CasterSection(engine)
+        AppInterfaceSection(engine)
 
         Section(stringResource(R.string.setup_receiver)) {
             Text(stringResource(R.string.setup_variant), fontWeight = FontWeight.SemiBold)
@@ -236,6 +240,7 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
                 HeightRef.ELLIPSOID to stringResource(R.string.disp_ellipsoid)), s.heightRef) { v -> upd { it.copy(heightRef = v) } }
             SwitchRow(stringResource(R.string.disp_screen_on), s.keepScreenOn, { v -> upd { it.copy(keepScreenOn = v) } })
         }
+        OfflineMapsSection(engine)
     }
 }
 
@@ -256,5 +261,69 @@ private fun PhoneProfileRows(engine: GnssEngine) {
         KeyValue(stringResource(R.string.setup_phone_learned), stringResource(R.string.setup_phone_learned_value, p.epochs / 60.0, p.meanPhaseSats,
             p.fixableShare * 100, p.slipsPerSatMin))
         ActionButton(onClick = { engine.store.update { it.copy(phoneProfile = "") } }, compact = true) { Text(stringResource(R.string.setup_phone_forget)) }
+    }
+}
+
+/** Phone RTK: broadcast ephemerides from a second caster stream (BKG's BCEP00BKG0 by default). */
+@Composable
+private fun EphStreamRows(engine: GnssEngine) {
+    val s by engine.store.settings.collectAsState()
+    val st by engine.ephClient.ntrip.collectAsState()
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    SwitchRow(stringResource(R.string.eph_switch), s.ephStream, { v -> engine.store.update { it.copy(ephStream = v) } }, stringResource(R.string.eph_help))
+    if (s.ephStream) {
+        val names = s.profiles.map { it.name }
+        if (names.isEmpty()) Text(stringResource(R.string.eph_no_profile), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+        else Picker(stringResource(R.string.eph_profile), listOf("") + names, s.ephProfile.takeIf { it in names } ?: "", { it.ifEmpty { "—" } },
+            { v -> engine.store.update { it.copy(ephProfile = v) }; engine.updateEphStream() })
+        TextSetting(stringResource(R.string.eph_mount), s.ephMount, { v -> engine.store.update { it.copy(ephMount = v.trim()) }; engine.updateEphStream() })
+        if (st.status != com.rfsat.pocketgnss.core.NtripStatus.OFF) Text(stringResource(R.string.eph_status, stringResource(ntripStatusLabel(st.status)),
+            st.message), style = MaterialTheme.typography.bodySmall, color = if (st.status == com.rfsat.pocketgnss.core.NtripStatus.ERROR) AlarmRed else muted)
+    }
+}
+
+/** Setup: local NTRIP caster for other rovers on the same Wi-Fi or the phone's hotspot. */
+@Composable
+private fun CasterSection(engine: GnssEngine) {
+    val s by engine.store.settings.collectAsState()
+    val st by engine.caster.state.collectAsState()
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    fun upd(f: (com.rfsat.pocketgnss.data.AppSettings) -> com.rfsat.pocketgnss.data.AppSettings) = engine.store.update(f)
+    Section(stringResource(R.string.caster_title)) {
+        Text(stringResource(R.string.caster_help), style = MaterialTheme.typography.bodySmall, color = muted)
+        SwitchRow(stringResource(R.string.caster_switch), s.casterOn, { v -> upd { it.copy(casterOn = v) } })
+        NumberField(stringResource(R.string.caster_port), s.casterPort.toDouble(), { v -> upd { it.copy(casterPort = v.toInt(), casterOn = false) } },
+            Modifier.fillMaxWidth(), min = 1024.0, max = 65535.0)
+        TextSetting(stringResource(R.string.caster_mount), s.casterMount, { v -> upd { it.copy(casterMount = v.trim().ifEmpty { "POCKETGNSS" }, casterOn = false) } })
+        TextSetting(stringResource(R.string.caster_user), s.casterUser, { v -> upd { it.copy(casterUser = v.trim(), casterOn = false) } })
+        TextSetting(stringResource(R.string.caster_pass), s.casterPass, { v -> upd { it.copy(casterPass = v, casterOn = false) } }, password = true)
+        if (st.running) {
+            val addrs = com.rfsat.pocketgnss.core.NtripCaster.addresses()
+            Text(stringResource(R.string.caster_running, addrs.joinToString(", ").ifEmpty { "—" }, st.port, s.casterMount), color = SafeGreen,
+                style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.caster_clients, st.clients.size, st.clients.joinToString(", "), st.bytes / 1024.0), style = MaterialTheme.typography.bodySmall, color = muted)
+            val ntrip by engine.ntripClient.ntrip.collectAsState()
+            if (ntrip.status != com.rfsat.pocketgnss.core.NtripStatus.STREAMING) Text(stringResource(R.string.caster_no_source), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+        }
+        st.error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = AlarmRed) }
+        Text(stringResource(R.string.caster_terms), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+    }
+}
+
+/** Setup: JSON position stream and broadcast for the user's own apps. */
+@Composable
+private fun AppInterfaceSection(engine: GnssEngine) {
+    val s by engine.store.settings.collectAsState()
+    val clients by engine.jsonServer.clientCount.collectAsState()
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    fun upd(f: (com.rfsat.pocketgnss.data.AppSettings) -> com.rfsat.pocketgnss.data.AppSettings) = engine.store.update(f)
+    Section(stringResource(R.string.api_title)) {
+        Text(stringResource(R.string.api_help), style = MaterialTheme.typography.bodySmall, color = muted)
+        SwitchRow(stringResource(R.string.api_json), s.apiJson, { v -> upd { it.copy(apiJson = v) } },
+            stringResource(R.string.api_json_help, if (s.apiJsonLocalOnly) "127.0.0.1" else "0.0.0.0", s.apiJsonPort, clients))
+        NumberField(stringResource(R.string.out_server_port), s.apiJsonPort.toDouble(), { v -> upd { it.copy(apiJsonPort = v.toInt(), apiJson = false) } },
+            Modifier.fillMaxWidth(), min = 1024.0, max = 65535.0)
+        SwitchRow(stringResource(R.string.out_server_local), s.apiJsonLocalOnly, { v -> upd { it.copy(apiJsonLocalOnly = v, apiJson = false) } })
+        SwitchRow(stringResource(R.string.api_broadcast), s.apiBroadcast, { v -> upd { it.copy(apiBroadcast = v) } }, stringResource(R.string.api_broadcast_help))
     }
 }

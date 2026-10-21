@@ -18,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Agriculture
 import androidx.compose.material.icons.filled.CellTower
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Language
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.SatelliteAlt
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Tune
@@ -72,6 +74,8 @@ import kotlin.math.sqrt
 enum class ToolId(@StringRes val title: Int, @StringRes val summary: Int, val icon: ImageVector) {
     SURVEY(R.string.tool_survey, R.string.tool_survey_sum, Icons.Filled.MyLocation),
     STAKEOUT(R.string.tool_stakeout, R.string.tool_stakeout_sum, Icons.Filled.Navigation),
+    FIELD(R.string.tool_field, R.string.tool_field_sum, Icons.Filled.Agriculture),
+    GUIDANCE(R.string.tool_guide, R.string.tool_guide_sum, Icons.Filled.Straighten),
     CORRECTIONS(R.string.tool_corrections, R.string.tool_corrections_sum, Icons.Filled.CellTower),
     HISTORY(R.string.tool_history, R.string.tool_history_sum, Icons.Filled.History),
     RAW(R.string.tool_raw, R.string.tool_raw_sum, Icons.Filled.SatelliteAlt),
@@ -115,6 +119,8 @@ fun ToolsTab(engine: GnssEngine, initialTool: ToolId? = null) {
         when (open) {
             ToolId.SURVEY -> SurveyTool(engine)
             ToolId.STAKEOUT -> StakeoutTool(engine)
+            ToolId.FIELD -> FieldTool(engine)
+            ToolId.GUIDANCE -> GuidanceTool(engine)
             ToolId.CORRECTIONS -> CorrectionsTool(engine)
             ToolId.RAW -> RawTool(engine)
             ToolId.HISTORY -> HistoryTool(engine)
@@ -145,6 +151,9 @@ private fun SurveyTool(engine: GnssEngine) = NeedsReceiver(engine) {
     val s by engine.store.settings.collectAsState()
     var minQ by remember { mutableStateOf(sv.minQuality) }
     var name by remember { mutableStateOf(engine.nextPointName()) }
+    var code by rememberSaveable { mutableStateOf("") }
+    var note by rememberSaveable { mutableStateOf("") }
+    var photo by rememberSaveable { mutableStateOf("") }
     var refLat by remember { mutableStateOf(sv.reference?.latitude?.toString() ?: "") }
     var refLon by remember { mutableStateOf(sv.reference?.longitude?.toString() ?: "") }
     var refH by remember { mutableStateOf(sv.reference?.height?.toString() ?: "") }
@@ -211,16 +220,19 @@ private fun SurveyTool(engine: GnssEngine) = NeedsReceiver(engine) {
             }
             if (points.isNotEmpty()) {
                 Picker(stringResource(R.string.survey_ref_from_point), listOf<SurveyPoint?>(null) + points, null, { it?.name ?: "—" }, { p ->
-                    if (p != null) { refLat = "%.10f".format(Locale.US, p.latitude); refLon = "%.10f".format(Locale.US, p.longitude); refH = "%.4f".format(Locale.US, p.heightEllipsoid)
-                        engine.setSurveyReference(Reference(p.latitude, p.longitude, p.heightEllipsoid)) }
+                    if (p != null) { refLat = "%.10f".format(Locale.US, p.latitude); refLon = "%.10f".format(Locale.US, p.longitude); refH = if (p.heightEllipsoid.isNaN()) "" else "%.4f".format(Locale.US, p.heightEllipsoid)
+                        engine.setSurveyReference(Reference(p.latitude, p.longitude, if (p.heightEllipsoid.isNaN()) 0.0 else p.heightEllipsoid)) }
                 })
             }
         }
 
         Section(stringResource(R.string.survey_save)) {
             TextSetting(stringResource(R.string.survey_name), name, { name = it })
+            PointAttributes(engine, code, { code = it }, note, { note = it }, photo, { photo = it }, name)
             ActionButton(onClick = {
-                engine.saveSurveyPoint(name.ifBlank { engine.nextPointName() })?.let { engine.toast(it.name); name = engine.nextPointName() }
+                engine.saveSurveyPoint(name.ifBlank { engine.nextPointName() }, note.trim(), code.trim(), photo)?.let {
+                    engine.toast(it.name); name = engine.nextPointName(); note = ""; photo = ""
+                }
             }, enabled = sv.stats != null, emphasis = true) { Text(stringResource(R.string.survey_save_btn)) }
         }
     }
@@ -273,7 +285,14 @@ private fun StakeoutTool(engine: GnssEngine) = NeedsReceiver(engine) {
         }
         val f = fix
         if (f == null || target == null) { Text(stringResource(R.string.top_no_fix), Modifier.padding(16.dp), color = muted); return@Column }
-        val enu = Geo.enu(f.latitude, f.longitude, f.ellipsoidHeight ?: 0.0, target.latitude, target.longitude, target.heightEllipsoid)
+        val enu = Geo.enu(f.latitude, f.longitude, f.ellipsoidHeight ?: 0.0, target.latitude, target.longitude,
+            if (target.heightEllipsoid.isNaN()) f.ellipsoidHeight ?: 0.0 else target.heightEllipsoid)
+        // Imported points may carry only a height above sea level: compare it with the receiver's.
+        val up: Double? = when {
+            !target.heightEllipsoid.isNaN() && f.ellipsoidHeight != null -> enu[2]
+            target.heightMsl != null && f.altitudeMsl != null -> target.heightMsl - f.altitudeMsl
+            else -> null
+        }
         val dist = sqrt(enu[0] * enu[0] + enu[1] * enu[1])
         val brg = Geo.bearing(f.latitude, f.longitude, target.latitude, target.longitude)
         val moving = (f.speedMs ?: 0.0) > 0.4 && f.courseDeg != null
@@ -289,7 +308,7 @@ private fun StakeoutTool(engine: GnssEngine) = NeedsReceiver(engine) {
         Section(stringResource(R.string.stake_offsets)) {
             KeyValue(stringResource(R.string.stake_east), formatOffset(enu[0]), live = true)
             KeyValue(stringResource(R.string.stake_north), formatOffset(enu[1]), live = true)
-            KeyValue(stringResource(R.string.stake_up), formatOffset(enu[2]), live = true)
+            KeyValue(stringResource(R.string.stake_up), up?.let { formatOffset(it) } ?: "—", live = true)
             KeyValue(stringResource(R.string.stake_bearing), "%.1f°".format(Locale.US, brg), live = true)
             KeyValue(stringResource(R.string.live_fix), stringResource(fixLabel(f.quality)) + " " + formatAccuracy(f.horizontalAccuracy), live = true, valueColor = fixColor(f.quality))
         }

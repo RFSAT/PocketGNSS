@@ -9,6 +9,13 @@
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
     <!-- Bluetooth Classic (SPP) link to the receiver's "BTU-ESPrtk" adapter. Paired devices only: no scanning. -->
+    <!-- App interface: other apps that declare and are granted this permission receive the position broadcast. -->
+    <permission
+        android:name="com.PocketGNSS.permission.POSITION"
+        android:description="@string/perm_position_desc"
+        android:label="@string/perm_position_label"
+        android:protectionLevel="dangerous" />
+
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
@@ -38,6 +45,7 @@
     <application
         android:name=".GnssApp"
         android:allowBackup="false"
+        android:localeConfig="@xml/locales_config"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
         android:label="${appLabel}"

@@ -142,7 +142,7 @@ fun CorrectionsTool(engine: GnssEngine) {
             Text(stringResource(variantRoute(s.receiverVariant)), style = MaterialTheme.typography.bodySmall, color = muted)
             if (s.receiverVariant == com.rfsat.pocketgnss.link.ReceiverVariant.WIFI) HotspotButton()
             KeyValue(stringResource(R.string.corr_caster), if (s.ntrip.host.isBlank()) "—" else "${s.ntrip.host}:${s.ntrip.port}/${s.ntrip.mountpoint}")
-            KeyValue(stringResource(R.string.corr_state), n.status.name.lowercase() + (if (n.message.isNotEmpty()) " · ${n.message}" else ""), live = true,
+            KeyValue(stringResource(R.string.corr_state), stringResource(ntripStatusLabel(n.status)) + (if (n.message.isNotEmpty()) " · ${n.message}" else ""), live = true,
                 valueColor = when (n.status) { NtripStatus.STREAMING -> SafeGreen; NtripStatus.ERROR -> AlarmRed; NtripStatus.OFF -> androidx.compose.ui.graphics.Color.Unspecified; else -> WarnAmber })
             KeyValue(stringResource(R.string.corr_data), stringResource(R.string.corr_data_value, n.bytes / 1024.0, n.bytesPerSec, n.frames, n.badFrames), live = true)
             if (n.lastDataMs > 0) KeyValue(stringResource(R.string.corr_last), "%.1f s".format(Locale.US, (System.currentTimeMillis() - n.lastDataMs) / 1000.0), live = true)

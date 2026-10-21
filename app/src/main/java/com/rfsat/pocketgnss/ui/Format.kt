@@ -110,3 +110,11 @@ fun formatDuration(sec: Double): String {
     val s = sec.toLong()
     return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, (s / 60) % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
 }
+
+@StringRes fun ntripStatusLabel(s: com.rfsat.pocketgnss.core.NtripStatus): Int = when (s) {
+    com.rfsat.pocketgnss.core.NtripStatus.OFF -> R.string.ntrip_st_off
+    com.rfsat.pocketgnss.core.NtripStatus.CONNECTING -> R.string.ntrip_st_connecting
+    com.rfsat.pocketgnss.core.NtripStatus.STREAMING -> R.string.ntrip_st_streaming
+    com.rfsat.pocketgnss.core.NtripStatus.WAITING -> R.string.ntrip_st_waiting
+    com.rfsat.pocketgnss.core.NtripStatus.ERROR -> R.string.ntrip_st_error
+}

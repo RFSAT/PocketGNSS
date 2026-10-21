@@ -44,18 +44,33 @@ fun MapScreen(engine: GnssEngine) {
     val fix by engine.fix.collectAsState()
     val track by engine.track.collectAsState()
     val points by engine.points.collectAsState()
+    val fields by engine.fields.collectAsState()
+    val cap by engine.fieldCapture.state.collectAsState()
+    val guide by engine.guidance.state.collectAsState()
+    val guideLines = guide.line?.let { l -> guide.solution?.let { com.rfsat.pocketgnss.core.Guidance.mapLines(l, it) } } ?: emptyList()
     val ntrip by engine.ntripClient.ntrip.collectAsState()
     var fitKey by remember { mutableIntStateOf(0) }
     var recenterKey by remember { mutableIntStateOf(0) }
     var follow by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf<SurveyPoint?>(null) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(s.tileCacheMb) {
+        try {
+            org.maplibre.android.MapLibre.getInstance(context)
+            org.maplibre.android.offline.OfflineManager.getInstance(context).setMaximumAmbientCacheSize(s.tileCacheMb * 1_000_000L,
+                object : org.maplibre.android.offline.OfflineManager.FileSourceCallback { override fun onSuccess() {}; override fun onError(message: String) {} })
+        } catch (_: Throwable) {}
+    }
 
     Box(Modifier.fillMaxSize()) {
         RtkMap(s.mapLayer, track, points, fix, ntrip.base?.geodetic, selected, follow, fitKey, recenterKey,
-            onPointTap = { selected = it }, modifier = Modifier.fillMaxSize())
+            onPointTap = { selected = it }, modifier = Modifier.fillMaxSize(), fields = fields, capture = cap.vertices, guide = guideLines,
+            ownMap = s.ownMap.takeIf { s.ownMapOn && it.isNotBlank() && java.io.File(it).isFile })
 
         Row(Modifier.align(Alignment.TopStart).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             for (l in MapLayer.entries) ChoiceChip(s.mapLayer == l, stringResource(l.label), { engine.store.update { it.copy(mapLayer = l) } },
+                container = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
+            if (s.ownMap.isNotBlank()) ChoiceChip(s.ownMapOn, stringResource(R.string.map_own), { engine.store.update { it.copy(ownMapOn = !it.ownMapOn) } },
                 container = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
         }
         Column(Modifier.align(Alignment.CenterEnd).padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

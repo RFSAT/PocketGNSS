@@ -177,6 +177,7 @@ class MainActivity : ComponentActivity() {
         val s = engine.store.value
         when (s.source) {
             LinkKind.SIMULATOR -> engine.connectSimulator()
+            LinkKind.REPLAY -> {}
             LinkKind.PHONE -> {
                 if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) engine.connectPhone()
                 else phonePermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -278,11 +279,11 @@ internal fun AppRoot(
             NavigationBar {
                 Tab.entries.forEach { t ->
                     NavigationBarItem(selected = tab == t, onClick = { tabName = t.name }, icon = { Icon(t.icon, stringResource(t.label)) },
-                        label = { Text(stringResource(t.label), fontSize = 10.sp, maxLines = 1, softWrap = false) })
+                        label = { FitText(stringResource(t.label), fontSize = 10.sp) })
                 }
                 NavigationBarItem(selected = false, onClick = { confirmExit = true },
                     icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, stringResource(R.string.tab_exit)) },
-                    label = { Text(stringResource(R.string.tab_exit), fontSize = 10.sp, maxLines = 1) })
+                    label = { FitText(stringResource(R.string.tab_exit), fontSize = 10.sp) })
             }
         },
         snackbarHost = { SnackbarHost(snack) },

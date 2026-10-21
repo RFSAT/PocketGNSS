@@ -82,10 +82,10 @@ class GridTest {
     @Test fun pointsCsvHasGridColumns() {
         val pt = com.rfsat.pocketgnss.data.SurveyPoint("P1", 52.23, 21.01, 120.0, 90.0, 0.01, 0.01, 0.02, 60, com.rfsat.pocketgnss.protocol.FixQuality.RTK_FIXED, 0L)
         val plain = com.rfsat.pocketgnss.data.Exporters.pointsCsv(listOf(pt)).lines()
-        assertEquals(11, plain[0].split(',').size)
+        assertEquals(14, plain[0].split(',').size)
         val csv = com.rfsat.pocketgnss.data.Exporters.pointsCsv(listOf(pt), GridSystem.PL_CS92).lines()
         assertTrue(csv[0].endsWith(",grid,easting_m,northing_m"))
         val f = csv[1].split(',')
-        assertEquals("\"PL-1992\"", f[11]); assertEquals(637231.090, f[12].toDouble(), 0.002); assertEquals(486786.394, f[13].toDouble(), 0.002)
+        assertEquals("\"PL-1992\"", f[14]); assertEquals(637231.090, f[15].toDouble(), 0.002); assertEquals(486786.394, f[16].toDouble(), 0.002)
     }
 }

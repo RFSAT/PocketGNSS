@@ -7,6 +7,15 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.10.0 (build 11000)
+Now in Greek, German, French, Spanish, Italian, Polish and Portuguese. Points take a code, a note and a photo (KMZ export). Replay recorded sessions, also phone raw sessions through phone RTK. Offline maps: viewed tiles are kept and your own MBTiles map works without signal. Phone RTK can use a second ephemeris stream. Relay corrections to other rovers with a local NTRIP caster, and read the position from your own apps (JSON stream, broadcast).
+
+## 1.9.0 (build 10900)
+New A-B guidance tool: set a line by driving the first pass, from saved points or with a bearing, enter the implement width and follow parallel passes with a lightbar showing which way to steer and by how much, the pass number and heading error. Shift the passes to match existing tramlines, beep when off line, and see the passes on the map. Lines are saved for the next season.
+
+## 1.8.0 (build 10800)
+New Field boundary tool: walk or drive round a field, or mark its corners, to get its area and perimeter; fields show on the map and export as KML, GeoJSON, shapefile or CSV. Import points and boundaries from CSV, GeoJSON, KML, GPX or zipped shapefiles (parcels from your paying agency or GIS, also in national grids) and stake out the imported points. Points export as shapefiles too.
+
 ## 1.7.0 (build 10700)
 Phone RTK reports a fix only once it has held for several seconds, and learns over a few sessions how well this phone tracks carrier phase to tune itself. New fix-loss alert: sound, vibration and a notification when the fix drops or corrections stop. Grid coordinates on Live, Survey and in the points CSV: UTM across Europe and worldwide, ETRS89-LAEA and the national grids of many EU Member States.
 

@@ -113,6 +113,11 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     val track: StateFlow<List<TrackPoint>> = _track.asStateFlow()
     private val _points = MutableStateFlow<List<SurveyPoint>>(emptyList())
     val points: StateFlow<List<SurveyPoint>> = _points.asStateFlow()
+    private val _fields = MutableStateFlow<List<com.rfsat.pocketgnss.data.Field>>(emptyList())
+    /** Field boundaries (Tools > Field boundary), captured or imported. */
+    val fields: StateFlow<List<com.rfsat.pocketgnss.data.Field>> = _fields.asStateFlow()
+    /** Boundary capture in progress. */
+    val fieldCapture = FieldCapture()
     private val _survey = MutableStateFlow(SurveyState())
     val survey: StateFlow<SurveyState> = _survey.asStateFlow()
     private val _ttff = MutableStateFlow(TtffState())
@@ -120,7 +125,25 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 8)
     val messages: SharedFlow<String> = _messages.asSharedFlow()
 
-    val ntripClient = NtripClient(scope, forward = { writeRaw(it); raw.onRtcm(it) }, gga = { ggaForCaster() })
+    val ntripClient = NtripClient(scope, forward = { writeRaw(it); raw.onRtcm(it); caster.send(it) }, gga = { ggaForCaster() })
+    /** Local NTRIP caster for other rovers (Setup > Outputs). */
+    val caster = NtripCaster()
+    /** App interface: JSON position lines on TCP (Setup > Outputs). */
+    val jsonServer = NmeaServer()
+    private var lastBroadcastMs = 0L
+    /** Phone RTK: a second caster stream with broadcast ephemerides only (Setup > Phone > Ephemeris stream). */
+    val ephClient = NtripClient(scope, forward = { com.rfsat.pocketgnss.link.PhoneRtkLink.current?.writeNav(it) }, gga = { null })
+
+    /** Starts or stops the ephemeris stream to match the settings and the link. */
+    fun updateEphStream() {
+        val s = store.value
+        val want = s.ephStream && linkInfo?.let { it.phoneRtk && it.kind == LinkKind.PHONE } == true
+        val p = s.profiles.firstOrNull { it.name == s.ephProfile }
+        if (want && p != null && s.ephMount.isNotBlank()) {
+            val cfg = p.config.copy(mountpoint = s.ephMount.trim(), ggaIntervalSec = 0)
+            if (!ephClient.running || ephClient.ntrip.value.mountpoint != cfg.mountpoint) ephClient.start(cfg)
+        } else if (ephClient.running) ephClient.stop()
+    }
     /** The phone's raw GNSS measurements: capability test and RINEX / RTCM recording (Tools > Phone raw GNSS). */
     val raw: com.rfsat.pocketgnss.raw.PhoneRawLogger by lazy {
         com.rfsat.pocketgnss.raw.PhoneRawLogger(context, sessionsRoot) { on -> setRtcmCapture(on) }
@@ -144,6 +167,10 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     /** Last positions with method and accuracy (Tools > Position history), optionally logged to CSV. */
     val history = SolutionHistory(sessionsRoot)
     private val pointStore = PointStore(File(File(context.getExternalFilesDir(null) ?: context.filesDir, "points"), "points.csv"))
+    /** A-B guidance (Tools > A-B guidance): saved lines and the active one. */
+    val guidance = GuidanceSession(File(File(context.getExternalFilesDir(null) ?: context.filesDir, "points"), "guidance.csv"))
+    private var lastGuideBeep = 0L
+    private val fieldStore = com.rfsat.pocketgnss.data.FieldStore(File(File(context.getExternalFilesDir(null) ?: context.filesDir, "points"), "fields.csv"))
 
     @Volatile private var link: GnssLink? = null
     private var readerJob: Job? = null
@@ -173,6 +200,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
 
     init {
         _points.value = pointStore.load()
+        _fields.value = fieldStore.load()
         scope.launch {
             while (isActive) {
                 delay(300)
@@ -183,8 +211,13 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         scope.launch {
             store.settings.collect { s ->
                 simulator?.configure(s.simConfig)
+                guidance.warnAt = s.guideWarn
+                if (s.ephStream != ephClient.running) updateEphStream()
                 if (s.mockLocation) { if (mock.status.value == MockStatus.OFF) mock.start() } else mock.stop()
                 if (s.nmeaServer) { if (!server.running) server.start(s.nmeaServerPort, s.nmeaServerLocalOnly) } else if (server.running) server.stop()
+                if (s.casterOn) { if (!caster.running || caster.state.value.port != s.casterPort) caster.start(s.casterPort, s.casterMount, s.casterUser, s.casterPass) }
+                else if (caster.running) caster.stop()
+                if (s.apiJson) { if (!jsonServer.running) jsonServer.start(s.apiJsonPort, s.apiJsonLocalOnly) } else if (jsonServer.running) jsonServer.stop()
                 if (s.btServer) { if (!btServer.running) btServer.start() } else if (btServer.running || btServer.state.value.status != BtServerStatus.OFF) btServer.stop()
             }
         }
@@ -203,6 +236,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     }
 
     private fun closeLink() {
+        if (ephClient.running) ephClient.stop()
         readerJob?.cancel(); readerJob = null
         link?.close(); link = null
         for (w in waiters) w.second.cancel()
@@ -261,6 +295,18 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         }
     }
 
+    /** Plays a recorded session back as the source (NMEA sessions as they were; phone raw sessions through phone RTK). */
+    fun replay(dir: File, speed: Double) {
+        val s = store.value
+        open(context.getString(R.string.replay_opening, dir.name)) {
+            if (dir.name.startsWith("raw_")) {
+                val base = com.rfsat.pocketgnss.rtk.RtkOptions(
+                    mode = if (s.phoneRtkStatic) com.rfsat.pocketgnss.rtk.RtkMode.STATIC else com.rfsat.pocketgnss.rtk.RtkMode.KINEMATIC)
+                com.rfsat.pocketgnss.link.RawReplayLink(dir, if (s.phoneRtkAuto) com.rfsat.pocketgnss.rtk.PhoneTuning.tune(base, currentPhoneProfile()) else base, speed)
+            } else com.rfsat.pocketgnss.link.NmeaReplayLink(File(dir, "raw.nmea"), speed)
+        }
+    }
+
     fun connectSimulator() {
         open(context.getString(R.string.conn_opening_sim)) { SimulatedLink(store.value.simConfig) }
     }
@@ -303,6 +349,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
             pollVersion()
         }
         if (store.value.ntripEnabled && l.info.writable && !ntripClient.running) ntripClient.start(store.value.ntrip)
+        updateEphStream()
     }
 
     private suspend fun readLoop(l: GnssLink) {
@@ -350,7 +397,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         _fix.value = f
         recordHistory(f, now)
         // Mock location from the phone's own chip would only feed the phone its own position back.
-        if (link?.info?.kind != LinkKind.PHONE) mock.push(f)
+        if (link?.info?.kind != LinkKind.PHONE && link?.info?.kind != LinkKind.REPLAY) mock.push(f)
         onFix(f, now)
     }
 
@@ -411,6 +458,12 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
                 if (trackBuf.size > 7200) trackBuf.subList(0, 1200).clear()
             }
             lastTrackMs = now
+        }
+        fieldCapture.onFix(f.latitude, f.longitude, f.ellipsoidHeight, f.quality, now)
+        appInterface(f, st, now)
+        if (guidance.state.value.line != null) {
+            guidance.onFix(f.latitude, f.longitude, f.courseDeg?.takeIf { (f.speedMs ?: 0.0) > 0.5 })
+            if (guidance.state.value.offLine && now - lastGuideBeep > 1500) { lastGuideBeep = now; alerter.beep() }
         }
         // Survey averaging.
         val sv = _survey.value
@@ -588,11 +641,11 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     }
 
     /** Saves the averaged survey as a named point. */
-    fun saveSurveyPoint(name: String, note: String = ""): SurveyPoint? {
+    fun saveSurveyPoint(name: String, note: String = "", code: String = "", photo: String = ""): SurveyPoint? {
         val sv = _survey.value
         val s = sv.stats ?: return null
         val p = SurveyPoint(name, s.meanLatitude, s.meanLongitude, s.meanHeight, sv.meanMsl, s.sdEast, s.sdNorth, s.sdUp, s.count,
-            sv.minQuality, System.currentTimeMillis(), note)
+            sv.minQuality, System.currentTimeMillis(), note, code, photo)
         pointStore.add(p); _points.value = pointStore.load()
         return p
     }
@@ -607,7 +660,82 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         return p
     }
 
-    fun deletePoint(p: SurveyPoint) { pointStore.remove(p); _points.value = pointStore.load() }
+    fun deletePoint(p: SurveyPoint) {
+        pointStore.remove(p); _points.value = pointStore.load()
+        if (p.photo.isNotBlank() && _points.value.none { it.photo == p.photo }) File(photoDir, p.photo).delete()
+    }
+
+    /** Replaces a point's name and attributes (same position and time). */
+    fun updatePoint(old: SurveyPoint, new: SurveyPoint) {
+        pointStore.save(pointStore.load().map { if (it.name == old.name && it.timeMs == old.timeMs) new else it }); _points.value = pointStore.load()
+        if (old.photo.isNotBlank() && old.photo != new.photo && _points.value.none { it.photo == old.photo }) File(photoDir, old.photo).delete()
+    }
+
+    /** Photos of points (points/photos), shared through the FileProvider. */
+    val photoDir: File get() = File(File(context.getExternalFilesDir(null) ?: context.filesDir, "points"), "photos").apply { mkdirs() }
+
+    /** A new, empty photo file name for the camera. */
+    fun newPhotoFile(prefix: String): File = File(photoDir, prefix.replace(Regex("[^A-Za-z0-9_-]"), "_").take(30) + "_" + System.currentTimeMillis() + ".jpg")
+
+    /** Codes used so far, most frequent first (offered when naming points). */
+    fun recentCodes(): List<String> = _points.value.map { it.code }.filter { it.isNotBlank() }.groupingBy { it }.eachCount()
+        .entries.sortedByDescending { it.value }.map { it.key }.take(8)
+
+    /** JSON stream and broadcast for the user's own apps (docs/app-interface.md). */
+    private fun appInterface(f: GnssFix, st: com.rfsat.pocketgnss.data.AppSettings, now: Long) {
+        caster.position = f.latitude to f.longitude
+        if (!jsonServer.running && !st.apiBroadcast) return
+        val method = if (link?.info?.phoneRtk == true) com.rfsat.pocketgnss.link.PhoneRtkLink.state.value.source.ifEmpty { null } else null
+        if (jsonServer.running) jsonServer.send(PositionJson.of(f, com.rfsat.pocketgnss.protocol.Grid.of(st.gridSystem, f.latitude, f.longitude, f.ellipsoidHeight, st.utmZone), method))
+        if (st.apiBroadcast && now - lastBroadcastMs >= 200) {
+            lastBroadcastMs = now
+            val i = android.content.Intent(ACTION_POSITION).putExtra("lat", f.latitude).putExtra("lon", f.longitude)
+                .putExtra("fix", f.quality.name).putExtra("gga_quality", f.quality.code).putExtra("h_acc", f.horizontalAccuracy).putExtra("v_acc", f.verticalAccuracy)
+                .putExtra("time_ms", now)
+            f.ellipsoidHeight?.let { i.putExtra("h_ell", it) }; f.altitudeMsl?.let { i.putExtra("h_msl", it) }
+            f.speedMs?.let { i.putExtra("speed", it) }; f.courseDeg?.let { i.putExtra("course", it) }
+            f.diffAgeSec?.let { i.putExtra("age", it) }; f.satellitesUsed?.let { i.putExtra("sats", it) }
+            method?.let { i.putExtra("method", it) }
+            try { context.sendBroadcast(i, PERMISSION_POSITION) } catch (_: Exception) {}
+        }
+    }
+
+    // ---------------------------------------------------------------- fields and import
+
+    /** Ends the boundary capture and saves it; null when it has fewer than 3 vertices. */
+    fun finishField(name: String, note: String = ""): com.rfsat.pocketgnss.data.Field? {
+        val (v, worst) = fieldCapture.finish()
+        if (v.size < 3) return null
+        val f = com.rfsat.pocketgnss.data.Field(name, v, System.currentTimeMillis(), worst, note)
+        fieldStore.add(f); _fields.value = fieldStore.load()
+        return f
+    }
+
+    fun deleteField(f: com.rfsat.pocketgnss.data.Field) { fieldStore.remove(f); _fields.value = fieldStore.load() }
+    fun renameField(f: com.rfsat.pocketgnss.data.Field, name: String) { fieldStore.rename(f, name); _fields.value = fieldStore.load() }
+
+    fun nextFieldName(): String {
+        val used = _fields.value.map { it.name }.toSet()
+        var i = _fields.value.size + 1
+        while ("F$i" in used) i++
+        return "F$i"
+    }
+
+    /**
+     * Imports points and boundaries from a file (CSV, GeoJSON, KML, GPX, zipped shapefile). Grid coordinates without a
+     * named grid use the one chosen in Setup (UTM: its fixed zone, else the zone of the current position).
+     */
+    fun importFile(bytes: ByteArray, name: String): com.rfsat.pocketgnss.data.ImportResult {
+        val st = store.value
+        val f = _fix.value
+        val zone = if (st.utmZone in 1..60) st.utmZone else f?.let { com.rfsat.pocketgnss.protocol.Grid.utmZone(it.longitude) } ?: 0
+        val ref = com.rfsat.pocketgnss.protocol.GridRef(st.gridSystem, zone, (f?.latitude ?: 1.0) < 0)
+            .takeIf { st.gridSystem != com.rfsat.pocketgnss.protocol.GridSystem.NONE }
+        val r = com.rfsat.pocketgnss.data.Importer(ref, System.currentTimeMillis(), name).read(bytes)
+        if (r.points.isNotEmpty()) { pointStore.save(pointStore.load() + r.points); _points.value = pointStore.load() }
+        if (r.fields.isNotEmpty()) { fieldStore.addAll(r.fields); _fields.value = fieldStore.load() }
+        return r
+    }
 
     fun nextPointName(prefix: String = "P"): String {
         val used = _points.value.map { it.name }.toSet()
@@ -636,7 +764,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         val s = store.value
         if (raw.state.value.recording) return true
         return connection.value is Connection.Ready && simulator == null &&
-            (recording.value.active || ntripClient.running || s.mockLocation || s.nmeaServer || (s.btServer && btServer.running))
+            (recording.value.active || ntripClient.running || s.mockLocation || s.nmeaServer || (s.btServer && btServer.running) || s.casterOn || s.apiJson || s.apiBroadcast)
     }
 
     /** Stops background activity (notification "Stop" action). */
@@ -650,9 +778,15 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     fun shutdown() {
         history.stopFile()
         if (raw.state.value.running) raw.stop()
-        stopRecording(); ntripClient.stop(); mock.stop(); server.stop(); btServer.stop()
+        stopRecording(); ntripClient.stop(); ephClient.stop(); caster.stop(); jsonServer.stop(); mock.stop(); server.stop(); btServer.stop()
         disconnect()
     }
 
     fun close() { shutdown(); scope.cancel() }
+
+    companion object {
+        /** Broadcast of each position (at most 5 per second) to apps holding [PERMISSION_POSITION]. */
+        const val ACTION_POSITION = "com.PocketGNSS.action.POSITION"
+        const val PERMISSION_POSITION = "com.PocketGNSS.permission.POSITION"
+    }
 }

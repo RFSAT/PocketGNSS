@@ -16,6 +16,9 @@ import kotlin.math.tan
 /** Plane (grid) coordinates: easting and northing in metres, with a label such as "ETRS89 / UTM 34N". */
 data class GridPoint(val easting: Double, val northing: Double, val label: String)
 
+/** A grid with its UTM zone and hemisphere (for [GridSystem.UTM]). */
+data class GridRef(val system: GridSystem, val utmZone: Int = 0, val south: Boolean = false)
+
 /** Where a grid is meant to be used (degrees); outside it the app still computes but warns. */
 data class GridArea(val latMin: Double, val latMax: Double, val lonMin: Double, val lonMax: Double) {
     fun contains(lat: Double, lon: Double) = lat in latMin..latMax && lon in lonMin..lonMax
@@ -173,6 +176,82 @@ object Grid {
             GridSystem.SE_SWEREF99TM -> g(transverseMercator(latDeg, lonDeg, 15.0, 0.9996, 500000.0, 0.0))
             GridSystem.SI_D96TM -> g(transverseMercator(latDeg, lonDeg, 15.0, 0.9999, 500000.0, -5000000.0))
         }
+    }
+
+    /**
+     * Grid to latitude / longitude: Newton iteration on the forward projection (numerical Jacobian), to well under
+     * a millimetre in a few steps for every grid here. [utmZone] (1..60) and [south] are needed for UTM.
+     * Returns null when the zone is missing or the iteration does not converge (coordinates far outside the grid).
+     */
+    fun inverse(system: GridSystem, easting: Double, northing: Double, utmZone: Int = 0, south: Boolean = false): Pair<Double, Double>? {
+        if (system == GridSystem.NONE) return null
+        if (system == GridSystem.UTM && utmZone !in 1..60) return null
+        fun fwd(la: Double, lo: Double): Pair<Double, Double>? = when (system) {
+            GridSystem.UTM -> utmFixed(la, lo, utmZone, south)
+            else -> of(system, la, lo, 0.0)?.let { it.easting to it.northing }
+        }
+        var lat: Double; var lon: Double
+        if (system == GridSystem.UTM) {
+            lat = ((northing - if (south) 10_000_000.0 else 0.0) / 110_950.0).coerceIn(-80.0, 84.0)
+            lon = utmZone * 6 - 183.0 + (easting - 500_000.0) / (111_320.0 * cos(Math.toRadians(lat)))
+        } else {
+            val a = system.area!!
+            lat = (a.latMin + a.latMax) / 2; lon = (a.lonMin + a.lonMax) / 2
+        }
+        val d = 1e-6
+        repeat(40) {
+            val f0 = fwd(lat, lon) ?: return null
+            val de = easting - f0.first; val dn = northing - f0.second
+            if (kotlin.math.abs(de) < 1e-5 && kotlin.math.abs(dn) < 1e-5) return lat to lon
+            val fl = fwd(lat + d, lon)!!; val fo = fwd(lat, lon + d)!!
+            val j11 = (fo.first - f0.first) / d; val j12 = (fl.first - f0.first) / d   // dE/dlon, dE/dlat
+            val j21 = (fo.second - f0.second) / d; val j22 = (fl.second - f0.second) / d // dN/dlon, dN/dlat
+            val det = j11 * j22 - j12 * j21
+            if (det == 0.0 || det.isNaN()) return null
+            val dLon = (de * j22 - dn * j12) / det
+            val dLat = (dn * j11 - de * j21) / det
+            lat = (lat + dLat.coerceIn(-5.0, 5.0)).coerceIn(-89.9, 89.9); lon += dLon.coerceIn(-5.0, 5.0)
+        }
+        return null
+    }
+
+    private fun utmFixed(latDeg: Double, lonDeg: Double, zone: Int, south: Boolean): Pair<Double, Double> =
+        transverseMercator(latDeg, lonDeg, zone * 6 - 183.0, 0.9996, 500000.0, if (south) 10_000_000.0 else 0.0)
+
+    /** A grid named by an EPSG code: ETRS89 / UTM (258zz), WGS 84 / UTM (326zz, 327zz), or one of [GridSystem]. Geographic codes give NONE. */
+    fun fromEpsg(code: Int): GridRef? = when (code) {
+        4326, 4258, 4937, 4979, 4936, 4978, 7789, 9000 -> GridRef(GridSystem.NONE)
+        in 25801..25860 -> GridRef(GridSystem.UTM, code - 25800)
+        in 32601..32660 -> GridRef(GridSystem.UTM, code - 32600)
+        in 32701..32760 -> GridRef(GridSystem.UTM, code - 32700, south = true)
+        else -> GridSystem.entries.firstOrNull { it.epsg == code }?.let { GridRef(it) }
+    }
+
+    /**
+     * The grid of a coordinate system written as WKT (a shapefile's .prj): geographic systems give NONE; projected ones
+     * are matched by their EPSG code or name (UTM zones, the national grids here). Null when not recognised.
+     */
+    fun fromWkt(wkt: String): GridRef? {
+        val w = wkt.trim()
+        if (w.startsWith("GEOGCS") || w.startsWith("GEOGCRS") || w.startsWith("GEODCRS")) return GridRef(GridSystem.NONE)
+        // The outermost AUTHORITY / ID is the last one in the text.
+        Regex("""(?:AUTHORITY|ID)\[\s*"EPSG"\s*,\s*"?(\d+)"?\s*]""").findAll(w).lastOrNull()?.let { m ->
+            fromEpsg(m.groupValues[1].toInt())?.let { return it }
+        }
+        val name = Regex("""^\w+\[\s*"([^"]*)"""").find(w)?.groupValues?.get(1)?.lowercase()?.replace('_', ' ') ?: w.lowercase()
+        Regex("""utm zone (\d{1,2})\s*([ns])?""").find(name)?.let { m ->
+            return GridRef(GridSystem.UTM, m.groupValues[1].toInt(), south = m.groupValues[2] == "s")
+        }
+        val byName = listOf(
+            "lambert-93" to GridSystem.FR_LAMBERT93, "lambert 93" to GridSystem.FR_LAMBERT93, "irish transverse mercator" to GridSystem.IE_ITM,
+            "irenet95" to GridSystem.IE_ITM, "cs92" to GridSystem.PL_CS92, "1992" to GridSystem.PL_CS92, "pt-tm06" to GridSystem.PT_TM06,
+            "tm06" to GridSystem.PT_TM06, "lambert 2008" to GridSystem.BE_LAMBERT2008, "sweref99 tm" to GridSystem.SE_SWEREF99TM,
+            "sweref 99 tm" to GridSystem.SE_SWEREF99TM, "tm35fin" to GridSystem.FI_TM35FIN, "lest97" to GridSystem.EE_LEST97,
+            "l-est97" to GridSystem.EE_LEST97, "lks92" to GridSystem.LV_LKS92, "lks-92" to GridSystem.LV_LKS92, "lks94" to GridSystem.LT_LKS94,
+            "htrs96" to GridSystem.HR_HTRS96TM, "d96" to GridSystem.SI_D96TM, "laea" to GridSystem.LAEA_EU, "tm07" to GridSystem.GR_TM07,
+            "ggrs87" to GridSystem.GR_EGSA87, "greek grid" to GridSystem.GR_EGSA87,
+        )
+        return byName.firstOrNull { name.contains(it.first) }?.let { GridRef(it.second) }
     }
 
     /** ECEF to latitude / longitude (degrees) on an ellipsoid (Bowring, iterated; sub-millimetre). */

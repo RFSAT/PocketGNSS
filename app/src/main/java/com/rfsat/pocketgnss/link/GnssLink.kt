@@ -6,7 +6,9 @@ import java.io.IOException
  * Where the position comes from. [PHONE] is the phone's own GNSS chip: Android's location, or with the phone RTK engine
  * its raw measurements processed together with a caster's corrections (PhoneRtkLink).
  */
-enum class LinkKind { USB, BLUETOOTH, TCP, PHONE, SIMULATOR }
+enum class LinkKind { USB, BLUETOOTH, TCP, PHONE, SIMULATOR,
+    /** A recorded session played back (Log > sessions > Replay); never a Setup choice. */
+    REPLAY }
 
 /**
  * Hardware versions of the RFSAT receiver (D3.3 §4.6). Both run ESPrtk on the ESP32 and fetch RTK corrections with

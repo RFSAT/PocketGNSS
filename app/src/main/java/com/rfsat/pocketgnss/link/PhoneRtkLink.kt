@@ -166,17 +166,7 @@ class PhoneRtkLink private constructor(
     }
 
     private fun emitSolution(s: RtkSolution, base: RtkBase) {
-        val now = System.currentTimeMillis()
-        // GPS time of the solution -> UTC milliseconds for the NMEA time fields.
-        val leap = 18_000L
-        val utcMs = (s.week * 604_800_000L + (s.tow * 1000).toLong()) + GPS_EPOCH_MS - leap
-        val differential = s.status == RtkStatus.FIX || s.status == RtkStatus.FLOAT || s.status == RtkStatus.DGPS
-        val fix = PhoneFix(timeMs = utcMs, latitude = s.latitude, longitude = s.longitude, altitude = s.height,
-            altitudeMsl = s.height - s.geoid, accuracy = kotlin.math.hypot(s.stdEast, s.stdNorth).toFloat(), verticalAccuracy = s.stdUp.toFloat(),
-            speed = s.speed.toFloat(), bearing = s.courseDeg?.toFloat(), quality = s.status.ggaQuality,
-            diffAgeSec = if (differential) s.age else null, stationId = if (differential) base.stationId else null,
-            stdEast = s.stdEast, stdNorth = s.stdNorth, stdUp = s.stdUp, satellitesUsed = s.satellites)
-        if (emit(fix, now)) _state.value = _state.value.copy(source = methodName(s.status))
+        if (emit(fixOf(s, base), System.currentTimeMillis())) _state.value = _state.value.copy(source = methodName(s.status))
     }
 
     private fun emitLocation(l: Location) {
@@ -213,6 +203,12 @@ class PhoneRtkLink private constructor(
         synchronized(engineLock) { RtkNative.inputRtcm(data, 0, data.size) }
     }
 
+    /** Broadcast ephemerides from a second caster stream (e.g. BKG's BCEP00BKG0): orbits only, never base data. */
+    fun writeNav(data: ByteArray) {
+        if (closed) return
+        synchronized(engineLock) { RtkNative.inputRtcmNav(data, 0, data.size) }
+    }
+
     override fun close() {
         if (closed) return
         closed = true
@@ -239,6 +235,26 @@ class PhoneRtkLink private constructor(
             RtkStatus.SINGLE -> "Single (RTKLIB)"
             RtkStatus.NONE -> "none"
         }
+
+        /** The NMEA position of an engine solution (GGA quality, GST from the filter, correction age and station). */
+        fun fixOf(s: RtkSolution, base: RtkBase): PhoneFix {
+            // GPS time of the solution -> UTC milliseconds for the NMEA time fields.
+            val leap = 18_000L
+            val utcMs = (s.week * 604_800_000L + (s.tow * 1000).toLong()) + GPS_EPOCH_MS - leap
+            val differential = s.status == RtkStatus.FIX || s.status == RtkStatus.FLOAT || s.status == RtkStatus.DGPS
+            return PhoneFix(timeMs = utcMs, latitude = s.latitude, longitude = s.longitude, altitude = s.height,
+                altitudeMsl = s.height - s.geoid, accuracy = kotlin.math.hypot(s.stdEast, s.stdNorth).toFloat(), verticalAccuracy = s.stdUp.toFloat(),
+                speed = s.speed.toFloat(), bearing = s.courseDeg?.toFloat(), quality = s.status.ggaQuality,
+                diffAgeSec = if (differential) s.age else null, stationId = if (differential) base.stationId else null,
+                stdEast = s.stdEast, stdNorth = s.stdNorth, stdUp = s.stdUp, satellitesUsed = s.satellites)
+        }
+
+        /** One NMEA epoch (bytes) for a solution, without satellites in view (session replay). */
+        fun nmea(s: RtkSolution, base: RtkBase): ByteArray =
+            PhoneNmea.epoch(fixOf(s, base), emptyList()).joinToString("") { it + "\r\n" }.toByteArray(Charsets.US_ASCII)
+
+        /** Lets a session replay show its engine state where phone RTK shows it. */
+        fun publish(st: PhoneRtkState) { shared.value = st }
 
         /** 6 Jan 1980 00:00:00 UTC in Unix milliseconds. */
         private const val GPS_EPOCH_MS = 315_964_800_000L

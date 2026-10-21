@@ -44,11 +44,15 @@ fun LogScreen(engine: GnssEngine) {
     val rec by engine.recording.collectAsState()
     val s by engine.store.settings.collectAsState()
     val points by engine.points.collectAsState()
+    val importFile = rememberImport(engine)
     var version by remember { mutableIntStateOf(0) }
     val rawSt by engine.raw.state.collectAsState()
     val sessions = remember(version, rec.active, rawSt.recording) { engine.sessions() }
     var confirmDelete by remember { mutableStateOf<File?>(null) }
     var confirmPoint by remember { mutableStateOf<SurveyPoint?>(null) }
+    var editPoint by remember { mutableStateOf<SurveyPoint?>(null) }
+    var replaySpeed by remember { mutableStateOf(5.0) }
+    editPoint?.let { p -> PointEditDialog(engine, p) { editPoint = null } }
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val any = stringResource(R.string.log_any_fix)
     val qualityLabels = logQualities.associateWith { if (it == FixQuality.NONE) any else stringResource(R.string.survey_at_least, stringResource(fixLabel(it))) }
@@ -87,9 +91,16 @@ fun LogScreen(engine: GnssEngine) {
         }
 
         Section(stringResource(R.string.log_points, points.size)) {
+            ActionButton(onClick = importFile, compact = true) { Text(stringResource(R.string.import_button)) }
+            Text(stringResource(R.string.import_help), style = MaterialTheme.typography.bodySmall, color = muted)
             if (points.isEmpty()) Text(stringResource(R.string.log_no_points), style = MaterialTheme.typography.bodySmall, color = muted)
             else {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ActionButton(onClick = { share(context, exportBytes(context, "points_shp.zip", Exporters.pointsShapefile(points, s.gridSystem, s.utmZone)), "application/zip") },
+                        compact = true) { Text("SHP") }
+                    if (points.any { it.photo.isNotBlank() }) ActionButton(onClick = {
+                        share(context, exportBytes(context, "points.kmz", Exporters.pointsKmz(points, engine.photoDir)), "application/vnd.google-earth.kmz")
+                    }, compact = true) { Text("KMZ") }
                     ActionButton(onClick = { share(context, export(context, "points.kml", Exporters.pointsKml(points)), "application/vnd.google-earth.kml+xml") }, compact = true) { Text("KML") }
                     ActionButton(onClick = { share(context, export(context, "points.csv", Exporters.pointsCsv(points, s.gridSystem, s.utmZone)), "text/csv") }, compact = true) { Text("CSV") }
                     ActionButton(onClick = { share(context, export(context, "points.geojson", Exporters.pointsGeoJson(points)), "application/geo+json") }, compact = true) { Text("GeoJSON") }
@@ -97,18 +108,33 @@ fun LogScreen(engine: GnssEngine) {
                 for (p in points.reversed()) {
                     Row(Modifier.fillMaxWidth()) {
                         Column(Modifier.weight(1f)) {
-                            Text(p.name, fontWeight = FontWeight.SemiBold)
-                            Text("%.8f, %.8f · %s · σH %s · n=%d".format(Locale.US, p.latitude, p.longitude, stringResource(fixLabel(p.quality)),
+                            Text(p.name + (if (p.code.isNotBlank()) "  ·  " + p.code else "") + (if (p.photo.isNotBlank()) "  📷" else ""), fontWeight = FontWeight.SemiBold)
+                            if (p.note.isNotBlank() && p.samples > 0) Text(p.note, style = MaterialTheme.typography.bodySmall)
+                            Text(if (p.samples == 0) "%.8f, %.8f · %s".format(Locale.US, p.latitude, p.longitude, p.note)
+                                else "%.8f, %.8f · %s · σH %s · n=%d".format(Locale.US, p.latitude, p.longitude, stringResource(fixLabel(p.quality)),
                                 formatDistance(kotlin.math.sqrt(p.sdEast * p.sdEast + p.sdNorth * p.sdNorth)), p.samples),
                                 style = MaterialTheme.typography.bodySmall, color = muted)
                         }
-                        ActionButton(onClick = { confirmPoint = p }, compact = true) { Text(stringResource(R.string.action_delete)) }
+                        Column(horizontalAlignment = androidx.compose.ui.Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            ActionButton(onClick = { editPoint = p }, compact = true) { Text(stringResource(R.string.point_edit_short)) }
+                            ActionButton(onClick = { confirmPoint = p }, compact = true) { Text(stringResource(R.string.action_delete)) }
+                        }
                     }
                 }
             }
         }
 
+        FieldExports(engine)
+
         Section(stringResource(R.string.log_sessions, sessions.size)) {
+            val rp by com.rfsat.pocketgnss.link.Replay.flow.collectAsState()
+            ChoiceRow(stringResource(R.string.log_replay_speed), com.rfsat.pocketgnss.link.Replay.speeds.map { v ->
+                v to (if (v <= 0) stringResource(R.string.log_replay_max) else "%.0f×".format(Locale.US, v)) }, replaySpeed) { replaySpeed = it }
+            if (rp.active) {
+                Text(stringResource(R.string.log_replay_running, rp.name, rp.done, rp.total), color = SafeGreen, fontWeight = FontWeight.SemiBold)
+                ActionButton(onClick = { engine.disconnect() }, compact = true) { Text(stringResource(R.string.log_replay_stop)) }
+            }
+            Text(stringResource(R.string.log_replay_help), style = MaterialTheme.typography.bodySmall, color = muted)
             if (sessions.isEmpty()) Text(stringResource(R.string.log_no_sessions), style = MaterialTheme.typography.bodySmall, color = muted)
             for (d in sessions) {
                 if (d.name.startsWith("history_")) {
@@ -125,7 +151,7 @@ fun LogScreen(engine: GnssEngine) {
                     continue
                 }
                 if (d.name.startsWith("raw_")) {
-                    RawSessionRow(d, live = rawSt.recording && rawSt.dir == d, onDelete = { confirmDelete = d })
+                    RawSessionRow(d, live = rawSt.recording && rawSt.dir == d, onDelete = { confirmDelete = d }, onReplay = { engine.replay(d, replaySpeed) })
                     HorizontalDivider()
                     continue
                 }
@@ -140,6 +166,7 @@ fun LogScreen(engine: GnssEngine) {
                         compact = true, enabled = csv.exists()) { Text("GPX") }
                     ActionButton(onClick = { share(context, export(context, d.name + ".kml", Exporters.trackKml(engine.sessionTrack(d), d.name)), "application/vnd.google-earth.kml+xml") },
                         compact = true, enabled = csv.exists()) { Text("KML") }
+                    ActionButton(onClick = { engine.replay(d, replaySpeed) }, compact = true, enabled = !live && raw.length() > 0) { Text(stringResource(R.string.log_replay)) }
                     ActionButton(onClick = { confirmDelete = d }, compact = true, enabled = !live) { Text(stringResource(R.string.action_delete)) }
                 }
                 HorizontalDivider()
@@ -149,22 +176,9 @@ fun LogScreen(engine: GnssEngine) {
 }
 
 
-private fun export(context: Context, name: String, text: String): File {
-    val dir = File(context.cacheDir, "exports").apply { mkdirs() }
-    return File(dir, name).apply { writeText(text) }
-}
-
-private fun share(context: Context, file: File, mime: String) {
-    try {
-        val uri = FileProvider.getUriForFile(context, context.packageName + ".files", file)
-        context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, uri)
-            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), file.name))
-    } catch (_: Exception) {}
-}
-
 /** A phone raw GNSS session: RINEX observations, GnssLogger text and the caster's RTCM, shared one by one or zipped. */
 @Composable
-private fun RawSessionRow(d: File, live: Boolean, onDelete: () -> Unit) {
+private fun RawSessionRow(d: File, live: Boolean, onDelete: () -> Unit, onReplay: () -> Unit) {
     val context = LocalContext.current
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val scope = rememberCoroutineScope()
@@ -184,6 +198,9 @@ private fun RawSessionRow(d: File, live: Boolean, onDelete: () -> Unit) {
                 share(context, z, "application/zip")
             }
         }, compact = true, enabled = !live) { Text("ZIP") }
+        ActionButton(onClick = onReplay, compact = true, enabled = !live && obs.length() > 0 && com.rfsat.pocketgnss.link.PhoneRtkLink.engineAvailable) {
+            Text(stringResource(R.string.log_replay))
+        }
         ActionButton(onClick = onDelete, compact = true, enabled = !live) { Text(stringResource(R.string.action_delete)) }
     }
 }

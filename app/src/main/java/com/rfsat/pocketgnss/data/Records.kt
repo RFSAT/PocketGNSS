@@ -25,6 +25,10 @@ data class SurveyPoint(
     val quality: FixQuality,
     val timeMs: Long,
     val note: String = "",
+    /** Attribute code / category (e.g. "tree", "drain", "sample"). */
+    val code: String = "",
+    /** Photo file name in the points/photos folder ("" = none). */
+    val photo: String = "",
 )
 
 /** One row of a session's fixes.csv, read back for the map track and exports. */
@@ -43,7 +47,8 @@ class PointStore(private val file: File) {
             val f = l.split(';')
             if (f.size < 11) null else try {
                 SurveyPoint(f[0], f[1].toDouble(), f[2].toDouble(), f[3].toDouble(), f[4].toDoubleOrNull(), f[5].toDouble(), f[6].toDouble(),
-                    f[7].toDouble(), f[8].toInt(), FixQuality.entries.firstOrNull { it.name == f[9] } ?: FixQuality.NONE, f[10].toLong(), f.getOrElse(11) { "" })
+                    f[7].toDouble(), f[8].toInt(), FixQuality.entries.firstOrNull { it.name == f[9] } ?: FixQuality.NONE, f[10].toLong(), f.getOrElse(11) { "" },
+                    f.getOrElse(12) { "" }, f.getOrElse(13) { "" })
             } catch (_: NumberFormatException) { null }
         }
     }
@@ -51,11 +56,11 @@ class PointStore(private val file: File) {
     @Synchronized fun save(list: List<SurveyPoint>) {
         file.parentFile?.mkdirs()
         file.bufferedWriter().use { w ->
-            w.write("name;lat;lon;h_ell;h_msl;sd_e;sd_n;sd_u;samples;quality;time_ms;note\n")
+            w.write("name;lat;lon;h_ell;h_msl;sd_e;sd_n;sd_u;samples;quality;time_ms;note;code;photo\n")
             for (p in list) w.write(listOf(esc(p.name), "%.10f".format(Locale.US, p.latitude), "%.10f".format(Locale.US, p.longitude),
                 "%.4f".format(Locale.US, p.heightEllipsoid), p.heightMsl?.let { "%.4f".format(Locale.US, it) } ?: "",
                 "%.4f".format(Locale.US, p.sdEast), "%.4f".format(Locale.US, p.sdNorth), "%.4f".format(Locale.US, p.sdUp),
-                p.samples, p.quality.name, p.timeMs, esc(p.note)).joinToString(";") + "\n")
+                p.samples, p.quality.name, p.timeMs, esc(p.note), esc(p.code), esc(p.photo)).joinToString(";") + "\n")
         }
     }
 
@@ -65,13 +70,17 @@ class PointStore(private val file: File) {
 
 /** Exports to the formats the AgriBIT users asked for (D3.5 Table 1: KML, SHP...) plus GPX, CSV and GeoJSON. */
 object Exporters {
-    fun pointsKml(points: List<SurveyPoint>, title: String = "PocketGNSS points"): String = buildString {
+    fun pointsKml(points: List<SurveyPoint>, title: String = "PocketGNSS points", photos: Boolean = false): String = buildString {
         append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<kml xmlns=\"http://www.opengis.net/kml/2.2\"><Document><name>").append(xml(title)).append("</name>\n")
         for (p in points) {
             append("<Placemark><name>").append(xml(p.name)).append("</name><description>")
-            append(xml("%s, %d samples, σE %.3f m σN %.3f m σU %.3f m, %s".format(Locale.US, p.quality.name, p.samples, p.sdEast, p.sdNorth, p.sdUp, isoTime(p.timeMs))))
-            append("</description><Point><altitudeMode>absolute</altitudeMode><coordinates>")
-            append("%.10f,%.10f,%.4f".format(Locale.US, p.longitude, p.latitude, p.heightMsl ?: p.heightEllipsoid))
+            append(xml(listOfNotNull(p.code.ifBlank { null }, p.note.ifBlank { null },
+                "%s, %d samples, σE %.3f m σN %.3f m σU %.3f m, %s".format(Locale.US, p.quality.name, p.samples, p.sdEast, p.sdNorth, p.sdUp, isoTime(p.timeMs))).joinToString(" · ")))
+            if (photos && p.photo.isNotBlank()) append(xml("<br/><img src=\"files/${p.photo}\" width=\"480\"/>"))
+            val alt = p.heightMsl ?: p.heightEllipsoid.takeIf { !it.isNaN() }
+            append("</description><ExtendedData><Data name=\"code\"><value>").append(xml(p.code)).append("</value></Data><Data name=\"note\"><value>")
+                .append(xml(p.note)).append("</value></Data></ExtendedData><Point>").append(if (alt != null) "<altitudeMode>absolute</altitudeMode>" else "").append("<coordinates>")
+            append("%.10f,%.10f".format(Locale.US, p.longitude, p.latitude)).append(alt?.let { ",%.4f".format(Locale.US, it) } ?: "")
             append("</coordinates></Point></Placemark>\n")
         }
         append("</Document></kml>\n")
@@ -82,10 +91,12 @@ object Exporters {
         points.forEachIndexed { i, p ->
             if (i > 0) append(',')
             append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[")
-            append("%.10f,%.10f,%.4f".format(Locale.US, p.longitude, p.latitude, p.heightEllipsoid)).append("]},\"properties\":{")
+            append("%.10f,%.10f".format(Locale.US, p.longitude, p.latitude)).append(if (p.heightEllipsoid.isNaN()) "" else ",%.4f".format(Locale.US, p.heightEllipsoid))
+            append("]},\"properties\":{")
             append("\"name\":\"").append(json(p.name)).append("\",\"quality\":\"").append(p.quality.name).append("\",")
             append("\"samples\":${p.samples},\"sd_e\":%.4f,\"sd_n\":%.4f,\"sd_u\":%.4f,".format(Locale.US, p.sdEast, p.sdNorth, p.sdUp))
-            append("\"h_msl\":").append(p.heightMsl?.let { "%.4f".format(Locale.US, it) } ?: "null").append(",\"time\":\"").append(isoTime(p.timeMs)).append("\"}}")
+            append("\"h_msl\":").append(p.heightMsl?.let { "%.4f".format(Locale.US, it) } ?: "null").append(",\"time\":\"").append(isoTime(p.timeMs))
+            append("\",\"code\":\"").append(json(p.code)).append("\",\"note\":\"").append(json(p.note)).append("\",\"photo\":\"").append(json(p.photo)).append("\"}}")
         }
         append("]}\n")
     }
@@ -115,17 +126,112 @@ object Exporters {
 
     /** Points as CSV; with a [grid], three more columns: the grid's name, easting and northing (m). */
     fun pointsCsv(points: List<SurveyPoint>, grid: GridSystem = GridSystem.NONE, utmZone: Int = 0): String = buildString {
-        append("name,latitude,longitude,h_ellipsoid_m,h_msl_m,sd_east_m,sd_north_m,sd_up_m,samples,quality,time_utc")
+        append("name,latitude,longitude,h_ellipsoid_m,h_msl_m,sd_east_m,sd_north_m,sd_up_m,samples,quality,time_utc,code,note,photo")
         append(if (grid != GridSystem.NONE) ",grid,easting_m,northing_m\n" else "\n")
         for (p in points) {
-            append("\"%s\",%.10f,%.10f,%.4f,%s,%.4f,%.4f,%.4f,%d,%s,%s".format(Locale.US, p.name.replace("\"", "'"),
-                p.latitude, p.longitude, p.heightEllipsoid, p.heightMsl?.let { "%.4f".format(Locale.US, it) } ?: "", p.sdEast, p.sdNorth, p.sdUp,
+            append("\"%s\",%.10f,%.10f,%s,%s,%.4f,%.4f,%.4f,%d,%s,%s".format(Locale.US, p.name.replace("\"", "'"),
+                p.latitude, p.longitude, opt4(p.heightEllipsoid), p.heightMsl?.let { "%.4f".format(Locale.US, it) } ?: "", p.sdEast, p.sdNorth, p.sdUp,
                 p.samples, p.quality.name, isoTime(p.timeMs)))
-            val g = Grid.of(grid, p.latitude, p.longitude, p.heightEllipsoid, utmZone)
+            append(",\"%s\",\"%s\",\"%s\"".format(p.code.replace("\"", "'"), p.note.replace("\"", "'"), p.photo))
+            val g = Grid.of(grid, p.latitude, p.longitude, p.heightEllipsoid.takeIf { !it.isNaN() }, utmZone)
             if (g != null) append(",\"%s\",%.4f,%.4f".format(Locale.US, g.label, g.easting, g.northing))
             else if (grid != GridSystem.NONE) append(",,,")
             append("\n")
         }
+    }
+
+    private fun opt4(v: Double) = if (v.isNaN()) "" else "%.4f".format(Locale.US, v)
+
+    // ------------------------------------------------------------------------------------------ fields
+
+    private fun ha(f: Field) = "%.4f".format(Locale.US, f.geometry.hectares)
+
+    fun fieldsKml(fields: List<Field>, title: String = "PocketGNSS fields"): String = buildString {
+        append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<kml xmlns=\"http://www.opengis.net/kml/2.2\"><Document><name>").append(xml(title)).append("</name>\n")
+        append("<Style id=\"field\"><LineStyle><color>ff00d7ff</color><width>2</width></LineStyle><PolyStyle><color>4000d7ff</color></PolyStyle></Style>\n")
+        for (f in fields) {
+            val ring = f.vertices + f.vertices.take(1)
+            append("<Placemark><name>").append(xml(f.name)).append("</name><description>")
+            append(xml("%s ha, perimeter %.2f m, %d vertices, %s, %s%s".format(Locale.US, ha(f), f.geometry.perimeter, f.vertices.size, f.quality.name,
+                isoTime(f.timeMs), if (f.note.isNotBlank()) ", " + f.note else "")))
+            append("</description><styleUrl>#field</styleUrl><ExtendedData>")
+            append("<Data name=\"area_ha\"><value>").append(ha(f)).append("</value></Data>")
+            append("<Data name=\"perimeter_m\"><value>%.3f</value></Data>".format(Locale.US, f.geometry.perimeter))
+            append("</ExtendedData><Polygon><tessellate>1</tessellate><outerBoundaryIs><LinearRing><coordinates>")
+            append(ring.joinToString(" ") { "%.10f,%.10f".format(Locale.US, it.longitude, it.latitude) })
+            append("</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>\n")
+        }
+        append("</Document></kml>\n")
+    }
+
+    /** GeoJSON (RFC 7946): closed rings, counter-clockwise. */
+    fun fieldsGeoJson(fields: List<Field>): String = buildString {
+        append("{\"type\":\"FeatureCollection\",\"features\":[")
+        fields.forEachIndexed { i, f ->
+            if (i > 0) append(',')
+            var ring = f.vertices + f.vertices.take(1)
+            if (ringSignedArea(ring) < 0) ring = ring.reversed()
+            append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[")
+            append(ring.joinToString(",") { "[%.10f,%.10f]".format(Locale.US, it.longitude, it.latitude) })
+            append("]]},\"properties\":{\"name\":\"").append(json(f.name)).append("\",\"area_ha\":").append(ha(f))
+            append(",\"perimeter_m\":%.3f,\"vertices\":%d,\"quality\":\"%s\",\"time\":\"%s\",\"note\":\"%s\"}}".format(Locale.US,
+                f.geometry.perimeter, f.vertices.size, f.quality.name, isoTime(f.timeMs), json(f.note)))
+        }
+        append("]}\n")
+    }
+
+    /** Vertices as CSV, with grid coordinates when a [grid] is chosen. */
+    fun fieldsCsv(fields: List<Field>, grid: GridSystem = GridSystem.NONE, utmZone: Int = 0): String = buildString {
+        append("field,vertex,latitude,longitude,h_ellipsoid_m,area_ha,perimeter_m")
+        append(if (grid != GridSystem.NONE) ",grid,easting_m,northing_m\n" else "\n")
+        for (f in fields) f.vertices.forEachIndexed { k, v ->
+            append("\"%s\",%d,%.10f,%.10f,%s,%s,%.3f".format(Locale.US, f.name.replace("\"", "'"), k + 1, v.latitude, v.longitude, opt4(v.height),
+                ha(f), f.geometry.perimeter))
+            val g = Grid.of(grid, v.latitude, v.longitude, v.height.takeIf { !it.isNaN() }, utmZone)
+            if (g != null) append(",\"%s\",%.4f,%.4f".format(Locale.US, g.label, g.easting, g.northing)) else if (grid != GridSystem.NONE) append(",,,")
+            append("\n")
+        }
+    }
+
+    fun fieldsShapefile(fields: List<Field>, base: String = "fields"): ByteArray {
+        val cols = listOf(DbfField("NAME", 'C', 80), DbfField("AREA_HA", 'N', 14, 4), DbfField("PERIM_M", 'N', 14, 3), DbfField("VERTICES", 'N', 8),
+            DbfField("QUALITY", 'C', 10), DbfField("DATE", 'C', 24), DbfField("NOTE", 'C', 120))
+        val rows = fields.map { listOf(it.name, it.geometry.hectares, it.geometry.perimeter, it.vertices.size, it.quality.name, isoTime(it.timeMs), it.note) }
+        return Shapefile.zip(base, Shapefile.polygons(fields.map { f -> f.vertices.map { it.longitude to it.latitude } }, cols, rows))
+    }
+
+    fun pointsShapefile(points: List<SurveyPoint>, grid: GridSystem = GridSystem.NONE, utmZone: Int = 0, base: String = "points"): ByteArray {
+        val cols = mutableListOf(DbfField("NAME", 'C', 80), DbfField("H_ELL", 'N', 12, 4), DbfField("H_MSL", 'N', 12, 4), DbfField("SD_E", 'N', 10, 4),
+            DbfField("SD_N", 'N', 10, 4), DbfField("SD_U", 'N', 10, 4), DbfField("SAMPLES", 'N', 8), DbfField("QUALITY", 'C', 10), DbfField("DATE", 'C', 24),
+            DbfField("NOTE", 'C', 120), DbfField("CODE", 'C', 40), DbfField("PHOTO", 'C', 60))
+        if (grid != GridSystem.NONE) cols += listOf(DbfField("GRID", 'C', 40), DbfField("EASTING", 'N', 15, 4), DbfField("NORTHING", 'N', 15, 4))
+        val rows = points.map { p ->
+            val base0 = listOf<Any?>(p.name, p.heightEllipsoid, p.heightMsl, p.sdEast, p.sdNorth, p.sdUp, p.samples, p.quality.name, isoTime(p.timeMs), p.note, p.code, p.photo)
+            if (grid == GridSystem.NONE) base0 else {
+                val g = Grid.of(grid, p.latitude, p.longitude, p.heightEllipsoid.takeIf { !it.isNaN() }, utmZone)
+                base0 + listOf(g?.label, g?.easting, g?.northing)
+            }
+        }
+        return Shapefile.zip(base, Shapefile.points(points.map { it.longitude to it.latitude }, cols, rows))
+    }
+
+    /** KMZ: the points' KML with their photos inside (files/...), shown in the placemark balloons. */
+    fun pointsKmz(points: List<SurveyPoint>, photoDir: java.io.File): ByteArray {
+        val out = java.io.ByteArrayOutputStream()
+        java.util.zip.ZipOutputStream(out).use { z ->
+            z.putNextEntry(java.util.zip.ZipEntry("doc.kml")); z.write(pointsKml(points, photos = true).toByteArray()); z.closeEntry()
+            for (p in points.filter { it.photo.isNotBlank() }.distinctBy { it.photo }) {
+                val f = java.io.File(photoDir, p.photo)
+                if (f.isFile) { z.putNextEntry(java.util.zip.ZipEntry("files/${p.photo}")); f.inputStream().use { it.copyTo(z) }; z.closeEntry() }
+            }
+        }
+        return out.toByteArray()
+    }
+
+    private fun ringSignedArea(r: List<Vertex>): Double {
+        var s = 0.0
+        for (i in 0 until r.size - 1) s += r[i].longitude * r[i + 1].latitude - r[i + 1].longitude * r[i].latitude
+        return s / 2
     }
 
     private fun xml(s: String) = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")

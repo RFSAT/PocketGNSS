@@ -114,6 +114,9 @@ class Alerter(private val context: Context) {
         } catch (_: SecurityException) {}
     }
 
+    /** Short tone: off the guidance line. */
+    fun beep() { try { tone?.startTone(ToneGenerator.TONE_PROP_BEEP, 150) } catch (_: Exception) {} }
+
     @Suppress("DEPRECATION")
     private fun vibrate(pattern: LongArray) {
         val v: Vibrator? = if (Build.VERSION.SDK_INT >= 31) context.getSystemService(VibratorManager::class.java)?.defaultVibrator

@@ -22,6 +22,11 @@ its position to the centimetre.
   Lambert-93, ITM, PL-1992, PT-TM06, SWEREF 99 TM), shown live and exported with points
 • Fix-loss alert: sound, vibration and notification when the RTK fix drops or corrections stop
 • Stake out saved points to the centimetre
+• Field boundaries: walk, drive or mark the corners of a field for its area in hectares and perimeter; export as
+  KML, GeoJSON or shapefile
+• A-B guidance with a lightbar: parallel passes at your implement width, steering offset, pass number, shift to
+  existing tramlines, off-line beep
+• Import points and parcel boundaries (CSV, GeoJSON, KML, GPX, shapefile) and stake out the points
 • Record sessions and export NMEA, CSV, GPX, KML and GeoJSON
 • Configure the u-blox NMEA messages, ports and rate (1-20 Hz) without a PC
 • Open the receiver's own web settings over its Wi-Fi hotspot
@@ -33,6 +38,10 @@ its position to the centimetre.
   dual-frequency phones)
 • Phone raw GNSS test: does this phone's GNSS chip deliver carrier phase for RTK? Record RINEX and the caster's
   RTCM stream for post-processing (RTKLIB, MATLAB)
+• Codes, notes and photos on points; KMZ export with photos
+• Replay recorded sessions; offline maps (viewed tiles and your own MBTiles map)
+• NTRIP caster on the phone for other rovers; JSON stream and broadcast for your own apps
+• In English, Greek, German, French, Spanish, Italian, Polish and Portuguese
 • Built-in simulator: try every screen and tool without a receiver
 
 Made by RFSAT Limited, a non-profit R&D company in Dublin and Athens. Developed with support from Claude AI (Anthropic).
@@ -58,11 +67,15 @@ user chooses it as a source or runs the phone raw GNSS test / recording; positio
 phone unless the user shares a file), `ACCESS_MOCK_LOCATION` (provider for the mock location feature, active only when the user
 selects the app in Developer options), `BLUETOOTH_CONNECT` (paired receiver; serving NMEA to paired devices), `BLUETOOTH_ADVERTISE` (only when the user
 makes the phone visible for pairing), `POST_NOTIFICATIONS`, `VIBRATE` (fix-loss alert).
+Defines the permission `com.PocketGNSS.permission.POSITION` (protection level dangerous) that other apps request to
+receive the position broadcast. Photos are taken through the camera app (ACTION_IMAGE_CAPTURE): no CAMERA permission.
 No background location access is requested.
 
 **Data safety:**
 * Location: shared with a third party only when the user enables NTRIP and the caster needs GGA (the user's own
-  correction provider; required for the functionality). Not collected by the developer.
+  correction provider; required for the functionality), or when the user switches on the JSON stream / broadcast /
+  NTRIP caster for their own devices and apps. Not collected by the developer.
+* Photos: taken by the user for points, stored in the app's folder, shared only when the user exports them.
 * Personal info, app activity, identifiers: none collected.
 * Data is encrypted in transit when the user enables TLS for the caster; map tiles over HTTPS.
 * Users can delete their data in the app (Log tab) or by uninstalling.

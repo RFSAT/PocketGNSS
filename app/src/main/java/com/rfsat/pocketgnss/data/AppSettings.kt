@@ -36,6 +36,10 @@ data class AppSettings(
     // Corrections from the phone
     val ntripEnabled: Boolean = false,
     val ntrip: NtripConfig = NtripConfig(),
+    /** Phone RTK: broadcast ephemerides from a second stream, with the account of the saved profile [ephProfile]. */
+    val ephStream: Boolean = false,
+    val ephProfile: String = "",
+    val ephMount: String = "BCEP00BKG0",
     /** Saved caster accounts; [activeProfile] is the one last loaded into [ntrip] ("" = none). */
     val profiles: List<CasterProfile> = emptyList(),
     val activeProfile: String = "",
@@ -50,12 +54,27 @@ data class AppSettings(
     val alertFloat: Boolean = false,
     val alertStaleSec: Int = 10,
     val alertSound: Boolean = true,
+    // A-B guidance: implement working width (m), lightbar step per segment (m), off-line beep distance (m, 0 = off)
+    val guideWidth: Double = 6.0,
+    val guideStep: Double = 0.05,
+    val guideWarn: Double = 0.0,
     val alertVibrate: Boolean = true,
     /** Set once the user has gone through the Bluetooth sharing set-up (Home then switches it on directly). */
     val btServerConfigured: Boolean = false,
     /** Send only the position sentences (GGA, RMC, GST, GSA, VTG, GNS, ZDA, GLL), not satellites in view. */
     val btServerPositionOnly: Boolean = false,
     val nmeaServerPort: Int = 10110,
+    /** Local NTRIP caster (relays the phone's corrections to other rovers on Wi-Fi / hotspot); password stored encrypted. */
+    val casterOn: Boolean = false,
+    val casterPort: Int = 2101,
+    val casterMount: String = "POCKETGNSS",
+    val casterUser: String = "",
+    val casterPass: String = "",
+    /** App interface: JSON position stream on TCP, and a position broadcast to apps holding the permission. */
+    val apiJson: Boolean = false,
+    val apiJsonPort: Int = 10111,
+    val apiJsonLocalOnly: Boolean = true,
+    val apiBroadcast: Boolean = false,
     val nmeaServerLocalOnly: Boolean = true,
     // Display
     val coordFormat: CoordFormat = CoordFormat.DECIMAL,
@@ -66,6 +85,11 @@ data class AppSettings(
     val heightRef: HeightRef = HeightRef.MSL,
     val keepScreenOn: Boolean = true,
     val mapLayer: MapLayer = MapLayer.SATELLITE,
+    /** Own map (MBTiles) copied into the app, shown over the base map when [ownMapOn]; "" = none. */
+    val ownMap: String = "",
+    val ownMapOn: Boolean = true,
+    /** Viewed map tiles kept for offline use, MB. */
+    val tileCacheMb: Int = 300,
     // Logging
     val logMinQuality: FixQuality = FixQuality.NONE,
     /** Seconds between logged fixes; 0 = every epoch. Raw NMEA is always complete. */
@@ -132,10 +156,22 @@ class SettingsStore(context: Context, private val cipher: SecretCipher = Keystor
             alertFloat = prefs.getBoolean("alertFloat", d.alertFloat),
             alertStaleSec = prefs.getInt("alertStale", d.alertStaleSec),
             alertSound = prefs.getBoolean("alertSound", d.alertSound),
+            guideWidth = Math.round(prefs.getFloat("guideWidth", d.guideWidth.toFloat()) * 10_000.0) / 10_000.0,
+            guideStep = Math.round(prefs.getFloat("guideStep", d.guideStep.toFloat()) * 10_000.0) / 10_000.0,
+            guideWarn = Math.round(prefs.getFloat("guideWarn", d.guideWarn.toFloat()) * 10_000.0) / 10_000.0,
             alertVibrate = prefs.getBoolean("alertVibrate", d.alertVibrate),
             btServerConfigured = prefs.getBoolean("btServerConfigured", d.btServerConfigured),
             btServerPositionOnly = prefs.getBoolean("btServerPosOnly", d.btServerPositionOnly),
             nmeaServerPort = prefs.getInt("serverPort", d.nmeaServerPort),
+            casterOn = prefs.getBoolean("casterOn", d.casterOn),
+            casterPort = prefs.getInt("casterPort", d.casterPort),
+            casterMount = prefs.getString("casterMount", d.casterMount) ?: d.casterMount,
+            casterUser = prefs.getString("casterUser", d.casterUser) ?: "",
+            casterPass = (prefs.getString("casterPassEnc", "") ?: "").let { if (it.isEmpty()) "" else cipher.decrypt(it) ?: "" },
+            apiJson = prefs.getBoolean("apiJson", d.apiJson),
+            apiJsonPort = prefs.getInt("apiJsonPort", d.apiJsonPort),
+            apiJsonLocalOnly = prefs.getBoolean("apiJsonLocal", d.apiJsonLocalOnly),
+            apiBroadcast = prefs.getBoolean("apiBroadcast", d.apiBroadcast),
             nmeaServerLocalOnly = prefs.getBoolean("serverLocal", d.nmeaServerLocalOnly),
             coordFormat = enumOr(prefs.getString("coordFormat", null), d.coordFormat),
             gridSystem = enumOr(prefs.getString("gridSystem", null), d.gridSystem),
@@ -143,6 +179,12 @@ class SettingsStore(context: Context, private val cipher: SecretCipher = Keystor
             heightRef = enumOr(prefs.getString("heightRef", null), d.heightRef),
             keepScreenOn = prefs.getBoolean("screenOn", d.keepScreenOn),
             mapLayer = enumOr(prefs.getString("mapLayer", null), d.mapLayer),
+            ephStream = prefs.getBoolean("ephStream", d.ephStream),
+            ephProfile = prefs.getString("ephProfile", d.ephProfile) ?: "",
+            ephMount = prefs.getString("ephMount", d.ephMount) ?: d.ephMount,
+            ownMap = prefs.getString("ownMap", d.ownMap) ?: "",
+            ownMapOn = prefs.getBoolean("ownMapOn", d.ownMapOn),
+            tileCacheMb = prefs.getInt("tileCacheMb", d.tileCacheMb),
             logMinQuality = enumOr(prefs.getString("logMinQ", null), d.logMinQuality),
             logIntervalSec = prefs.getFloat("logInterval", d.logIntervalSec.toFloat()).toDouble(),
             receiverId = prefs.getString("receiverId", d.receiverId) ?: "",
@@ -171,12 +213,19 @@ class SettingsStore(context: Context, private val cipher: SecretCipher = Keystor
             .putBoolean("ntripV2", s.ntrip.version2).putBoolean("ntripTls", s.ntrip.tls).putInt("ntripGga", s.ntrip.ggaIntervalSec)
             .putBoolean("mock", s.mockLocation)
             .putBoolean("alertOn", s.alertEnabled).putBoolean("alertFloat", s.alertFloat).putInt("alertStale", s.alertStaleSec)
+            .putFloat("guideWidth", s.guideWidth.toFloat()).putFloat("guideStep", s.guideStep.toFloat()).putFloat("guideWarn", s.guideWarn.toFloat())
             .putBoolean("alertSound", s.alertSound).putBoolean("alertVibrate", s.alertVibrate)
             .putBoolean("btServer", s.btServer).putBoolean("btServerConfigured", s.btServerConfigured)
             .putBoolean("btServerPosOnly", s.btServerPositionOnly)
+            .putBoolean("casterOn", s.casterOn).putInt("casterPort", s.casterPort).putString("casterMount", s.casterMount)
+            .putString("casterUser", s.casterUser).putString("casterPassEnc", if (s.casterPass.isEmpty()) "" else cipher.encrypt(s.casterPass) ?: "")
+            .putBoolean("apiJson", s.apiJson).putInt("apiJsonPort", s.apiJsonPort).putBoolean("apiJsonLocal", s.apiJsonLocalOnly)
+            .putBoolean("apiBroadcast", s.apiBroadcast)
             .putBoolean("server", s.nmeaServer).putInt("serverPort", s.nmeaServerPort).putBoolean("serverLocal", s.nmeaServerLocalOnly)
             .putString("coordFormat", s.coordFormat.name).putString("gridSystem", s.gridSystem.name).putInt("utmZone", s.utmZone).putString("heightRef", s.heightRef.name)
             .putBoolean("screenOn", s.keepScreenOn).putString("mapLayer", s.mapLayer.name)
+            .putBoolean("ephStream", s.ephStream).putString("ephProfile", s.ephProfile).putString("ephMount", s.ephMount)
+            .putString("ownMap", s.ownMap).putBoolean("ownMapOn", s.ownMapOn).putInt("tileCacheMb", s.tileCacheMb)
             .putString("logMinQ", s.logMinQuality.name).putFloat("logInterval", s.logIntervalSec.toFloat())
             .putString("receiverId", s.receiverId).putString("deviceNumber", s.deviceNumber)
             .putString("variant", s.receiverVariant.name)

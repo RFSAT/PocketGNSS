@@ -140,7 +140,7 @@ fun sourceHelp(s: AppSettings) = when (s.source) {
     LinkKind.BLUETOOTH -> R.string.help_bt
     LinkKind.TCP -> R.string.help_tcp
     LinkKind.PHONE -> R.string.help_phone
-    LinkKind.SIMULATOR -> R.string.help_sim
+    LinkKind.SIMULATOR, LinkKind.REPLAY -> R.string.help_sim
 }
 
 @Composable
