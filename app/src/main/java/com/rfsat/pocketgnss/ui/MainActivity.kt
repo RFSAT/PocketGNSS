@@ -54,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -262,7 +263,7 @@ internal fun AppRoot(
                         if (conn is Connection.Ready) Text("● ", color = fixColor(f?.quality ?: com.rfsat.pocketgnss.protocol.FixQuality.NONE), fontSize = 13.sp)
                         Text(
                             when (val c = conn) {
-                                is Connection.Ready -> c.info.name + (if (f != null) " · " + stringResource(fixLabel(f.quality)) + " " + formatAccuracy(f.horizontalAccuracy)
+                                is Connection.Ready -> c.info.name + (if (f != null) " · " + methodOrFix(c.info.phoneRtk, f.quality) + " " + formatAccuracy(f.horizontalAccuracy)
                                     else " · " + stringResource(R.string.top_no_fix))
                                 is Connection.Connecting -> stringResource(R.string.conn_connecting, c.label)
                                 Connection.AwaitingPermission -> stringResource(R.string.top_allow_usb)
@@ -293,7 +294,7 @@ internal fun AppRoot(
             AlertDialog(
                 onDismissRequest = { confirmExit = false },
                 title = { Text(stringResource(R.string.exit_title)) },
-                text = { Text(if (rec.active) stringResource(R.string.exit_logging, rec.fixes) else stringResource(R.string.exit_idle)) },
+                text = { Text(if (rec.active) pluralStringResource(R.plurals.exit_logging, rec.fixes.toPlural(), rec.fixes) else stringResource(R.string.exit_idle)) },
                 confirmButton = { ActionButton(onClick = { confirmExit = false; onExit() }, emphasis = true) { Text(stringResource(R.string.tab_exit)) } },
                 dismissButton = { ActionButton(onClick = { confirmExit = false }) { Text(stringResource(R.string.action_cancel)) } },
             )
@@ -327,3 +328,10 @@ fun NotConnected(conn: Connection, onReconnect: () -> Unit) {
     }
 }
 
+/** Fix type for the top bar: with phone RTK the method in use (e.g. PPP, which GGA can only call DGNSS), else the fix class. */
+@Composable
+private fun methodOrFix(phoneRtk: Boolean, q: com.rfsat.pocketgnss.protocol.FixQuality): String {
+    val st by com.rfsat.pocketgnss.link.PhoneRtkLink.state.collectAsState()
+    val m = if (phoneRtk) st.source.takeIf { it.isNotEmpty() } else null
+    return m?.let { methodText(it) } ?: stringResource(fixLabel(q))
+}

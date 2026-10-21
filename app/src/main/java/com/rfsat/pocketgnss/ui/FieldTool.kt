@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -90,9 +91,9 @@ fun FieldTool(engine: GnssEngine) {
                 if (f != null && start != null) KeyValue(stringResource(R.string.field_to_start), formatDistance(Geo.distance(f.latitude, f.longitude, start.latitude, start.longitude)), live = true)
                 if (f != null) KeyValue(stringResource(R.string.live_fix), stringResource(fixLabel(f.quality)) + " " + formatAccuracy(f.horizontalAccuracy), live = true,
                     valueColor = if (f.quality.rank >= cap.minQuality.rank) fixColor(f.quality) else AlarmRed)
-                if (cap.rejected > 0) Text(stringResource(R.string.field_rejected, cap.rejected, stringResource(fixLabel(cap.minQuality))),
+                if (cap.rejected > 0) Text(pluralStringResource(R.plurals.field_rejected, cap.rejected, cap.rejected, stringResource(fixLabel(cap.minQuality))),
                     style = MaterialTheme.typography.bodySmall, color = WarnAmber)
-                cap.averaging?.let { Text(stringResource(R.string.field_averaging, it), color = WarnAmber, fontWeight = FontWeight.SemiBold) }
+                cap.averaging?.let { Text(pluralStringResource(R.plurals.field_averaging, it, it), color = WarnAmber, fontWeight = FontWeight.SemiBold) }
                 if (cap.paused) Text(stringResource(R.string.field_paused_note), color = WarnAmber)
                 Preview(cap.vertices, f?.let { Vertex(it.latitude, it.longitude) }, Modifier.fillMaxWidth().aspectRatio(1.4f))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -143,7 +144,7 @@ private fun FieldList(engine: GnssEngine) {
         for (f in fields.reversed()) {
             val g = f.geometry
             Text(f.name, fontWeight = FontWeight.SemiBold)
-            Text(stringResource(R.string.field_row, formatArea(g.area), formatDistance(g.perimeter), f.vertices.size,
+            Text(pluralStringResource(R.plurals.field_row, f.vertices.size, formatArea(g.area), formatDistance(g.perimeter), f.vertices.size,
                 if (f.quality == FixQuality.NONE) f.note else stringResource(fixLabel(f.quality))), style = MaterialTheme.typography.bodySmall, color = muted)
             if (g.selfIntersecting) Text(stringResource(R.string.field_crosses), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -163,7 +164,14 @@ fun FieldExports(engine: GnssEngine) {
     val s by engine.store.settings.collectAsState()
     val importFile = rememberImport(engine)
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val points by engine.points.collectAsState()
+    val lines by engine.guidance.lines.collectAsState()
     Section(stringResource(R.string.field_exports)) {
+        if (fields.isNotEmpty() || lines.isNotEmpty()) ActionButton(onClick = {
+            val xml = com.rfsat.pocketgnss.data.IsoXml.taskData(fields, lines, points, com.rfsat.pocketgnss.BuildConfig.VERSION_NAME)
+            share(context, exportBytes(context, "TASKDATA.zip", com.rfsat.pocketgnss.data.IsoXml.zip(xml)), "application/zip")
+        }, compact = true) { Text(stringResource(R.string.isoxml_button)) }
+        if (fields.isNotEmpty() || lines.isNotEmpty()) Text(stringResource(R.string.isoxml_help), style = MaterialTheme.typography.bodySmall, color = muted)
         if (fields.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ActionButton(onClick = { share(context, export(context, "fields.kml", Exporters.fieldsKml(fields)), "application/vnd.google-earth.kml+xml") }, compact = true) { Text("KML") }
             ActionButton(onClick = { share(context, export(context, "fields.geojson", Exporters.fieldsGeoJson(fields)), "application/geo+json") }, compact = true) { Text("GeoJSON") }

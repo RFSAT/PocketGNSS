@@ -80,6 +80,7 @@ private fun formatAngle(v: Double, f: CoordFormat, hemi: String, decimals: Int):
 fun heightOf(f: GnssFix, ref: HeightRef): Double? = when (ref) {
     HeightRef.MSL -> f.altitudeMsl
     HeightRef.ELLIPSOID -> f.ellipsoidHeight
+    HeightRef.MODEL -> null   // needs the height model: HeightRow / GnssEngine.nationalHeight
 }
 
 fun formatHeight(h: Double?) = h?.let { "%.3f m".format(Locale.US, it) } ?: "—"
@@ -118,3 +119,7 @@ fun formatDuration(sec: Double): String {
     com.rfsat.pocketgnss.core.NtripStatus.WAITING -> R.string.ntrip_st_waiting
     com.rfsat.pocketgnss.core.NtripStatus.ERROR -> R.string.ntrip_st_error
 }
+
+/** A count as the Int quantity Android's plural rules take (large counts all select the same form). */
+fun Long.toPlural(): Int = if (this > 1_000_000L) 1_000_000 + (this % 1_000_000L).toInt() else toInt()
+fun Int.toPlural(): Int = this

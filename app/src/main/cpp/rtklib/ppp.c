@@ -401,6 +401,38 @@ static double mwmeas(const obsd_t *obs, const nav_t *nav)
     return (obs->L[0]-obs->L[1])*CLIGHT/(freq1-freq2)-
            (freq1*obs->P[0]+freq2*obs->P[1])/(freq1+freq2);
 }
+/* PocketGNSS: apply SSR code biases as absolute values (set by prtk.c) */
+int ppp_ssr_absbias=0;
+/* PocketGNSS: SSR code bias of an observation code, falling back to an equivalent tracking mode on the same band
+   when the service sends none for this one (e.g. HAS gives GPS L2 P, receivers report L2 W; phones report
+   Galileo E1 C where a service may send E1 X) */
+static float ssr_cbias(const ssr_t *ssr, uint8_t code)
+{
+    const char *s,*alt="";
+    char o[3];
+    uint8_t c;
+    if (code==CODE_NONE) return 0.0f;
+    if (ssr->cbias[code-1]!=0.0f) return ssr->cbias[code-1];
+    s=code2obs(code);
+    if (!s||!s[0]||!s[1]) return 0.0f;
+    switch (s[1]) {
+        case 'W': alt="PY"; break;
+        case 'P': alt="WY"; break;
+        case 'Y': alt="PW"; break;
+        case 'C': alt="XB"; break;
+        case 'B': alt="XC"; break;
+        case 'X': alt="CQLSIB"; break;
+        case 'Q': alt="XI"; break;
+        case 'I': alt="XQ"; break;
+        case 'L': alt="XS"; break;
+        case 'S': alt="XL"; break;
+    }
+    for (;*alt;alt++) {
+        o[0]=s[0]; o[1]=*alt; o[2]='\0';
+        if ((c=obs2code(o))!=CODE_NONE&&ssr->cbias[c-1]!=0.0f) return ssr->cbias[c-1];
+    }
+    return 0.0f;
+}
 /* antenna corrected measurements --------------------------------------------*/
 static void corr_meas(const obsd_t *obs, const nav_t *nav, const double *azel,
                       const prcopt_t *opt, const double *dantr,
@@ -429,8 +461,10 @@ static void corr_meas(const obsd_t *obs, const nav_t *nav, const double *azel,
                 ix=(i==0?CODE_L1P-1:CODE_L2P-1);
             else if (sys==SYS_GAL)
                 ix=(i==0?CODE_L1X-1:CODE_L7X-1);
-            /* apply SSR correction */
-            P[i]+=(nav->ssr[obs->sat-1].cbias[obs->code[i]-1]-nav->ssr[obs->sat-1].cbias[ix]);
+            /* apply SSR correction (PocketGNSS: absolute biases, as Galileo HAS and RTCM SSR define them, when
+               ppp_ssr_absbias is set; RTKLIB's default subtracts the bias of a reference code) */
+            if (ppp_ssr_absbias) P[i]+=ssr_cbias(nav->ssr+obs->sat-1,obs->code[i]);
+            else P[i]+=(nav->ssr[obs->sat-1].cbias[obs->code[i]-1]-nav->ssr[obs->sat-1].cbias[ix]);
         }
         else {   /* apply code bias corrections from file */
             if (sys==SYS_GAL&&(i==1||i==2)) frq=3-i;  /* GAL biases are L1/L5 */

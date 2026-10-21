@@ -1,6 +1,7 @@
 package com.rfsat.pocketgnss.core
 
 import android.Manifest
+import com.rfsat.pocketgnss.ui.toPlural
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -94,12 +95,12 @@ class LinkService : Service() {
     private fun notification(): Notification {
         val f = engine.fix.value
         val parts = ArrayList<String>()
-        if (engine.recording.value.active) parts.add(getString(R.string.notif_logging, engine.recording.value.fixes))
-        engine.raw.state.value.takeIf { it.recording }?.let { parts.add(getString(R.string.notif_raw, it.rinexEpochs)) }
+        if (engine.recording.value.active) parts.add(engine.recording.value.fixes.let { resources.getQuantityString(R.plurals.notif_logging, it.toPlural(), it) })
+        engine.raw.state.value.takeIf { it.recording }?.let { parts.add(resources.getQuantityString(R.plurals.notif_raw, it.rinexEpochs.toPlural(), it.rinexEpochs)) }
         if (engine.ntripClient.running) parts.add(getString(R.string.notif_ntrip, engine.ntripClient.ntrip.value.status.name.lowercase()))
         if (engine.store.value.mockLocation) parts.add(getString(R.string.notif_mock))
         if (engine.store.value.nmeaServer) parts.add(getString(R.string.notif_server, engine.server.clientCount.value))
-        if (engine.btServer.running) parts.add(getString(R.string.notif_bt, engine.btServer.state.value.clients.size))
+        if (engine.btServer.running) parts.add(engine.btServer.state.value.clients.size.let { resources.getQuantityString(R.plurals.notif_bt, it, it) })
         val title = if (f != null) getString(R.string.notif_title_fix, getString(fixLabel(f.quality)), formatAccuracy(f.horizontalAccuracy))
             else getString(R.string.notif_title_nofix)
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),

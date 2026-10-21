@@ -132,7 +132,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     val jsonServer = NmeaServer()
     private var lastBroadcastMs = 0L
     /** Phone RTK: a second caster stream with broadcast ephemerides only (Setup > Phone > Ephemeris stream). */
-    val ephClient = NtripClient(scope, forward = { com.rfsat.pocketgnss.link.PhoneRtkLink.current?.writeNav(it) }, gga = { null })
+    val ephClient = NtripClient(scope, forward = { com.rfsat.pocketgnss.link.PhoneRtkLink.current?.writeNav(it); raw.onRtcmNav(it) }, gga = { null })
 
     /** Starts or stops the ephemeris stream to match the settings and the link. */
     fun updateEphStream() {
@@ -168,7 +168,9 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     val history = SolutionHistory(sessionsRoot)
     private val pointStore = PointStore(File(File(context.getExternalFilesDir(null) ?: context.filesDir, "points"), "points.csv"))
     /** A-B guidance (Tools > A-B guidance): saved lines and the active one. */
-    val guidance = GuidanceSession(File(File(context.getExternalFilesDir(null) ?: context.filesDir, "points"), "guidance.csv"))
+    val guidance = GuidanceSession(File(File(context.getExternalFilesDir(null) ?: context.filesDir, "points"), "guidance.csv")).also { g ->
+        g.fields = { fields.value }
+    }
     private var lastGuideBeep = 0L
     private val fieldStore = com.rfsat.pocketgnss.data.FieldStore(File(File(context.getExternalFilesDir(null) ?: context.filesDir, "points"), "fields.csv"))
 
@@ -272,6 +274,11 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     fun currentPhoneProfile(): com.rfsat.pocketgnss.rtk.PhoneProfile? =
         com.rfsat.pocketgnss.rtk.PhoneProfile.decode(store.value.phoneProfile)?.takeIf { it.model == android.os.Build.MODEL }
 
+    /** Phone RTK engine options from the settings (RTK or PPP, moving or still). */
+    private fun rtkOptions(s: com.rfsat.pocketgnss.data.AppSettings) = com.rfsat.pocketgnss.rtk.RtkOptions(
+        mode = if (s.phoneRtkStatic) com.rfsat.pocketgnss.rtk.RtkMode.STATIC else com.rfsat.pocketgnss.rtk.RtkMode.KINEMATIC,
+        ppp = s.phonePpp)
+
     fun connectPhone() {
         if (!phoneHasGnss) { disconnect(context.getString(R.string.no_gnss_short)); return }
         val s = store.value
@@ -280,8 +287,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         open(context.getString(if (rtk) R.string.conn_opening_phone_rtk else R.string.conn_opening_phone)) {
             if (rtk) {
                 try {
-                    val base = com.rfsat.pocketgnss.rtk.RtkOptions(
-                        mode = if (s.phoneRtkStatic) com.rfsat.pocketgnss.rtk.RtkMode.STATIC else com.rfsat.pocketgnss.rtk.RtkMode.KINEMATIC)
+                    val base = rtkOptions(s)
                     val profile = currentPhoneProfile()
                     val options = if (s.phoneRtkAuto) com.rfsat.pocketgnss.rtk.PhoneTuning.tune(base, profile) else base
                     com.rfsat.pocketgnss.link.PhoneRtkLink.open(context, options, profile ?: com.rfsat.pocketgnss.rtk.PhoneProfile(android.os.Build.MODEL)) { p ->
@@ -300,8 +306,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         val s = store.value
         open(context.getString(R.string.replay_opening, dir.name)) {
             if (dir.name.startsWith("raw_")) {
-                val base = com.rfsat.pocketgnss.rtk.RtkOptions(
-                    mode = if (s.phoneRtkStatic) com.rfsat.pocketgnss.rtk.RtkMode.STATIC else com.rfsat.pocketgnss.rtk.RtkMode.KINEMATIC)
+                val base = rtkOptions(s)
                 com.rfsat.pocketgnss.link.RawReplayLink(dir, if (s.phoneRtkAuto) com.rfsat.pocketgnss.rtk.PhoneTuning.tune(base, currentPhoneProfile()) else base, speed)
             } else com.rfsat.pocketgnss.link.NmeaReplayLink(File(dir, "raw.nmea"), speed)
         }
@@ -461,6 +466,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         }
         fieldCapture.onFix(f.latitude, f.longitude, f.ellipsoidHeight, f.quality, now)
         appInterface(f, st, now)
+        guidance.recordCurve(f.latitude, f.longitude)
         if (guidance.state.value.line != null) {
             guidance.onFix(f.latitude, f.longitude, f.courseDeg?.takeIf { (f.speedMs ?: 0.0) > 0.5 })
             if (guidance.state.value.offLine && now - lastGuideBeep > 1500) { lastGuideBeep = now; alerter.beep() }
@@ -672,6 +678,40 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     }
 
     /** Photos of points (points/photos), shared through the FileProvider. */
+    /** Downloaded national height models (geoid grids), in the app's private storage. */
+    val geoid = com.rfsat.pocketgnss.data.GeoidStore(File(context.filesDir, "geoid"))
+
+    /** Progress of a height model download: model id, fraction done, error message (null while running or after success). */
+    data class GeoidDownload(val id: String = "", val running: Boolean = false, val progress: Float = 0f, val error: String? = null)
+    private val _geoidDownload = MutableStateFlow(GeoidDownload())
+    val geoidDownload: StateFlow<GeoidDownload> = _geoidDownload
+
+    /** The chosen height model when heights are shown in a national system and it is downloaded. */
+    fun heightModel(): com.rfsat.pocketgnss.data.HeightModel? = store.value.takeIf { it.heightRef == com.rfsat.pocketgnss.data.HeightRef.MODEL }
+        ?.let { com.rfsat.pocketgnss.data.HeightModels.byId(it.heightModel) }?.takeIf { geoid.installed(it) }
+
+    /** Height in the chosen national height system, or null (no model, not downloaded, or outside its grid). */
+    fun nationalHeight(lat: Double, lon: Double, hEll: Double?): Double? = heightModel()?.let { geoid.height(it, lat, lon, hEll) }
+
+    /** National heights for the exporters, when a model is chosen and downloaded. */
+    fun nationalHeights(): com.rfsat.pocketgnss.data.NationalHeights? = heightModel()?.let { m ->
+        com.rfsat.pocketgnss.data.NationalHeights(m.system) { lat, lon, h -> geoid.height(m, lat, lon, h) } }
+
+    fun downloadHeightModel(m: com.rfsat.pocketgnss.data.HeightModel) {
+        if (_geoidDownload.value.running) return
+        _geoidDownload.value = GeoidDownload(m.id, true)
+        scope.launch(Dispatchers.IO) {
+            try {
+                geoid.download(m) { f -> _geoidDownload.value = GeoidDownload(m.id, true, f) }
+                _geoidDownload.value = GeoidDownload(m.id, false, 1f)
+            } catch (e: Exception) {
+                _geoidDownload.value = GeoidDownload(m.id, false, 0f, e.message ?: e.javaClass.simpleName)
+            }
+        }
+    }
+
+    fun deleteHeightModel(m: com.rfsat.pocketgnss.data.HeightModel) { geoid.delete(m); _geoidDownload.value = GeoidDownload() }
+
     val photoDir: File get() = File(File(context.getExternalFilesDir(null) ?: context.filesDir, "points"), "photos").apply { mkdirs() }
 
     /** A new, empty photo file name for the camera. */
@@ -686,7 +726,8 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         caster.position = f.latitude to f.longitude
         if (!jsonServer.running && !st.apiBroadcast) return
         val method = if (link?.info?.phoneRtk == true) com.rfsat.pocketgnss.link.PhoneRtkLink.state.value.source.ifEmpty { null } else null
-        if (jsonServer.running) jsonServer.send(PositionJson.of(f, com.rfsat.pocketgnss.protocol.Grid.of(st.gridSystem, f.latitude, f.longitude, f.ellipsoidHeight, st.utmZone), method))
+        if (jsonServer.running) jsonServer.send(PositionJson.of(f, com.rfsat.pocketgnss.protocol.Grid.of(st.gridSystem, f.latitude, f.longitude, f.ellipsoidHeight, st.utmZone), method,
+            heightModel()?.let { m -> m.system to geoid.height(m, f.latitude, f.longitude, f.ellipsoidHeight) }))
         if (st.apiBroadcast && now - lastBroadcastMs >= 200) {
             lastBroadcastMs = now
             val i = android.content.Intent(ACTION_POSITION).putExtra("lat", f.latitude).putExtra("lon", f.longitude)
@@ -696,6 +737,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
             f.speedMs?.let { i.putExtra("speed", it) }; f.courseDeg?.let { i.putExtra("course", it) }
             f.diffAgeSec?.let { i.putExtra("age", it) }; f.satellitesUsed?.let { i.putExtra("sats", it) }
             method?.let { i.putExtra("method", it) }
+            heightModel()?.let { m -> geoid.height(m, f.latitude, f.longitude, f.ellipsoidHeight)?.let { i.putExtra("h_national", it).putExtra("height_system", m.system) } }
             try { context.sendBroadcast(i, PERMISSION_POSITION) } catch (_: Exception) {}
         }
     }

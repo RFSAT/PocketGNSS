@@ -30,7 +30,7 @@ class RtkEngineTest {
     @Test fun twoStationSession() {
         assumeTrue("host build of the RTK engine not available", RtkNative.available)
         val o = RtkOptions(glonass = false, galileo = false, beidou = false, qzss = false)
-        assertTrue(RtkNative.init(o.mode.code, o.navsys, o.elevationMaskDeg, o.snrMaskDbHz, o.arMode, 0, o.errorRatio, o.arRatio, o.maxBaseAgeSec, o.minFixSats))
+        assertTrue(RtkNative.start(o))
         val lines = javaClass.getResourceAsStream("/rtk/two_station_3km.txt")!!.bufferedReader().readLines()
         val arrays = RoverArrays()
         val out = DoubleArray(RtkSolution.SIZE)

@@ -94,6 +94,9 @@ object CasterProfiles {
         CasterProfile("EUREF-IP (BKG)", NtripConfig(host = "euref-ip.net", port = 2101, ggaIntervalSec = 0)),
         CasterProfile("EUREF-IP (ROB, Belgium)", NtripConfig(host = "www.euref-ip.be", port = 2101, ggaIntervalSec = 0)),
         CasterProfile("IGS-IP (BKG)", NtripConfig(host = "igs-ip.net", port = 2101, ggaIntervalSec = 0)),
+        // IGS real-time products (free registration at igs-ip.net): PPP correction streams SSRA… and the broadcast
+        // ephemeris stream BCEP00BKG0. The mountpoint is chosen from the caster's sourcetable (Get mountpoints).
+        CasterProfile("IGS products (PPP)", NtripConfig(host = "products.igs-ip.net", port = 2101, ggaIntervalSec = 0)),
         CasterProfile("RTK2go (community)", NtripConfig(host = "rtk2go.com", port = 2101, ggaIntervalSec = 10)),
     )
 
@@ -105,7 +108,14 @@ object CasterProfiles {
         "MAX" -> "Master-auxiliary (MAX) · GPS+GLO"
         "MSM_NEAR", "NEAR_GNSS" -> "Nearest single base · GPS+GLO+GAL+BDS"
         "NEAR" -> "Nearest single base · GPS+GLO"
-        else -> null
+        else -> when {
+            // IGS real-time naming: TTTT XX AAA F (product type, scheme, analysis centre, 0 = RTCM SSR / 1 = IGS SSR)
+            name.startsWith("SSRA") -> "PPP corrections (SSR, antenna phase centre): for PPP (HAS) mode"
+            name.startsWith("SSRC") -> "SSR to the centre of mass: not usable here, choose an SSRA… stream"
+            name.startsWith("BCEP") -> "Broadcast ephemerides only: for the ephemeris stream"
+            name.startsWith("IONO") -> "Ionosphere model only"
+            else -> null
+        }
     }
 
     /**

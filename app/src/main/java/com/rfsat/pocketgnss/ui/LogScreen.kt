@@ -23,6 +23,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -72,7 +73,7 @@ fun LogScreen(engine: GnssEngine) {
         Section(stringResource(R.string.log_recording)) {
             ToggleButton(on = rec.active, label = stringResource(if (rec.active) R.string.log_recording_on else R.string.log_recording_off),
                 onClick = { if (rec.active) engine.stopRecording() else engine.startRecording() })
-            if (rec.active) KeyValue(rec.dir?.name ?: "", stringResource(R.string.log_counts, rec.fixes, rec.lines), live = true)
+            if (rec.active) KeyValue(rec.dir?.name ?: "", pluralStringResource(R.plurals.n_fixes, rec.fixes.toPlural(), rec.fixes) + " · " + pluralStringResource(R.plurals.n_nmea_lines, rec.lines.toPlural(), rec.lines), live = true)
             Picker(stringResource(R.string.log_min_quality), logQualities, s.logMinQuality,
                 { qualityLabels.getValue(it) },
                 { q -> engine.store.update { it.copy(logMinQuality = q) } })
@@ -96,14 +97,14 @@ fun LogScreen(engine: GnssEngine) {
             if (points.isEmpty()) Text(stringResource(R.string.log_no_points), style = MaterialTheme.typography.bodySmall, color = muted)
             else {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ActionButton(onClick = { share(context, exportBytes(context, "points_shp.zip", Exporters.pointsShapefile(points, s.gridSystem, s.utmZone)), "application/zip") },
+                    ActionButton(onClick = { share(context, exportBytes(context, "points_shp.zip", Exporters.pointsShapefile(points, s.gridSystem, s.utmZone, heights = engine.nationalHeights())), "application/zip") },
                         compact = true) { Text("SHP") }
                     if (points.any { it.photo.isNotBlank() }) ActionButton(onClick = {
                         share(context, exportBytes(context, "points.kmz", Exporters.pointsKmz(points, engine.photoDir)), "application/vnd.google-earth.kmz")
                     }, compact = true) { Text("KMZ") }
                     ActionButton(onClick = { share(context, export(context, "points.kml", Exporters.pointsKml(points)), "application/vnd.google-earth.kml+xml") }, compact = true) { Text("KML") }
-                    ActionButton(onClick = { share(context, export(context, "points.csv", Exporters.pointsCsv(points, s.gridSystem, s.utmZone)), "text/csv") }, compact = true) { Text("CSV") }
-                    ActionButton(onClick = { share(context, export(context, "points.geojson", Exporters.pointsGeoJson(points)), "application/geo+json") }, compact = true) { Text("GeoJSON") }
+                    ActionButton(onClick = { share(context, export(context, "points.csv", Exporters.pointsCsv(points, s.gridSystem, s.utmZone, engine.nationalHeights())), "text/csv") }, compact = true) { Text("CSV") }
+                    ActionButton(onClick = { share(context, export(context, "points.geojson", Exporters.pointsGeoJson(points, engine.nationalHeights())), "application/geo+json") }, compact = true) { Text("GeoJSON") }
                 }
                 for (p in points.reversed()) {
                     Row(Modifier.fillMaxWidth()) {
@@ -132,7 +133,12 @@ fun LogScreen(engine: GnssEngine) {
                 v to (if (v <= 0) stringResource(R.string.log_replay_max) else "%.0f×".format(Locale.US, v)) }, replaySpeed) { replaySpeed = it }
             if (rp.active) {
                 Text(stringResource(R.string.log_replay_running, rp.name, rp.done, rp.total), color = SafeGreen, fontWeight = FontWeight.SemiBold)
-                ActionButton(onClick = { engine.disconnect() }, compact = true) { Text(stringResource(R.string.log_replay_stop)) }
+                androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+                    ActionButton(onClick = { com.rfsat.pocketgnss.link.Replay.setPaused(!rp.paused) }, compact = true) {
+                        Text(stringResource(if (rp.paused) R.string.log_replay_resume else R.string.log_replay_pause))
+                    }
+                    ActionButton(onClick = { com.rfsat.pocketgnss.link.Replay.setPaused(false); engine.disconnect() }, compact = true) { Text(stringResource(R.string.log_replay_stop)) }
+                }
             }
             Text(stringResource(R.string.log_replay_help), style = MaterialTheme.typography.bodySmall, color = muted)
             if (sessions.isEmpty()) Text(stringResource(R.string.log_no_sessions), style = MaterialTheme.typography.bodySmall, color = muted)

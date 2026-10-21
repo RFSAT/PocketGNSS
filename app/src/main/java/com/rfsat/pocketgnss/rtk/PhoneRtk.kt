@@ -26,7 +26,17 @@ data class RtkOptions(
     val minFixSats: Int = 5,
     /** A fix is reported only after this many consecutive fixed epochs (else the float solution is shown). */
     val confirmEpochs: Int = 3,
+    /**
+     * Precise point positioning instead of RTK: no base station; the caster stream carries SSR orbit, clock and code-bias
+     * corrections (Galileo HAS Internet Data Distribution, IGS real-time "SSRA" streams), referred to the antenna phase centre.
+     */
+    val ppp: Boolean = false,
+    /** PPP: ionosphere-free combination (phones with L1 + L5); false = broadcast ionosphere model (L1-only phones). */
+    val ionoFree: Boolean = true,
 ) {
+    /** Engine mode (prtk.h PRTK_MODE_*): 1 / 2 RTK kinematic / static, 3 / 4 PPP kinematic / static. */
+    val engineMode: Int get() = if (ppp) mode.code + 2 else mode.code
+
     val navsys: Int get() = (if (gps) 0x01 else 0) or (if (glonass) 0x04 else 0) or (if (galileo) 0x08 else 0) or
         (if (qzss) 0x10 else 0) or (if (beidou) 0x20 else 0)
 }
@@ -38,7 +48,9 @@ enum class RtkStatus(val code: Int, val ggaQuality: Int, val label: String) {
     FLOAT(2, 5, "RTK float"),
     SBAS(3, 2, "SBAS"),
     DGPS(4, 2, "DGNSS"),
-    SINGLE(5, 1, "single");
+    SINGLE(5, 1, "single"),
+    /** Precise point positioning (float): reported in GGA as differential (2), never as RTK. */
+    PPP(6, 2, "PPP");
 
     companion object { fun of(code: Int) = entries.firstOrNull { it.code == code } ?: NONE }
 }
@@ -100,12 +112,62 @@ data class RtkBase(
     val ephemerides: Int,
     val glonassEphemerides: Int,
     val frames: Long,
+    /** PPP: satellites with current SSR orbit and clock corrections, and with code biases. */
+    val ssrSatellites: Int = 0,
+    val codeBiasSatellites: Int = 0,
+    /** GPS week and time of week of the latest SSR clock correction (0 when none). */
+    val ssrWeek: Int = 0,
+    val ssrTow: Double = 0.0,
 ) {
     companion object {
-        const val SIZE = 14
+        const val SIZE = 18
         fun from(v: DoubleArray) = RtkBase(v[0] != 0.0, v[4], v[5], v[6], v[7].toInt(), v[8].toInt(), v[9].toInt(), v[10],
-            v[11].toInt(), v[12].toInt(), v[13].toLong())
+            v[11].toInt(), v[12].toInt(), v[13].toLong(), v[14].toInt(), v[17].toInt(), v[15].toInt(), v[16])
     }
+}
+
+/**
+ * PPP ionosphere model for the phone at hand. The ionosphere-free combination needs two frequencies; on a phone that
+ * tracks L1 only it would leave no satellites, so after [switchAfter] epochs with fewer than [minDual] dual-frequency
+ * satellites the engine falls back to the broadcast ionosphere model, and goes back when the phone delivers L5 / E5a
+ * on at least [goodDual] satellites for [returnAfter] epochs.
+ */
+class IonoChooser(ionoFree: Boolean = true, private val minDual: Int = 4, private val goodDual: Int = 6,
+                  private val switchAfter: Int = 30, private val returnAfter: Int = 60) {
+    var ionoFree = ionoFree; private set
+    private var run = 0
+
+    /** One epoch with [dual] satellites carrying code and phase on two bands; returns the new choice when it changes. */
+    fun update(dual: Int): Boolean? {
+        run = if (ionoFree) (if (dual < minDual) run + 1 else 0) else (if (dual >= goodDual) run + 1 else 0)
+        if (run >= (if (ionoFree) switchAfter else returnAfter)) { ionoFree = !ionoFree; run = 0; return ionoFree }
+        return null
+    }
+
+    companion object {
+        /** Satellites with pseudorange and carrier phase on L1 and on a second band in [e]. */
+        fun dualSatellites(e: com.rfsat.pocketgnss.raw.RawEpoch): Int = e.obs.filter { it.pseudorange != null && it.phase != null && it.code.isNotEmpty() }
+            .groupBy { it.sat }.count { (_, o) -> o.any { it.code[0] == '1' } && o.any { it.code[0] != '1' } }
+    }
+}
+
+/**
+ * PPP convergence: a float PPP solution starts at metres and needs typically 20–30 minutes of continuous carrier phase
+ * to reach its best. Reported as converged once [minMinutes] have passed since the first PPP solution and the filter's
+ * horizontal standard deviation is at most [maxStdM].
+ */
+class PppConvergence(private val minMinutes: Double = 15.0, private val maxStdM: Double = 0.3) {
+    private var startSec: Double? = null
+
+    /** True while still converging; [s] is the latest solution. */
+    fun converging(s: RtkSolution): Boolean {
+        if (s.status != RtkStatus.PPP) { startSec = null; return false }
+        val t = s.week * 604_800.0 + s.tow
+        val t0 = startSec ?: t.also { startSec = it }
+        return (t - t0) / 60.0 < minMinutes || kotlin.math.hypot(s.stdEast, s.stdNorth) > maxStdM
+    }
+
+    fun reset() { startSec = null }
 }
 
 /** A rover epoch as the parallel arrays [RtkNative.rover] takes. */

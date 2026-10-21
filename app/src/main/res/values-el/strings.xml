@@ -31,7 +31,6 @@
     <string name="api_broadcast_help">Οι εφαρμογές Android που δηλώνουν και λαμβάνουν την άδεια com.PocketGNSS.permission.POSITION λαμβάνουν το com.PocketGNSS.action.POSITION έως 5 φορές το δευτερόλεπτο.</string>
     <string name="api_help">Τα δικά σας προγράμματα (εφαρμογές Android, MATLAB, Python σε φορητό στο hotspot) μπορούν να διαβάζουν τη θέση χωρίς ανάλυση NMEA. Δείτε το docs/app-interface.md για τα πεδία και παραδείγματα.</string>
     <string name="api_json">Ροή θέσης JSON</string>
-    <string name="api_json_help">Μία γραμμή JSON ανά θέση στο %1$s:%2$d (%3$d συνδεδεμένοι)</string>
     <string name="api_title">Διεπαφή για τις δικές σας εφαρμογές</string>
     <string name="bt_share_all">Όλο το NMEA</string>
     <string name="bt_share_bt_off">Το Bluetooth είναι κλειστό: πατήστε Ξανά για να ενεργοποιηθεί</string>
@@ -55,7 +54,6 @@
     <string name="bt_share_title">Το τηλέφωνο ως δέκτης GNSS (Bluetooth)</string>
     <string name="bt_share_visible">Ορατό για σύζευξη</string>
     <string name="bt_share_waiting">Αναμονή συσκευής: κάντε σύζευξη με το \"%1$s\" και συνδέστε τη στη σειριακή θύρα \"PocketGNSS NMEA\"</string>
-    <string name="caster_clients">%1$d rovers %2$s · %3$.0f kB εστάλησαν</string>
     <string name="caster_help">Άλλοι δέκτες στο ίδιο Wi-Fi ή στο hotspot του τηλεφώνου (δεύτερο τρακτέρ, βάση drone, rover τοπογραφίας) συνδέονται στο τηλέφωνο όπως σε οποιονδήποτε NTRIP caster και λαμβάνουν τις διορθώσεις που λαμβάνει το τηλέφωνο. Η αναμετάδοση NTRIP του τηλεφώνου πρέπει να είναι ενεργή.</string>
     <string name="caster_mount">Mountpoint</string>
     <string name="caster_no_source">Δεν υπάρχουν διορθώσεις για αναμετάδοση: ενεργοποιήστε το NTRIP (Live) με ένα προφίλ caster.</string>
@@ -93,7 +91,7 @@
     <string name="corr_baseline_far">Πάνω από 50 km από τη βάση: η ακρίβεια RTK μειώνεται. Επιλέξτε πιο κοντινό mountpoint ή mountpoint δικτύου (VRS).</string>
     <string name="corr_caster">Caster</string>
     <string name="corr_data">Δεδομένα</string>
-    <string name="corr_data_value">%1$.1f kB · %2$.0f B/s · %3$d πλαίσια · %4$d λανθασμένα</string>
+    <string name="corr_data_value">%1$.1f kB · %2$.0f B/s</string>
     <string name="corr_fetch">Λήψη mountpoints</string>
     <string name="corr_gga">Τελευταίο GGA που στάλθηκε</string>
     <string name="corr_intro">Τρεις δρόμοι φέρνουν διορθώσεις στον δέκτη: ο δικός του πελάτης NTRIP μέσω κινητού δικτύου (έκδοση LTE) ή μέσω Wi-Fi (και οι δύο εκδόσεις), ρυθμισμένος στο Εργαλεία &gt; Ρυθμίσεις δέκτη (ενότητες 4 και 7)· ή αυτή η αναμετάδοση: το τηλέφωνο λαμβάνει RTCM μέσω των δεδομένων κινητής και το προωθεί στον δέκτη μέσω Bluetooth ή USB, στέλνοντας στον caster το GGA του δέκτη. Η αναμετάδοση εξυπηρετεί και άλλους δέκτες RTCM 3 συνδεδεμένους μέσω USB ή Bluetooth.</string>
@@ -115,6 +113,7 @@
     <string name="disp_grid_utm">UTM (ETRS89 / WGS 84)</string>
     <string name="disp_height">Υψόμετρο</string>
     <string name="disp_msl">Μέση στάθμη θάλασσας</string>
+    <string name="disp_national">Εθνικό</string>
     <string name="disp_screen_on">Οθόνη αναμμένη όσο υπάρχει σύνδεση</string>
     <string name="disp_utm_auto">Αυτόματα (ζώνη της θέσης)</string>
     <string name="disp_utm_zone">Ζώνη UTM</string>
@@ -126,14 +125,12 @@
     <string name="eph_status">Ροή εφημερίδων: %1$s %2$s</string>
     <string name="eph_switch">Ροή εφημερίδων</string>
     <string name="exit_idle">Η σύνδεση με τον δέκτη, οι διορθώσεις και οι έξοδοι κλείνουν.</string>
-    <string name="exit_logging">Γίνεται καταγραφή (%1$d λύσεις). Θα σταματήσει και τα αρχεία θα κλείσουν.</string>
     <string name="exit_title">Έξοδος από το PocketGNSS;</string>
     <string name="field_add_corner">Προσθήκη γωνίας</string>
     <string name="field_add_vertex">Προσθήκη κορυφής</string>
     <string name="field_area">Εμβαδόν</string>
     <string name="field_average">Μέσος όρος (s)</string>
     <string name="field_average_now">Κανένας</string>
-    <string name="field_averaging">Μέσος όρος γωνίας… %1$d λύσεις</string>
     <string name="field_capturing">Καταγραφή ορίου</string>
     <string name="field_crosses">Οι πλευρές αυτού του ορίου τέμνονται: το εμβαδόν δεν είναι αξιόπιστο.</string>
     <string name="field_delete_title">Διαγραφή αυτού του αγροτεμαχίου;</string>
@@ -155,9 +152,7 @@
     <string name="field_paused_note">Σε παύση: δεν προστίθενται κορυφές κατά την κίνηση.</string>
     <string name="field_perimeter">Περίμετρος</string>
     <string name="field_recording">Καταγραφή</string>
-    <string name="field_rejected">%1$d λύσεις δεν χρησιμοποιήθηκαν (κάτω από %2$s)</string>
     <string name="field_rename">Μετονομασία</string>
-    <string name="field_row">%1$s · περίμετρος %2$s · %3$d κορυφές · %4$s</string>
     <string name="field_saved">Το αγροτεμάχιο %1$s αποθηκεύτηκε: %2$s</string>
     <string name="field_spacing">Κορυφή ανά (m)</string>
     <string name="field_start">Έναρξη</string>
@@ -189,20 +184,45 @@
     <string name="guide_along">Κατά μήκος της γραμμής</string>
     <string name="guide_b_point">B από σημείο</string>
     <string name="guide_bearing">Ή αζιμούθιο από το A</string>
+    <string name="guide_clear_cov">Διαγραφή κάλυψης</string>
+    <string name="guide_clear_text">Η επιφάνεια εργασίας, οι επικαλύψεις και η κάλυψη του αγροτεμαχίου που καταγράφηκαν μέχρι τώρα διαγράφονται.</string>
+    <string name="guide_clear_title">Διαγραφή του χάρτη κάλυψης;</string>
+    <string name="guide_curve_finish">Τέλος και χρήση</string>
+    <string name="guide_curve_help">Οδηγήστε το πρώτο πέρασμα κατά μήκος της καμπύλης: τα περάσματα την ακολουθούν, σε απόσταση ενός πλάτους εργαλείου, και από τις δύο πλευρές. Κρατιέται ένα σημείο κάθε 0,5 m και η διαδρομή εξομαλύνεται στα 5 cm. Όνομα και πλάτος όπως παραπάνω.</string>
+    <string name="guide_curve_recording">Καταγραφή της καμπύλης: %1$s</string>
+    <string name="guide_curve_short">Οδηγήστε τουλάχιστον 10 m πριν τελειώσετε την καμπύλη.</string>
+    <string name="guide_curve_start">Καταγραφή καμπύλης</string>
+    <string name="guide_curve_title">Καμπύλη (ισοϋψείς, στροφές)</string>
+    <string name="guide_curve_value">καμπύλη · μήκος %1$s · πλάτος %2$.2f m</string>
+    <string name="guide_export_cov">Κοινοποίηση επιφάνειας εργασίας (GeoJSON)</string>
+    <string name="guide_field_cov">%1$.0f %% καλυμμένο · κενά %2$s</string>
     <string name="guide_heading">Σφάλμα πορείας</string>
+    <string name="guide_headland_field">Αγροτεμάχιο</string>
+    <string name="guide_headland_help">Περάσματα γύρω από ένα όριο αγροτεμαχίου, μέσα σε αυτό: το πρώτο μισό πλάτος εργαλείου μέσα από το όριο, κάθε επόμενο ένα πλάτος πιο μέσα. Πλάτος όπως παραπάνω.</string>
+    <string name="guide_headland_start">Έναρξη καθοδήγησης κεφαλών</string>
+    <string name="guide_headland_suffix">κεφαλές</string>
+    <string name="guide_headland_title">Κεφαλές</string>
+    <string name="guide_headland_value">κεφαλές · περίμετρος %1$s · πλάτος %2$.2f m</string>
     <string name="guide_help">Οδηγήστε το πρώτο πέρασμα: ορίστε το A στην αρχή του και το B στο τέλος του (ή πάρτε τα από αποθηκευμένα / εισαγμένα σημεία ή δώστε A και αζιμούθιο). Τα περάσματα τρέχουν μετά παράλληλα, σε απόσταση ενός πλάτους εργασίας, και στις δύο πλευρές.</string>
     <string name="guide_hold">Κρατήστε την πορεία</string>
     <string name="guide_line">Γραμμή</string>
     <string name="guide_line_value">αζιμούθιο %1$.1f° · πλάτος %2$.2f m</string>
     <string name="guide_name">Όνομα γραμμής</string>
     <string name="guide_new">Νέα γραμμή A-B</string>
+    <string name="guide_no_field">Δεν υπάρχει όριο αγροτεμαχίου εδώ: καταγράψτε ή εισαγάγετε ένα (Εργαλεία &gt; Όριο αγροτεμαχίου) για να δείτε την κάλυψη και τα κενά του.</string>
+    <string name="guide_no_fields">Δεν υπάρχουν ακόμη όρια αγροτεμαχίων: καταγράψτε ή εισαγάγετε ένα στο Εργαλεία &gt; Όριο αγροτεμαχίου.</string>
     <string name="guide_none">Δεν υπάρχουν ακόμη γραμμές.</string>
     <string name="guide_on_line">Στη γραμμή</string>
+    <string name="guide_overlap">Διπλή εργασία</string>
     <string name="guide_pass">Πέρασμα</string>
     <string name="guide_pass_ab">Γραμμή A-B</string>
-    <string name="guide_pass_left">%1$d αριστερά της A-B</string>
-    <string name="guide_pass_right">%1$d δεξιά της A-B</string>
-    <string name="guide_reset_area">Μηδενισμός εμβαδού</string>
+    <string name="guide_pass_curve">η καμπύλη που οδηγήθηκε</string>
+    <string name="guide_pass_headland">πέρασμα κεφαλής %1$d</string>
+    <string name="guide_pass_left">%1$d αριστερά</string>
+    <string name="guide_pass_outside">έξω από το αγροτεμάχιο</string>
+    <string name="guide_pass_right">%1$d δεξιά</string>
+    <string name="guide_record">Καταγραφή κάλυψης</string>
+    <string name="guide_record_help">Βάφει στον χάρτη τη λωρίδα εργασίας (το πλάτος του εργαλείου). Σταματήστε την όσο το εργαλείο είναι σηκωμένο: στροφές στις κεφαλές, μεταφορά.</string>
     <string name="guide_saved">Αποθηκευμένες γραμμές (%1$d)</string>
     <string name="guide_set_a">Ορισμός A εδώ</string>
     <string name="guide_set_b">Ορισμός B εδώ</string>
@@ -220,7 +240,22 @@
     <string name="guide_warn">Ήχος εκτός γραμμής (cm)</string>
     <string name="guide_warn_off">Όχι</string>
     <string name="guide_width">Πλάτος εργασίας</string>
-    <string name="guide_worked">Εμβαδόν εργασίας</string>
+    <string name="guide_worked">Επιφάνεια εργασίας</string>
+    <string name="height_in">Υψόμετρο (%1$s)</string>
+    <string name="height_model">Μοντέλο υψομέτρων</string>
+    <string name="height_model_choose">Επιλέξτε το μοντέλο υψομέτρων της χώρας όπου εργάζεστε.</string>
+    <string name="height_model_credit">%1$s · %2$s · EPSG:%3$d</string>
+    <string name="height_model_delete">Διαγραφή</string>
+    <string name="height_model_download">Λήψη (%1$s)</string>
+    <string name="height_model_downloading">Λήψη… %1$d %%</string>
+    <string name="height_model_failed">Η λήψη απέτυχε: %1$s</string>
+    <string name="height_model_help">Υψόμετρα στο υψομετρικό σύστημα της χώρας σας, από το επίσημο μοντέλο γεωειδούς της χαρτογραφικής υπηρεσίας της (δημοσιευμένο στο PROJ-data). Κατεβαίνει μία φορά και ελέγχεται· μετά λειτουργεί χωρίς σύνδεση. Τα υψόμετρα είναι σωστά για θέσεις σε ETRS89, όπως τις δίνουν τα ευρωπαϊκά δίκτυα RTK και το PPP του PocketGNSS.</string>
+    <string name="height_model_missing">Κατεβάστε το μοντέλο υψομέτρων στο Ρυθμίσεις &gt; Προβολή.</string>
+    <string name="height_model_none">Επιλέξτε μοντέλο υψομέτρων στο Ρυθμίσεις &gt; Προβολή.</string>
+    <string name="height_model_outside">Εκτός %1$s: επιλέξτε άλλο μοντέλο υψομέτρων στο Ρυθμίσεις &gt; Προβολή.</string>
+    <string name="height_model_ready">Έγινε λήψη (%1$s), λειτουργεί χωρίς σύνδεση</string>
+    <string name="height_model_use">Χρήση %1$s (η θέση σας)</string>
+    <string name="height_model_world">Το EGM2008 είναι η καλύτερη δωρεάν επιλογή όπου δεν υπάρχει ανοιχτό εθνικό μοντέλο (για παράδειγμα Ελλάδα, Ιταλία, Κροατία, Ρουμανία)· μπορεί να διαφέρει από τα εθνικά υψόμετρα κατά μερικά δεκατόμετρα.</string>
     <string name="help_bt">Bluetooth Classic (SPP), όπως χρησιμοποιεί ο προσαρμογέας του δέκτη· το BLE δεν χρησιμοποιείται. Ο δέκτης στέλνει το ίδιο NMEA όπως μέσω USB. Κάντε σύζευξη του τηλεφώνου με τον προσαρμογέα του (BTU-ESPrtk : &lt;ID&gt;) στις ρυθμίσεις Android και επιλέξτε τον παρακάτω.</string>
     <string name="help_phone">Το δικό του τσιπ GNSS του τηλεφώνου, χωρίς εξωτερικό δέκτη. Με το Phone RTK (Ρυθμίσεις) οι ακατέργαστες μετρήσεις του συνδυάζονται με διορθώσεις από caster μέσω της αναμετάδοσης NTRIP· η ακρίβεια εξαρτάται από το τηλέφωνο (δεκατόμετρα έως εκατοστά με φάση φέροντος σε L1 + L5). Χωρίς διορθώσεις ή με απενεργοποιημένο Phone RTK: επίπεδο μέτρου. Απαιτεί πρόσβαση στην τοποθεσία και ενεργή τοποθεσία.</string>
     <string name="help_sim">Ένας προσομοιωμένος δέκτης RTK: όλες οι οθόνες και τα εργαλεία λειτουργούν χωρίς υλικό.</string>
@@ -246,7 +281,6 @@
     <string name="hist_latest_help">Μηχανή: n = δορυφόροι στη λύση, φ = σήματα με φάση φέροντος, r = λόγος ασαφειών (για fixed χρειάζεται περίπου 3 ή περισσότερο).</string>
     <string name="hist_log">Καταγραφή κάθε θέσης σε αρχείο CSV</string>
     <string name="hist_log_help">Αποθηκεύεται στο Καταγραφή &gt; Συνεδρίες (\"Ιστορικό θέσεων\"), με όλες τις στήλες μαζί με τα εσωτερικά της μηχανής.</string>
-    <string name="hist_log_on">%1$s · %2$d γραμμές</string>
     <string name="hist_ref_auto">μέσος όρος %1$s</string>
     <string name="hist_ref_auto_btn">Αυτόματη</string>
     <string name="hist_ref_here">Αναφορά εδώ</string>
@@ -283,12 +317,13 @@
     <string name="home_version">v%1$s (build %2$d)</string>
     <string name="hotspot_open">Ρυθμίσεις hotspot τηλεφώνου</string>
     <string name="import_button">Εισαγωγή σημείων / ορίων</string>
-    <string name="import_done">Εισήχθησαν %1$d σημεία και %2$d όρια.</string>
+    <string name="import_done">Εισήχθησαν %1$s και %2$s.</string>
     <string name="import_format">Δεν ήταν δυνατή η ανάγνωση του αρχείου (CSV, GeoJSON, KML, GPX ή συμπιεσμένο shapefile).</string>
     <string name="import_help">CSV (πλάτος / μήκος, ή easting / northing στον κάνναβο που επιλέχθηκε στο Ρυθμίσεις &gt; Προβολή), GeoJSON, KML, σημεία GPX ή συμπιεσμένο shapefile (.shp, .dbf, .prj). Τα σημεία είναι έτοιμα για χάραξη· τα όρια προστίθενται στη λίστα αγροτεμαχίων.</string>
     <string name="import_no_grid">Το αρχείο έχει συντεταγμένες καννάβου: επιλέξτε τον κάνναβό του στο Ρυθμίσεις &gt; Προβολή (για UTM σταθερή ζώνη ή συνδεθείτε για την τρέχουσα ζώνη) και εισαγάγετε ξανά.</string>
     <string name="import_nothing">Δεν βρέθηκαν σημεία ή όρια σε αυτό το αρχείο.</string>
-    <string name="import_skipped">%1$d εγγραφές δεν ήταν δυνατό να διαβαστούν.</string>
+    <string name="isoxml_button">ISO-XML για τερματικά ISOBUS</string>
+    <string name="isoxml_help">TASKDATA.zip (ISO 11783-10, έκδοση 4.3) με όλα τα αγροτεμάχια, τις γραμμές καθοδήγησης (A-B, καμπύλες, κεφαλές) και τα σημεία, για τερματικά τρακτέρ και λογισμικό διαχείρισης εκμετάλλευσης. Αποσυμπιέστε το σε USB stick ώστε ο φάκελος TASKDATA να είναι στην κορυφή.</string>
     <string name="live_accuracy">Ακρίβεια</string>
     <string name="live_accuracy_value">Ο %1$s · Κ %2$s</string>
     <string name="live_age">Ηλικία διορθώσεων</string>
@@ -316,25 +351,29 @@
     <string name="live_ntrip_value">%1$s · %2$s · %3$.0f B/s</string>
     <string name="live_phone_no_rtk">GNSS τηλεφώνου με απενεργοποιημένο Phone RTK (Ρυθμίσεις): οι διορθώσεις δεν εφαρμόζονται, η θέση μένει αυτόνομη.</string>
     <string name="live_position">Θέση</string>
+    <string name="live_ppp_frame_etrs">Συντεταγμένες σε ETRS89 (ETRF2000), μετασχηματισμένες από το παγκόσμιο σύστημα αναφοράς των διορθώσεων (ITRF2020), όπως τις χρησιμοποιούν τα ευρωπαϊκά δίκτυα RTK και τα εθνικά συστήματα.</string>
+    <string name="live_ppp_frame_itrf">Συντεταγμένες σε ITRF2020 με τη σημερινή ημερομηνία, το παγκόσμιο σύστημα αναφοράς των διορθώσεων.</string>
+    <string name="live_ppp_hint">Ενεργοποιήστε την αναμετάδοση NTRIP με ροή Galileo HAS ή IGS SSRA… (caster στο Ρυθμίσεις &gt; Αναμετάδοση NTRIP)· μέχρι τότε το τηλέφωνο δίνει αυτόνομη θέση.</string>
+    <string name="live_ppp_l1">Καμία δεύτερη συχνότητα από αυτό το τηλέφωνο: το PPP χρησιμοποιεί το εκπεμπόμενο μοντέλο ιονόσφαιρας (περίπου ένα μέτρο).</string>
+    <string name="live_ppp_noeph">Δεν υπάρχουν ακόμη εφημερίδες: αν η ροή διορθώσεων δεν τις περιέχει, ενεργοποιήστε τη ροή εφημερίδων (Ρυθμίσεις &gt; Σύνδεση δέκτη).</string>
+    <string name="live_ppp_nossr">Δεν υπάρχουν ακόμη διορθώσεις SSR σε αυτή τη ροή: το PPP χρειάζεται mountpoint Galileo HAS ή IGS SSRA… (Ρυθμίσεις &gt; Αναμετάδοση NTRIP).</string>
+    <string name="live_ppp_ssr">Διορθώσεις SSR</string>
     <string name="live_rec_off">Rec OFF</string>
     <string name="live_rec_on">Rec ON</string>
     <string name="live_route">Έκδοση δέκτη</string>
     <string name="live_rtk_base">Δεδομένα βάσης</string>
-    <string name="live_rtk_base_value">σταθμός %1$d · %2$d δορυφόροι · %3$d εφημερίδες</string>
     <string name="live_rtk_engine">Phone RTK</string>
-    <string name="live_rtk_engine_value">%1$d σήματα, %2$d με φάση φέροντος · λόγος AR %3$.1f</string>
     <string name="live_rtk_hint">Ενεργοποιήστε την αναμετάδοση NTRIP (caster και mountpoint στις Ρυθμίσεις) για RTK· μέχρι τότε το τηλέφωνο δίνει αυτόνομη θέση.</string>
     <string name="live_rtk_no_basepos">δεν υπάρχει ακόμη θέση σταθμού (1005/1006)</string>
     <string name="live_rtk_noeph">Ο caster δεν στέλνει εφημερίδες (RTCM 1019/1020/1045/1046/1042): το τηλέφωνο δεν μπορεί να υπολογίσει θέσεις δορυφόρων μόνο από αυτή τη ροή. Επιλέξτε mountpoint που τις περιλαμβάνει (οι περισσότερες ροές MSM).</string>
     <string name="live_rtk_nophase">Αυτή τη στιγμή δεν υπάρχει φάση φέροντος από το τηλέφωνο: το RTK δεν μπορεί να δώσει fixed (τηλέφωνο μόνο κώδικα ή ενεργή εξοικονόμηση ενέργειας). Η θέση μένει σε επίπεδο μέτρου.</string>
+    <string name="live_rtk_station">σταθμός %1$d</string>
     <string name="live_sats">Δορυφόροι</string>
-    <string name="live_sats_value">%1$d σε χρήση / %2$d ορατοί</string>
     <string name="live_sky">Ουρανός και σήματα</string>
     <string name="live_speed">Ταχύτητα / πορεία</string>
     <string name="live_time">Ώρα</string>
     <string name="live_waiting">Αναμονή θέσης…</string>
     <string name="log_any_fix">Οποιαδήποτε λύση</string>
-    <string name="log_counts">%1$d λύσεις · %2$d γραμμές NMEA</string>
     <string name="log_delete_point">Διαγραφή αυτού του σημείου;</string>
     <string name="log_delete_title">Διαγραφή αυτής της συνεδρίας;</string>
     <string name="log_every_epoch">Κάθε εποχή</string>
@@ -352,6 +391,8 @@
     <string name="log_replay">Αναπαραγωγή</string>
     <string name="log_replay_help">Η αναπαραγωγή παίζει μια συνεδρία ως πηγή, ώστε τα Ζωντανά, ο Χάρτης, τα εργαλεία και το ιστορικό θέσεων να δουλεύουν πάνω της. Οι συνεδρίες NMEA παίζουν όπως καταγράφηκαν· οι ακατέργαστες συνεδρίες τηλεφώνου (RINEX + RTCM) περνούν ξανά από το Phone RTK με τις τρέχουσες ρυθμίσεις.</string>
     <string name="log_replay_max">Μέγ.</string>
+    <string name="log_replay_pause">Παύση</string>
+    <string name="log_replay_resume">Συνέχεια</string>
     <string name="log_replay_running">Αναπαραγωγή %1$s: %2$d από %3$d</string>
     <string name="log_replay_speed">Ταχύτητα αναπαραγωγής</string>
     <string name="log_replay_stop">Διακοπή αναπαραγωγής</string>
@@ -367,9 +408,12 @@
     <string name="map_tap_point">Πατήστε ένα σημείο για απόσταση και αζιμούθιο.</string>
     <string name="map_terrain">Ανάγλυφο</string>
     <string name="map_to_point">%1$s στις %2$.1f°</string>
+    <string name="method_android">Θέση Android</string>
+    <string name="method_code_dgnss">DGNSS κώδικα</string>
+    <string name="method_ppp">PPP</string>
+    <string name="method_ppp_conv">PPP σε σύγκλιση</string>
     <string name="mount_dialog_empty">Ο caster δεν επέστρεψε mountpoints.</string>
     <string name="mount_dialog_error">Δεν ήταν δυνατή η λήψη του sourcetable: %1$s</string>
-    <string name="mount_dialog_help">%1$d mountpoints. Πρώτα ροές δικτύου (VRS, MAX, πλησιέστερη βάση), μετά μεμονωμένοι σταθμοί, οι πλησιέστεροι πρώτοι. Πατήστε ένα για χρήση· η αποστολή θέσης (GGA) ρυθμίζεται από τη λίστα του caster.</string>
     <string name="mount_dialog_loading">Ζητείται το sourcetable από τον caster…</string>
     <string name="mount_dialog_title">Mountpoints στο %1$s:%2$d</string>
     <string name="nc_awaiting">Αναμονή για να επιτρέψετε την πρόσβαση USB.</string>
@@ -379,7 +423,6 @@
     <string name="nmea_all">Όλα</string>
     <string name="nmea_copied">Το NMEA αντιγράφηκε</string>
     <string name="nmea_copy">Αντιγραφή</string>
-    <string name="nmea_count">%1$d εμφανίζονται από τις τελευταίες %2$d προτάσεις</string>
     <string name="nmea_empty">Δεν υπάρχουν ακόμη προτάσεις αυτού του τύπου.</string>
     <string name="nmea_fewer">Λιγότερες</string>
     <string name="nmea_help">Οι προτάσεις του δέκτη όπως φτάνουν, χωρίς αποθήκευση αρχείου. Φιλτράρισμα ανά τύπο, παύση για ανάγνωση, αντιγραφή ή κοινοποίηση όσων εμφανίζονται. Για πλήρη καταγραφή, χρησιμοποιήστε την Καταγραφή παραπάνω.</string>
@@ -389,13 +432,10 @@
     <string name="nmea_title">Μηνύματα NMEA (ζωντανά)</string>
     <string name="no_gnss_short">Αυτό το τηλέφωνο δεν έχει δέκτη GNSS: συνδέστε εξωτερικό</string>
     <string name="no_gnss_warning">Αυτό το τηλέφωνο δεν έχει δικό του δέκτη GNSS (δορυφορικού εντοπισμού). Το PocketGNSS είναι χρήσιμο μόνο με εξωτερικό δέκτη GNSS συνδεδεμένο μέσω USB, Bluetooth ή δικτύου· η πηγή τηλεφώνου και τα εργαλεία ακατέργαστων GNSS τηλεφώνου δεν είναι διαθέσιμα.</string>
-    <string name="notif_bt">Bluetooth: %1$d συσκευές</string>
     <string name="notif_channel">Σύνδεση δέκτη</string>
     <string name="notif_channel_help">Εμφανίζεται όσο η εφαρμογή καταγράφει, στέλνει διορθώσεις ή δημοσιεύει τη θέση με σβηστή οθόνη.</string>
-    <string name="notif_logging">Καταγραφή %1$d λύσεων</string>
     <string name="notif_mock">Ψευδής τοποθεσία</string>
     <string name="notif_ntrip">NTRIP %1$s</string>
-    <string name="notif_raw">Ακατέργαστα GNSS %1$d εποχές</string>
     <string name="notif_server">Διακομιστής NMEA (%1$d)</string>
     <string name="notif_stop">Διακοπή</string>
     <string name="notif_title_fix">%1$s %2$s</string>
@@ -447,7 +487,6 @@
     <string name="out_mock_open_dev">Επιλογές για προγραμματιστές</string>
     <string name="out_mock_phone">Μη διαθέσιμο με πηγή το τηλέφωνο: η ψευδής τοποθεσία θα αντικαθιστούσε τον πάροχο GNSS του ίδιου του τηλεφώνου και μαζί του τις μετρήσεις του.</string>
     <string name="out_server">Διακομιστής NMEA TCP</string>
-    <string name="out_server_help">Διαθέτει το NMEA του δέκτη στο %1$s:%2$d · %3$d πελάτες</string>
     <string name="out_server_local">Μόνο αυτό το τηλέφωνο</string>
     <string name="out_server_local_help">Ανενεργό: μπορούν να συνδεθούν και υπολογιστές του ίδιου δικτύου</string>
     <string name="out_server_port">Θύρα διακομιστή</string>
@@ -457,6 +496,8 @@
     <string name="phint_dgnss">Κώδικας με διορθώσεις (πολύ λίγη φάση φέροντος): επίπεδο μέτρου</string>
     <string name="phint_fixed">Φάση φέροντος, επιλυμένες ασάφειες: εκατοστά αν η λύση είναι σωστή</string>
     <string name="phint_float">Φάση φέροντος, χωρίς επίλυση: δεκατόμετρα</string>
+    <string name="phint_ppp">Ακριβής απόλυτος προσδιορισμός, χωρίς βάση: δεκατόμετρα έως περίπου ένα μέτρο σε τηλέφωνο</string>
+    <string name="phint_ppp_conv">Σύγκλιση: η ακρίβεια βελτιώνεται τα πρώτα 20–30 λεπτά σε ανοιχτό ουρανό</string>
     <string name="phint_single">Χωρίς διορθώσεις: μέτρα</string>
     <string name="point_code">Κωδικός / κατηγορία</string>
     <string name="point_edit">Επεξεργασία σημείου</string>
@@ -475,7 +516,6 @@
     <string name="raw_chip">Τσιπ GNSS</string>
     <string name="raw_clock">Ρολόι δέκτη</string>
     <string name="raw_clock_missing">χωρίς full bias: οι μετρήσεις δεν χρησιμοποιούνται</string>
-    <string name="raw_clock_ok">αναφέρεται full bias · %1$d ασυνέχειες</string>
     <string name="raw_col_cn0">C/N0</string>
     <string name="raw_col_code">Κώδικας</string>
     <string name="raw_col_phase">Φάση</string>
@@ -537,6 +577,9 @@
     <string name="setup_phone_auto_learning">Εκμάθηση: μετά από περίπου 10 λεπτά Phone RTK η μηχανή προσαρμόζεται σε ό,τι δίνει αυτό το τηλέφωνο.</string>
     <string name="setup_phone_auto_noar">Αυτό το τηλέφωνο σπάνια έχει αρκετή φάση φέροντος για fixed: η επίλυση ασαφειών είναι απενεργοποιημένη, ώστε να δίνει ειλικρινείς λύσεις float / κώδικα αντί για ψευδείς fixed.</string>
     <string name="setup_phone_auto_normal">Αυτό το τηλέφωνο δίνει χρήσιμη φάση φέροντος: κανονικές ρυθμίσεις.</string>
+    <string name="setup_phone_corr">Διορθώσεις</string>
+    <string name="setup_phone_corr_ppp">PPP (HAS)</string>
+    <string name="setup_phone_corr_rtk">RTK (βάση)</string>
     <string name="setup_phone_forget">Διαγραφή όσων μαθεύτηκαν</string>
     <string name="setup_phone_learned">Εκμάθηση</string>
     <string name="setup_phone_learned_value">%1$.0f λεπτά · %2$.1f δορ. με φάση · αρκετοί για fixed %3$.0f %% · %4$.2f ολισθήσεις / δορ.-λεπτό</string>
@@ -547,6 +590,8 @@
     <string name="setup_phone_rtk_mode">Το τηλέφωνο είναι</string>
     <string name="setup_phone_rtk_moving">Σε κίνηση</string>
     <string name="setup_phone_rtk_static">Ακίνητο σε σημείο</string>
+    <string name="setup_ppp_help">Το PPP δεν χρειάζεται σταθμό βάσης ούτε συνδρομή: η αναμετάδοση NTRIP συνδέεται σε ροή διορθώσεων τροχιάς, ρολογιού και code bias των δορυφόρων (SSR) και οι ακατέργαστες μετρήσεις του τηλεφώνου επεξεργάζονται μόνες τους. Το Galileo HAS είναι δωρεάν από την ΕΕ μετά από εγγραφή στο European GNSS Service Centre (gsc-europa.eu, HAS Internet Data Distribution)· λειτουργούν επίσης οι ροές πραγματικού χρόνου του IGS με όνομα SSRA… (δωρεάν εγγραφή). Αναμένονται δεκατόμετρα έως περίπου ένα μέτρο σε τηλέφωνο δύο συχνοτήτων μετά από 20–30 λεπτά σε ανοιχτό ουρανό, περίπου ένα μέτρο σε τηλέφωνα μόνο L1. Δεν γίνεται επίλυση ασαφειών, άρα όχι εκατοστά.</string>
+    <string name="setup_ppp_ssrc">Οι ροές με όνομα SSRC… αναφέρουν τις τροχιές στο κέντρο μάζας των δορυφόρων, που το PocketGNSS δεν χρησιμοποιεί: επιλέξτε Galileo HAS ή ροή SSRA… (κέντρο φάσης κεραίας).</string>
     <string name="setup_receiver">Ρυθμίσεις web δέκτη</string>
     <string name="setup_receiver_help">Χρησιμοποιείται για την εύρεση του hotspot του δέκτη (ESPrtk : &lt;ID&gt;, το ID φαίνεται στην οθόνη LCD) και για την εμφάνιση των στοιχείων σύνδεσης (RTKrover + αριθμός συσκευής).</string>
     <string name="setup_receiver_id">ID δέκτη (π.χ. AJG03)</string>
@@ -582,11 +627,9 @@
     <string name="state_server">διακομιστής :%1$d</string>
     <string name="stream_baud">Ρυθμός baud</string>
     <string name="stream_bytes">Ληφθέντα</string>
-    <string name="stream_bytes_value">%1$d bytes · %2$d NMEA · %3$d UBX</string>
     <string name="stream_console">Κονσόλα NMEA</string>
     <string name="stream_counts">Μηνύματα και ρυθμοί</string>
     <string name="stream_errors">Σφάλματα</string>
-    <string name="stream_errors_value">%1$d λάθος checksum · %2$d άλλα bytes</string>
     <string name="stream_gap">Μέγ. κενό</string>
     <string name="stream_live">Ζωντανά</string>
     <string name="stream_paused">Σε παύση</string>
@@ -619,7 +662,6 @@
     <string name="survey_rms">Σφάλμα RMS</string>
     <string name="survey_running">Μέσος όρος ON</string>
     <string name="survey_samples">Δείγματα</string>
-    <string name="survey_samples_value">%1$d σε χρήση · %2$d απορρίφθηκαν · %3$s</string>
     <string name="survey_save">Αποθήκευση ως σημείο</string>
     <string name="survey_save_btn">Αποθήκευση σημείου</string>
     <string name="survey_sd">Τυπ. απόκλιση</string>
@@ -636,8 +678,8 @@
     <string name="tool_corrections_sum">Αναμετάδοση NTRIP μέσω τηλεφώνου, μηνύματα RTCM, απόσταση βάσης, mountpoints</string>
     <string name="tool_field">Όριο αγροτεμαχίου</string>
     <string name="tool_field_sum">Περπατήστε ή οδηγήστε γύρω από ένα αγροτεμάχιο ή σημειώστε τις γωνίες του: εμβαδόν, περίμετρος, εξαγωγή KML / SHP</string>
-    <string name="tool_guide">Καθοδήγηση A-B</string>
-    <string name="tool_guide_sum">Παράλληλα περάσματα στο πλάτος του εργαλείου με μπάρα ενδείξεων, για ψεκασμό, λίπανση και σπορά</string>
+    <string name="tool_guide">Καθοδήγηση</string>
+    <string name="tool_guide_sum">Γραμμές A-B, καμπύλες και περάσματα κεφαλών στο πλάτος του εργαλείου, με φωτεινή μπάρα και χάρτη κάλυψης</string>
     <string name="tool_history">Ιστορικό θέσεων</string>
     <string name="tool_history_sum">Κάθε υπολογισμένη θέση με μέθοδο και ακρίβεια· δηλωμένη έναντι πραγματικής διασποράς· αρχείο CSV</string>
     <string name="tool_nmea">Έξοδος NMEA</string>
@@ -746,4 +788,132 @@
     <string name="web_warnings">Προειδοποιήσεις</string>
     <string name="web_wifi_hotspot">Δεν υπάρχει δρομολογητής στο χωράφι; Ενεργοποιήστε το hotspot κινητής αυτού του τηλεφώνου με το ίδιο SSID και κωδικό όπως στην ενότητα 4: ο δέκτης φτάνει τότε στην υπηρεσία RTK μέσω των δεδομένων κινητής του τηλεφώνου. Πολλά τηλέφωνα δεν μπορούν να έχουν hotspot όσο είναι συνδεδεμένα στο Wi-Fi του δέκτη, οπότε ολοκληρώστε πρώτα αυτές τις ρυθμίσεις.</string>
     <string name="web_wifi_steps">Έκδοση Wi-Fi: στην ενότητα 4 επιλέξτε Internet via Wi-Fi, Number Access Point 1 AP Wi-Fi, και το SSID και τον κωδικό του δρομολογητή στο χωράφι (προεπιλογή RFSAT)· αφήστε ενεργό το Smart Scan. Send και ελέγξτε το παράθυρο κατάστασης.</string>
+    <plurals name="api_json_help">
+        <item quantity="one">Μία γραμμή JSON ανά θέση στο %1$s:%2$d (%3$d συνδεδεμένος)</item>
+        <item quantity="other">Μία γραμμή JSON ανά θέση στο %1$s:%2$d (%3$d συνδεδεμένοι)</item>
+    </plurals>
+    <plurals name="caster_clients">
+        <item quantity="one">%1$d rover %2$s · %3$.0f kB εστάλησαν</item>
+        <item quantity="other">%1$d rovers %2$s · %3$.0f kB εστάλησαν</item>
+    </plurals>
+    <plurals name="corr_bad">
+        <item quantity="one">%1$d λανθασμένο</item>
+        <item quantity="other">%1$d λανθασμένα</item>
+    </plurals>
+    <plurals name="corr_frames">
+        <item quantity="one">%1$d πλαίσιο</item>
+        <item quantity="other">%1$d πλαίσια</item>
+    </plurals>
+    <plurals name="exit_logging">
+        <item quantity="one">Γίνεται καταγραφή (%1$d λύση). Θα σταματήσει και τα αρχεία θα κλείσουν.</item>
+        <item quantity="other">Γίνεται καταγραφή (%1$d λύσεις). Θα σταματήσει και τα αρχεία θα κλείσουν.</item>
+    </plurals>
+    <plurals name="field_averaging">
+        <item quantity="one">Μέσος όρος γωνίας… %1$d λύση</item>
+        <item quantity="other">Μέσος όρος γωνίας… %1$d λύσεις</item>
+    </plurals>
+    <plurals name="field_rejected">
+        <item quantity="one">%1$d λύση δεν χρησιμοποιήθηκε (κάτω από %2$s)</item>
+        <item quantity="other">%1$d λύσεις δεν χρησιμοποιήθηκαν (κάτω από %2$s)</item>
+    </plurals>
+    <plurals name="field_row">
+        <item quantity="one">%1$s · περίμετρος %2$s · %3$d κορυφή · %4$s</item>
+        <item quantity="other">%1$s · περίμετρος %2$s · %3$d κορυφές · %4$s</item>
+    </plurals>
+    <plurals name="hist_log_on">
+        <item quantity="one">%1$s · %2$d γραμμή</item>
+        <item quantity="other">%1$s · %2$d γραμμές</item>
+    </plurals>
+    <plurals name="import_boundaries">
+        <item quantity="one">%1$d όριο</item>
+        <item quantity="other">%1$d όρια</item>
+    </plurals>
+    <plurals name="import_points">
+        <item quantity="one">%1$d σημείο</item>
+        <item quantity="other">%1$d σημεία</item>
+    </plurals>
+    <plurals name="import_skipped">
+        <item quantity="one">%1$d εγγραφή δεν ήταν δυνατό να διαβαστεί.</item>
+        <item quantity="other">%1$d εγγραφές δεν ήταν δυνατό να διαβαστούν.</item>
+    </plurals>
+    <plurals name="live_ppp_ssr_value">
+        <item quantity="one">%1$d δορυφόρος · %2$d με code biases · πριν από %3$.0f s</item>
+        <item quantity="other">%1$d δορυφόροι · %2$d με code biases · πριν από %3$.0f s</item>
+    </plurals>
+    <plurals name="live_rtk_engine_value">
+        <item quantity="one">%1$d σήμα, %2$d με φάση φέροντος · λόγος AR %3$.1f</item>
+        <item quantity="other">%1$d σήματα, %2$d με φάση φέροντος · λόγος AR %3$.1f</item>
+    </plurals>
+    <plurals name="mount_dialog_help">
+        <item quantity="one">%1$d mountpoint. Πρώτα ροές δικτύου (VRS, MAX, πλησιέστερη βάση), μετά μεμονωμένοι σταθμοί, οι πλησιέστεροι πρώτοι. Πατήστε ένα για χρήση· η αποστολή θέσης (GGA) ρυθμίζεται από τη λίστα του caster.</item>
+        <item quantity="other">%1$d mountpoints. Πρώτα ροές δικτύου (VRS, MAX, πλησιέστερη βάση), μετά μεμονωμένοι σταθμοί, οι πλησιέστεροι πρώτοι. Πατήστε ένα για χρήση· η αποστολή θέσης (GGA) ρυθμίζεται από τη λίστα του caster.</item>
+    </plurals>
+    <plurals name="n_bad_checksums">
+        <item quantity="one">%1$d λάθος checksum</item>
+        <item quantity="other">%1$d λάθος checksum</item>
+    </plurals>
+    <plurals name="n_ephemerides">
+        <item quantity="one">%1$d εφημερίδα</item>
+        <item quantity="other">%1$d εφημερίδες</item>
+    </plurals>
+    <plurals name="n_fixes">
+        <item quantity="one">%1$d λύση</item>
+        <item quantity="other">%1$d λύσεις</item>
+    </plurals>
+    <plurals name="n_nmea_lines">
+        <item quantity="one">%1$d γραμμή NMEA</item>
+        <item quantity="other">%1$d γραμμές NMEA</item>
+    </plurals>
+    <plurals name="n_other_bytes">
+        <item quantity="one">%1$d άλλο byte</item>
+        <item quantity="other">%1$d άλλα bytes</item>
+    </plurals>
+    <plurals name="n_rejected">
+        <item quantity="one">%1$d απορρίφθηκε</item>
+        <item quantity="other">%1$d απορρίφθηκαν</item>
+    </plurals>
+    <plurals name="n_satellites">
+        <item quantity="one">%1$d δορυφόρος</item>
+        <item quantity="other">%1$d δορυφόροι</item>
+    </plurals>
+    <plurals name="n_used">
+        <item quantity="one">%1$d σε χρήση</item>
+        <item quantity="other">%1$d σε χρήση</item>
+    </plurals>
+    <plurals name="nmea_count">
+        <item quantity="one">%1$d εμφανίζεται από την τελευταία %2$d πρόταση</item>
+        <item quantity="other">%1$d εμφανίζονται από τις τελευταίες %2$d προτάσεις</item>
+    </plurals>
+    <plurals name="notif_bt">
+        <item quantity="one">Bluetooth: %1$d συσκευή</item>
+        <item quantity="other">Bluetooth: %1$d συσκευές</item>
+    </plurals>
+    <plurals name="notif_logging">
+        <item quantity="one">Καταγραφή %1$d λύσης</item>
+        <item quantity="other">Καταγραφή %1$d λύσεων</item>
+    </plurals>
+    <plurals name="notif_raw">
+        <item quantity="one">Ακατέργαστα GNSS %1$d εποχή</item>
+        <item quantity="other">Ακατέργαστα GNSS %1$d εποχές</item>
+    </plurals>
+    <plurals name="out_server_help">
+        <item quantity="one">Διαθέτει το NMEA του δέκτη στο %1$s:%2$d · %3$d πελάτης</item>
+        <item quantity="other">Διαθέτει το NMEA του δέκτη στο %1$s:%2$d · %3$d πελάτες</item>
+    </plurals>
+    <plurals name="raw_clock_ok">
+        <item quantity="one">αναφέρεται full bias · %1$d ασυνέχεια</item>
+        <item quantity="other">αναφέρεται full bias · %1$d ασυνέχειες</item>
+    </plurals>
+    <plurals name="sats_in_view">
+        <item quantity="one">%1$d ορατός</item>
+        <item quantity="other">%1$d ορατοί</item>
+    </plurals>
+    <plurals name="sats_used">
+        <item quantity="one">%1$d σε χρήση</item>
+        <item quantity="other">%1$d σε χρήση</item>
+    </plurals>
+    <plurals name="stream_bytes_value">
+        <item quantity="one">%1$d byte · %2$d NMEA · %3$d UBX</item>
+        <item quantity="other">%1$d bytes · %2$d NMEA · %3$d UBX</item>
+    </plurals>
 </resources>

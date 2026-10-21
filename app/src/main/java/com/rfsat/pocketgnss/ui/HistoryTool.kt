@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -92,7 +93,7 @@ fun HistoryTool(engine: GnssEngine) {
             KeyValue(stringResource(R.string.hist_reference), when {
                 ref == null -> "—"
                 h.reference != null -> stringResource(R.string.hist_ref_user)
-                else -> stringResource(R.string.hist_ref_auto, list.maxByOrNull { it.quality.rank }?.method ?: "")
+                else -> stringResource(R.string.hist_ref_auto, list.maxByOrNull { it.quality.rank }?.method?.let { methodText(it) } ?: "")
             })
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton(onClick = {
@@ -104,7 +105,7 @@ fun HistoryTool(engine: GnssEngine) {
                     compact = true, enabled = list.isNotEmpty()) { Text(stringResource(R.string.hist_export)) }
             }
             SwitchRow(stringResource(R.string.hist_log), h.logging, { on -> if (on) h.startFile() else h.stopFile(); version = -4 },
-                if (h.logging) stringResource(R.string.hist_log_on, h.fileName ?: "", h.fileRows) else stringResource(R.string.hist_log_help))
+                if (h.logging) pluralStringResource(R.plurals.hist_log_on, h.fileRows.toPlural(), h.fileName ?: "", h.fileRows) else stringResource(R.string.hist_log_help))
         }
 
         if (ref != null && list.isNotEmpty()) {
@@ -119,7 +120,7 @@ fun HistoryTool(engine: GnssEngine) {
                     for (s in stats) Row(verticalAlignment = Alignment.CenterVertically) {
                         val sample = shown.first { it.method == s.method }
                         Box(Modifier.size(10.dp).background(methodColor(sample), CircleShape))
-                        Text(" ${s.method}", style = MaterialTheme.typography.bodySmall)
+                        Text(" " + methodText(s.method), style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
@@ -134,7 +135,7 @@ fun HistoryTool(engine: GnssEngine) {
                 for (s in stats) Row(Modifier.fillMaxWidth()) {
                     val sample = shown.first { it.method == s.method }
                     val bad = s.within2Sigma < 0.8
-                    Text(s.method, Modifier.weight(0.3f), style = MaterialTheme.typography.bodySmall, color = methodColor(sample), fontWeight = FontWeight.SemiBold)
+                    Text(methodText(s.method), Modifier.weight(0.3f), style = MaterialTheme.typography.bodySmall, color = methodColor(sample), fontWeight = FontWeight.SemiBold)
                     Text("${s.count}", Modifier.weight(0.12f), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
                     Text(formatAccuracy(s.meanAccH), Modifier.weight(0.15f), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
                     Text(formatAccuracy(s.rmsDist), Modifier.weight(0.15f), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
@@ -154,7 +155,7 @@ fun HistoryTool(engine: GnssEngine) {
                     val o = SolutionHistory.enu(r, ref)
                     Row(Modifier.fillMaxWidth()) {
                         Text(time.format(Date(r.timeMs)), Modifier.weight(0.2f), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
-                        Text(r.method, Modifier.weight(0.26f), style = MaterialTheme.typography.bodySmall, color = methodColor(r), maxLines = 1)
+                        Text(methodText(r.method), Modifier.weight(0.26f), style = MaterialTheme.typography.bodySmall, color = methodColor(r), maxLines = 1)
                         Text("%+.2f %+.2f".format(Locale.US, o[0], o[1]), Modifier.weight(0.24f), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
                         Text(formatAccuracy(r.accH), Modifier.weight(0.14f), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
                         Text(listOfNotNull(r.satellites?.let { "n$it" }, r.phaseSignals?.let { "φ$it" }, r.ratio?.takeIf { it > 0 }?.let { "r%.1f".format(Locale.US, it) })

@@ -6,16 +6,20 @@
 #define FN(name) Java_com_rfsat_pocketgnss_rtk_RtkNative_##name
 
 JNIEXPORT jboolean JNICALL FN(init)(JNIEnv *env, jobject thiz, jint mode, jint navsys, jdouble elmask, jdouble snrmask,
-                                    jint armode, jint gloAr, jdouble eratio, jdouble thresar, jdouble maxage, jint minfixsats)
+                                    jint armode, jint gloAr, jdouble eratio, jdouble thresar, jdouble maxage, jint minfixsats,
+                                    jint ionoFree)
 {
     prtk_opt_t o;
     prtk_default_opt(&o);
     o.mode = mode; o.navsys = navsys; o.elmask_deg = elmask; o.snrmask = snrmask;
     o.armode = armode; o.glo_ar = gloAr; o.eratio = eratio; o.thresar = thresar; o.maxage = maxage; o.minfixsats = minfixsats;
+    o.iono_free = ionoFree;
     return prtk_init(&o) ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT void JNICALL FN(free)(JNIEnv *env, jobject thiz) { prtk_free(); }
+
+JNIEXPORT void JNICALL FN(setIono)(JNIEnv *env, jobject thiz, jint ionoFree) { prtk_set_iono(ionoFree); }
 
 JNIEXPORT void JNICALL FN(setTime)(JNIEnv *env, jobject thiz, jint week, jdouble tow) { prtk_set_time(week, tow); }
 
@@ -71,16 +75,17 @@ JNIEXPORT jint JNICALL FN(rover)(JNIEnv *env, jobject thiz, jint week, jdouble t
     return st;
 }
 
-/* out: hasPos, x, y, z, lat, lon, h, stationId, nobs, obsWeek, obsTow, neph, ngeph, frames (14) */
+/* out: hasPos, x, y, z, lat, lon, h, stationId, nobs, obsWeek, obsTow, neph, ngeph, frames, nssr, ssrWeek, ssrTow,
+ *      ncbias (18) */
 JNIEXPORT void JNICALL FN(base)(JNIEnv *env, jobject thiz, jdoubleArray out)
 {
     prtk_base_t b;
     prtk_base(&b);
-    jdouble v[14] = {
+    jdouble v[18] = {
         b.has_pos, b.xyz[0], b.xyz[1], b.xyz[2], b.llh[0], b.llh[1], b.llh[2], b.station_id, b.nobs,
-        b.obs_week, b.obs_tow, b.neph, b.ngeph, (double)b.frames
+        b.obs_week, b.obs_tow, b.neph, b.ngeph, (double)b.frames, b.nssr, b.ssr_week, b.ssr_tow, b.ncbias
     };
-    (*env)->SetDoubleArrayRegion(env, out, 0, 14, v);
+    (*env)->SetDoubleArrayRegion(env, out, 0, 18, v);
 }
 
 JNIEXPORT jstring JNICALL FN(message)(JNIEnv *env, jobject thiz) { return (*env)->NewStringUTF(env, prtk_message()); }

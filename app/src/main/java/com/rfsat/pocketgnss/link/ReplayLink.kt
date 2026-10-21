@@ -3,6 +3,8 @@ package com.rfsat.pocketgnss.link
 import com.rfsat.pocketgnss.protocol.RtcmFrames
 import com.rfsat.pocketgnss.raw.RinexReader
 import com.rfsat.pocketgnss.rtk.FixGate
+import com.rfsat.pocketgnss.rtk.IonoChooser
+import com.rfsat.pocketgnss.rtk.PppConvergence
 import com.rfsat.pocketgnss.rtk.RoverArrays
 import com.rfsat.pocketgnss.rtk.RtkBase
 import com.rfsat.pocketgnss.rtk.RtkNative
@@ -18,13 +20,17 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
 /** Progress of a replay, for the Log screen and the top bar. */
-data class ReplayState(val active: Boolean = false, val name: String = "", val done: Int = 0, val total: Int = 0, val speed: Double = 1.0)
+data class ReplayState(val active: Boolean = false, val name: String = "", val done: Int = 0, val total: Int = 0, val speed: Double = 1.0,
+                       val paused: Boolean = false)
 
 object Replay {
     val state = MutableStateFlow(ReplayState())
     val flow: StateFlow<ReplayState> = state.asStateFlow()
     /** Replay speeds offered: real time, faster, as fast as possible (0). */
     val speeds = listOf(1.0, 5.0, 20.0, 0.0)
+
+    /** Holds the replay at the current epoch (the screens keep showing it) or lets it go on. */
+    fun setPaused(on: Boolean) { state.value = state.value.copy(paused = on && state.value.active) }
 }
 
 /**
@@ -44,6 +50,7 @@ class NmeaReplayLink(file: File, private val speed: Double) : GnssLink {
 
     override fun read(buffer: ByteArray): Int {
         if (closed) throw IOException("closed")
+        if (Replay.state.value.paused) { Thread.sleep(100); nextNs = System.nanoTime(); return 0 }
         if (i >= lines.size) { Replay.state.value = Replay.state.value.copy(active = false, done = lines.size); throw IOException(FINISHED) }
         val wait = nextNs - System.nanoTime()
         if (wait > 0) { Thread.sleep(minOf(wait / 1_000_000, 200)); if (nextNs - System.nanoTime() > 0) return 0 }
@@ -105,14 +112,15 @@ class RawReplayLink(dir: File, private val options: RtkOptions, private val spee
     private val queue = LinkedBlockingQueue<ByteArray>()
     private var lastTow: Double? = null
     private var nextNs = System.nanoTime()
+    private val iono = IonoChooser(options.ionoFree)
+    private val convergence = PppConvergence()
     @Volatile private var closed = false
     override val info = LinkInfo(LinkKind.REPLAY, "Replay: " + dir.name, "phone raw GNSS through phone RTK · %s".format(NmeaReplayLink.speedLabel(speed)),
         phoneRtk = true)
 
     init {
         if (!RtkNative.available) throw IOException("Phone RTK engine not available on this phone")
-        val ok = RtkNative.init(options.mode.code, options.navsys, options.elevationMaskDeg, options.snrMaskDbHz, options.arMode,
-            if (options.glonassAr) 1 else 0, options.errorRatio, options.arRatio, options.maxBaseAgeSec, options.minFixSats)
+        val ok = RtkNative.start(options)
         if (!ok) throw IOException("Phone RTK engine could not start")
         PhoneRtkLink.publish(PhoneRtkState())
         Replay.state.value = ReplayState(true, info.name, 0, total, speed)
@@ -121,6 +129,7 @@ class RawReplayLink(dir: File, private val options: RtkOptions, private val spee
     override fun read(buffer: ByteArray): Int {
         if (closed) throw IOException("closed")
         queue.poll()?.let { b -> val n = minOf(b.size, buffer.size); b.copyInto(buffer, 0, 0, n); return n }
+        if (Replay.state.value.paused) { Thread.sleep(100); nextNs = System.nanoTime(); return 0 }
         val wait = nextNs - System.nanoTime()
         if (wait > 0) { Thread.sleep(minOf(wait / 1_000_000, 200)); if (nextNs - System.nanoTime() > 0) return 0 }
         val e = reader.next() ?: run { Replay.state.value = Replay.state.value.copy(active = false, done = total); throw IOException(NmeaReplayLink.FINISHED) }
@@ -139,6 +148,7 @@ class RawReplayLink(dir: File, private val options: RtkOptions, private val spee
             while (fi <= minOf(j, frames.size - 1)) { RtkNative.inputRtcm(frames[fi], 0, frames[fi].size); fi++ }
         }
         arrays.fill(e)
+        if (options.ppp) iono.update(IonoChooser.dualSatellites(e))?.let { f -> RtkNative.setIono(if (f) 1 else 0); convergence.reset() }
         val st = RtkNative.rover(e.gpsWeek, e.towSeconds, arrays.n, arrays.sys, arrays.prn, arrays.codes, arrays.p, arrays.l, arrays.d,
             arrays.snr, arrays.lli, solOut)
         RtkNative.base(baseOut)
@@ -149,7 +159,8 @@ class RawReplayLink(dir: File, private val options: RtkOptions, private val spee
         val status = if (st != 0) sol.status else RtkStatus.NONE
         PhoneRtkLink.publish(PhoneRtkState(if (status != RtkStatus.NONE) sol else prev.solution, base, prev.epochs + 1, e.obs.size, withPhase,
             RtkNative.message().trim().lineSequence().lastOrNull { it.isNotBlank() } ?: "", noPhase = withPhase == 0,
-            source = if (status != RtkStatus.NONE) PhoneRtkLink.methodName(status) else prev.source))
+            source = if (status != RtkStatus.NONE) PhoneRtkLink.methodName(status, convergence.converging(sol)) else prev.source,
+            ionoFree = iono.ionoFree))
         if (status == RtkStatus.NONE) return 0
         val nmea = PhoneRtkLink.nmea(sol, base)
         val n = minOf(nmea.size, buffer.size)

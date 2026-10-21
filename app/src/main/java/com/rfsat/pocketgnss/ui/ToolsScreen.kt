@@ -53,6 +53,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -179,14 +180,15 @@ private fun SurveyTool(engine: GnssEngine) = NeedsReceiver(engine) {
 
         Section(stringResource(R.string.survey_results)) {
             val st = sv.stats
-            KeyValue(stringResource(R.string.survey_samples), stringResource(R.string.survey_samples_value, sv.samples, sv.rejected,
-                formatDuration(((if (sv.running) now else (sv.startedMs.takeIf { it > 0 } ?: now)) - (sv.startedMs.takeIf { it > 0 } ?: now)) / 1000.0)), live = true)
+            KeyValue(stringResource(R.string.survey_samples), listOf(pluralStringResource(R.plurals.n_used, sv.samples, sv.samples), pluralStringResource(R.plurals.n_rejected, sv.rejected, sv.rejected),
+                formatDuration(((if (sv.running) now else (sv.startedMs.takeIf { it > 0 } ?: now)) - (sv.startedMs.takeIf { it > 0 } ?: now)) / 1000.0)).joinToString(" · "), live = true)
             if (st == null) Text(stringResource(R.string.survey_need_two), style = MaterialTheme.typography.bodySmall, color = muted)
             else {
                 KeyValue(stringResource(R.string.live_lat), formatLat(st.meanLatitude, s.coordFormat), live = true)
                 KeyValue(stringResource(R.string.live_lon), formatLon(st.meanLongitude, s.coordFormat), live = true)
                 GridRows(s, st.meanLatitude, st.meanLongitude, st.meanHeight)
                 KeyValue(stringResource(R.string.survey_h), stringResource(R.string.survey_h_value, formatHeight(st.meanHeight), formatHeight(sv.meanMsl)), live = true)
+                NationalHeightRow(engine, st.meanLatitude, st.meanLongitude, st.meanHeight)
                 KeyValue(stringResource(R.string.survey_sd), "σE %s · σN %s · σU %s".format(formatDistance(st.sdEast), formatDistance(st.sdNorth), formatDistance(st.sdUp)), live = true)
                 KeyValue(stringResource(R.string.survey_cep), "CEP50 %s · CEP95 %s · 2DRMS %s".format(formatDistance(st.cep50), formatDistance(st.cep95), formatDistance(st.drms2)), live = true)
                 KeyValue(stringResource(R.string.survey_max), formatDistance(st.maxHorizontal), live = true)
@@ -375,8 +377,8 @@ private fun StreamTool(engine: GnssEngine) = NeedsReceiver(engine) {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     Column(Modifier.verticalScroll(rememberScrollState())) {
         Section(stringResource(R.string.stream_counts)) {
-            KeyValue(stringResource(R.string.stream_bytes), stringResource(R.string.stream_bytes_value, st.bytes, st.nmeaLines, st.ubxFrames), live = true)
-            KeyValue(stringResource(R.string.stream_errors), stringResource(R.string.stream_errors_value, st.badChecksums, st.garbageBytes), live = true)
+            KeyValue(stringResource(R.string.stream_bytes), pluralStringResource(R.plurals.stream_bytes_value, st.bytes.toPlural(), st.bytes, st.nmeaLines, st.ubxFrames), live = true)
+            KeyValue(stringResource(R.string.stream_errors), pluralStringResource(R.plurals.n_bad_checksums, st.badChecksums.toPlural(), st.badChecksums) + " · " + pluralStringResource(R.plurals.n_other_bytes, st.garbageBytes.toPlural(), st.garbageBytes), live = true)
             st.baud?.let { KeyValue(stringResource(R.string.stream_baud), "$it bd", live = true) }
             Row(Modifier.fillMaxWidth()) {
                 for (h in listOf(R.string.stream_type, R.string.stream_rate, R.string.stream_total, R.string.stream_gap))

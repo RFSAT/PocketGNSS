@@ -131,7 +131,7 @@ class PhoneRawLogger(
         if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             _state.value = RawState(error = "Location is off on this phone: turn it on in quick settings"); return
         }
-        analyzer = RawAnalyzer(); lastDisc = null; rtcmBytes = 0; rawLines = 0; gotEvents = false
+        analyzer = RawAnalyzer(); lastDisc = null; rtcmBytes = 0; mainFrames.reset(); navFrames.reset(); rawLines = 0; gotEvents = false
         val caps = capabilities()
         var dir: File? = null
         if (record) {
@@ -188,10 +188,24 @@ class PhoneRawLogger(
         if (rtcm != null) { try { rtcm?.close() } catch (_: Exception) {}; rtcm = null; rtcmControl(false) }
     }
 
-    /** RTCM bytes from the NTRIP client (any thread). */
-    fun onRtcm(data: ByteArray) {
+    /**
+     * RTCM bytes from the NTRIP client (any thread). Both streams (the caster's and, with PPP or the ephemeris
+     * stream, the second one) are cut into whole frames before they are written, so they interleave cleanly in
+     * base.rtcm3 and a replay sees every frame.
+     */
+    fun onRtcm(data: ByteArray) = write(mainFrames, data)
+
+    /** RTCM bytes from the ephemeris stream (any thread). */
+    fun onRtcmNav(data: ByteArray) = write(navFrames, data)
+
+    private fun splitter(): com.rfsat.pocketgnss.protocol.StreamSplitter = com.rfsat.pocketgnss.protocol.StreamSplitter(onNmea = {},
+        onRtcm = { f -> rtcm?.let { out -> try { out.write(f.bytes); rtcmBytes += f.bytes.size } catch (_: Exception) {} } })
+    private val mainFrames = splitter()
+    private val navFrames = splitter()
+
+    private fun write(s: com.rfsat.pocketgnss.protocol.StreamSplitter, data: ByteArray) {
         val out = rtcm ?: return
-        synchronized(out) { try { out.write(data); rtcmBytes += data.size } catch (_: Exception) {} }
+        synchronized(out) { s.feed(data) }
     }
 
     private fun handle(event: GnssMeasurementsEvent) {

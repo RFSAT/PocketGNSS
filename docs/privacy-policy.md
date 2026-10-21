@@ -18,10 +18,14 @@ Photos you take for points stay in the app's folder unless you export them.
 * To devices on your Wi-Fi or hotspot, only if you switch them on: the NMEA / JSON position streams and the
   corrections relayed by the app's NTRIP caster (with the login you set).
 * To the ephemeris caster you choose for phone RTK (with that account), only if you switch the ephemeris stream on.
+  For PPP, the correction stream (Galileo HAS Internet Data Distribution or IGS) comes from the caster you enter, with
+  your account for that service, like any NTRIP connection.
+* To cdn.proj.org (the PROJ project's file server), only when you download a height model: a request for that model's
+  file. No position or identifier is sent.
 * Nothing is sent to RFSAT Limited. The app contains no analytics, advertising or tracking.
 
 **What stays on the phone.** Settings (the NTRIP password encrypted with a key in the phone's Android Keystore), recorded sessions (including
-raw GNSS recordings) and saved points are
+raw GNSS recordings), saved points and fields, the coverage map and downloaded height models are
 stored in the app's private storage and its own folder on the phone. You can share or delete them from the Log
 tab; uninstalling the app removes them.
 

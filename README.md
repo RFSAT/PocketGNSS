@@ -20,7 +20,7 @@ Two hardware versions exist and the app supports both (Setup > Receiver version)
 In both, the receiver applies the corrections itself; the app reads the corrected position. How to set up each route,
 with the D3.5 timings and availability, is in **[docs/rtk-connectivity.md](docs/rtk-connectivity.md)**.
 
-RFSAT Limited. Version 1.10.0 (build 11000).
+RFSAT Limited. Version 1.12.0 (build 11200).
 
 ## Background: the AgriBIT project
 
@@ -61,8 +61,8 @@ agricultural GNSS enabled services*) are listed on the same CORDIS Results page.
 |---|---|
 | Home | Connection card with quick actions, receiver version (asked once if not set), receiver module (from UBX MON-VER), description, RFSAT / AgriBIT credits, Claude AI acknowledgement |
 | Live | Source name with a Disconnect button, fix banner coloured by fix type with accuracy (GST-measured or estimated), fix-loss alert strip, position (with grid easting / northing when a grid is chosen), height MSL / ellipsoid, satellites, DOP, speed, correction age and station, receiver version with what to check when no corrections arrive, per-constellation RTK mode (GNS), phone NTRIP status and base distance, NTRIP / Recording / Mark point buttons, sky plot and C/N0 bars |
-| Map | MapLibre with Street / Satellite / Terrain (same raster sources as DBM and PocketSpectro): position coloured by fix, track coloured by fix type, field boundaries with name and area, the boundary being captured, the A-B guidance passes, saved points with names, NTRIP base station, follow / recenter / fit / mark / clear |
-| Tools | Survey point · Stake out · Field boundary · A-B guidance · Corrections (NTRIP) · Position history · Phone raw GNSS (RTK test) · NMEA output (UBX) · Receiver settings (web) · Time to fix · Data stream |
+| Map | MapLibre with Street / Satellite / Terrain (same raster sources as DBM and PocketSpectro): position coloured by fix, track coloured by fix type, field boundaries with name and area, the boundary being captured, the guidance passes (straight, curved, headland) and the coverage map, saved points with names, NTRIP base station, follow / recenter / fit / mark / clear |
+| Tools | Survey point · Stake out · Field boundary · Guidance · Corrections (NTRIP) · Position history · Phone raw GNSS (RTK test) · NMEA output (UBX) · Receiver settings (web) · Time to fix · Data stream |
 | Log | Recording (raw NMEA + fixes CSV, minimum fix and interval), live NMEA viewer (filter by sentence type, pause, show more, copy, share the shown lines as .nmea; last 2000 sentences, nothing saved unless shared), saved points (KML / CSV / GeoJSON / shapefile; import), fields (KML / GeoJSON / shapefile / CSV; import), sessions (NMEA / CSV / GPX / KML; phone raw sessions as RINEX / GnssLog / RTCM / ZIP; delete) |
 | Setup | Connection source and its options (Phone: Phone RTK on/off, moving or still), phone NTRIP caster, outputs (mock location, NMEA TCP server, phone as Bluetooth GNSS receiver), fix-loss alert, receiver ID and device number, display units and grid, simulator |
 | Exit | Confirms, stops recording, closes the link and outputs |
@@ -81,14 +81,35 @@ agricultural GNSS enabled services*) are listed on the same CORDIS Results page.
   values, checked against PROJ), crossing edges are flagged. Fields show on the map and export as KML, GeoJSON,
   zipped shapefile (polygon, attributes NAME / AREA_HA / PERIM_M / VERTICES / QUALITY / DATE / NOTE) and a vertex CSV
   with grid coordinates (`data/Fields.kt`, `core/FieldCapture.kt`, `data/Shapefile.kt`).
-* **A-B guidance**: straight parallel passes for spraying, spreading, sowing. The line is set from the current
+* **Guidance** (A-B lines, curves, headlands): parallel passes for spraying, spreading, sowing. An A-B line is set from the current
   position (A at the start of the first pass, B at its end), from saved / imported points, or from A and a bearing;
   passes run one working width apart on both sides. A 15-segment lightbar ("chase the lights", 2–20 cm per segment)
   and a large offset show which way to steer as seen in the direction of travel (it works driving A→B or B→A), with
-  the pass number, heading error, distance along the line and the area worked (width × distance driven on a pass).
-  The whole pattern can be shifted in 5 cm steps (e.g. onto last season's tramlines); an optional beep sounds when
-  off the line by 10–50 cm. Lines are saved; the map draws the current pass and its neighbours. Computed in the
-  local east / north plane at A (`core/Guidance.kt`, unit-tested to the millimetre).
+  the pass number, heading error and distance along the line. The whole pattern can be shifted in 5 cm steps (e.g.
+  onto last season's tramlines); an optional beep sounds when off the line by 10–50 cm. Lines are saved; the map
+  draws the current pass and its neighbours. Computed in the local east / north plane at A (`core/Guidance.kt`,
+  unit-tested to the millimetre).
+  **Curves**: Record curve keeps the path driven (a point every 0.5 m, simplified to 5 cm) as the first pass of a
+  curve pattern; pass k is the curve at k working widths, i.e. the guidance offset is the signed distance to the
+  nearest point of the recorded polyline (continued straight beyond its ends), so passes stay parallel round bends.
+  **Headland**: passes round a saved field boundary, inside it, the first half a width in from the boundary, shown
+  as headland pass 1, 2, ... The map draws the parallel curves with arcs round outer corners and without the loops an
+  offset forms inside bends tighter than itself (`core/Curves.kt`, `CurveTest`: offsets of a 100 m arc to 2 cm,
+  headland passes round square corners, recording and reloading).
+* **Coverage map** (in Guidance): the implement's swath is painted along the path driven on cells of an eighth
+  of the working width (0.25–2 m), kept only where work was done. Ground painted again more than 8 s after it was
+  last painted is an overlap (shown red); repainting within that time (the joins of a pass, the inside of a turn) is
+  not. With a field boundary under the vehicle the panel shows the field's covered share and the gaps. Recording
+  pauses while the implement is lifted, the map survives restarts (`points/coverage.bin`), can be cleared for a new
+  job and exported as GeoJSON. The map layer merges cells into rectangles and coarsens them on large fields so that
+  drawing stays fast (`core/Coverage.kt`, `CoverageTest`: a 0.5 m overlap of two 200 m passes measures 100.0 m²).
+* **ISO-XML** (Tools > Field boundary > Export): `TASKDATA.zip` in ISO 11783-10 version 4.3 for ISOBUS terminals and
+  farm management software: each field a partfield (PFD) with its boundary (PLN type 1), the guidance lines that start
+  in it (GGP / GPN: A-B as type 1 with reference points A and B, curves and headland rings as type 3, implement width
+  in the line string) and the points inside it (PNT, ellipsoidal height in mm, accuracies); lines and points outside
+  every field go into one more partfield. Unzipped onto a USB stick, `TASKDATA/TASKDATA.XML` is where terminals look
+  (`data/IsoXml.kt`; the export of `IsoXmlTest` validates against the ISO 11783-10 TaskFile schema V4.3 with
+  xmlschema, and wrong point types, IDs or versions are rejected by the same check).
 * **Import** (Log > Saved points, Tools > Field boundary): CSV (latitude / longitude, or easting / northing in the
   grid chosen in Setup; header names in several EU languages, `;` with decimal commas), GeoJSON (its `crs` EPSG
   code is honoured), KML (points, polygons, closed lines), GPX waypoints and zipped shapefiles (points and polygons;
@@ -182,6 +203,37 @@ corrections from a European RTK network, WGS 84 / ITRF without (about 0.9 m apar
 grid coordinates are as good as the fix. Grids needing a datum grid file (Netherlands RD, Czech / Slovak S-JTSK,
 Hungary EOV, Romania Stereo 70, UK OSGB36) are not included. A position outside the grid's area gets a warning.
 
+### National heights
+
+Setup > Display > Height > National shows heights in the country's own height system instead of above the
+ellipsoid or the receiver's approximate sea level. The model is the official geoid or quasi-geoid grid of the
+national mapping agency, as published in PROJ-data, with the EPSG transformation from ETRS89 for that country; the
+app suggests the one for your position (simplified Natural Earth borders) and downloads it once from cdn.proj.org
+(30 kB – 2.3 MB, SHA-256 checked against the PROJ-data catalogue), after which it works offline.
+
+| Country | Height system (model) | Country | Height system (model) |
+|---|---|---|---|
+| Austria | EVRF2000 Austria (BEV) | Latvia | Latvia 2000 (LV'14) |
+| Belgium | Ostend / TAW (hBG18) | Netherlands | NAP (NLGEO2018) |
+| Czechia | Baltic 1957 (CR-2005) | Northern Ireland | Belfast (OSGM15) |
+| Denmark | DVR90 2023 | Norway | NN2000 (HREF2018B) |
+| Finland | N2000 (FIN2023N2000) | Poland | PL-EVRF2007-NH (PL-geoid2021) |
+| France (mainland) | NGF-IGN69 (RAF20) | Portugal (mainland) | Cascais (GeodPT08) |
+| Germany | DHHN2016 (GCG2016) | Slovakia | EVRF2007 |
+| Great Britain | ODN (OSGM15) | Slovenia | SVS2010 (SLO-VRP2016/Koper) |
+| Hungary | EOMA 1980 (geoid2014) | Spain (mainland, Balearics) | Alicante (EGM08-REDNAP) |
+| Ireland | Malin Head (OSGM15) | Sweden | RH 2000 (SWEN17_RH2000) |
+| Switzerland | LN02 (CHGeo2004) | World | EGM2008 2.5′ (81 MB), EGM96 15′ (2.7 MB) |
+
+Greece, Italy, Croatia, Romania, Bulgaria, Lithuania, Estonia and the others have no openly licensed national model;
+EGM2008 is the best free approximation there (within a few decimetres of national heights). The national height is
+shown on Live and in Survey point, added to the points CSV (`height_system`, `h_national_m`), GeoJSON and shapefile
+(`H_SYSTEM`, `H_NAT`), and sent in the JSON stream for your own apps. The reader (`data/Geoid.kt`) decodes the PROJ
+GeoTIFFs (float32, DEFLATE with the floating-point predictor, strips or tiles) and interpolates like PROJ, including
+its handling of no-data nodes; `GeoidTest` checks all 23 grids against PROJ 9.8.1 to 0.1 mm. Licences: CC BY 4.0
+for most, CC0 (Switzerland, Sweden), Licence Ouverte (France), BSD (Ordnance Survey), CC BY-SA (Hungary), public
+domain (NGA); each model's credit is shown with it.
+
 ### Points: codes, notes, photos
 
 Survey point and Log > Saved points > Edit give each point a code / category (the codes used so far are offered as
@@ -213,6 +265,36 @@ Ephemeris stream opens a second NTRIP connection with the account of a saved cas
 `BCEP00BKG0` on `igs-ip.net`, free with BKG registration) and feeds only its navigation messages to the engine
 (`prtk_input_rtcm_nav`), never base observations.
 
+### Phone PPP with Galileo HAS
+
+Setup > Receiver connection > Phone RTK > Corrections: **PPP (HAS)** runs precise point positioning instead of RTK:
+no base station; the NTRIP relay brings state-space (SSR) corrections of the satellites' orbits, clocks and code
+biases, and RTKLIB's PPP filter (float ambiguities, estimated troposphere, tides, phase wind-up) works on the phone's
+raw measurements alone. Sources:
+
+* **Galileo HAS** (High Accuracy Service): free from the EU. Its Internet Data Distribution sends the corrections as
+  standard RTCM 3 SSR messages (1059 / 1060 for GPS, 1242 / 1243 for Galileo) with broadcast ephemerides over NTRIP
+  to registered users: register at the European GNSS Service Centre (gsc-europa.eu > Galileo HAS > HAS Internet Data
+  Distribution); the caster address and account come by e-mail and go into a caster profile.
+* **IGS real-time streams** named `SSRA…` (antenna phase centre; free registration at igs-ip.net, caster
+  `products.igs-ip.net`, preset "IGS products (PPP)"), with the ephemeris stream `BCEP00BKG0` for the orbits. `SSRC…`
+  streams (centre of mass) are not usable and the app says so.
+
+Phones with L1 + L5 / E5a use the ionosphere-free combination; when a phone delivers no second frequency the app
+switches to the broadcast ionosphere model by itself (and back). PPP converges: Live shows "PPP converging" until
+15 minutes have passed and the filter's horizontal standard deviation is at most 0.3 m; GGA reports PPP as quality 2,
+never as RTK. Expect a few decimetres after 20–30 minutes on a dual-frequency phone under open sky, about a metre on
+L1-only phones; HAS has no phase biases yet, so there is no ambiguity fixing and no centimetres.
+
+PPP gives coordinates in ITRF2020 at the observation epoch. Inside Europe (the ETRF area, 16°W–38°E, 33°N–85°N) the
+app converts them to ETRS89 (ETRF2000, EPSG transformation 10586, 14 time-dependent parameters; about 1 m in 2026,
+`protocol/Datum.kt`, `DatumTest` against PROJ to 0.2 mm), so PPP fits RTK networks, national grids and heights.
+
+`PppTest` replays one hour of real HAS Internet Data Distribution corrections with the observations of IGS station
+OBE4 (cssrlib-data, MIT licence) through the app's own replay path: after 30 minutes every epoch is within 0.17 m
+horizontally (0.16 m vertically) with the station's signals, within 0.43 m with a phone's L1 + L5 signals only, and
+within 1.1 m for L1 only.
+
 ### Local NTRIP caster
 
 Setup > NTRIP caster for other rovers serves the corrections the phone receives to other receivers on the same Wi-Fi
@@ -231,7 +313,10 @@ A JSON line per position on TCP port 10111 (local or LAN) and a broadcast intent
 
 English, Greek, German, French, Spanish, Italian, Polish and Portuguese (European) in `res/values-*/strings.xml`,
 offered in Android's per-app language setting (`res/xml/locales_config.xml`). Placeholders are checked to match
-English; lint's MissingTranslation keeps every language complete. GNSS terms such as RTK fixed / float, mountpoint
+English; lint's MissingTranslation keeps every language complete. Counts use Android plurals with each language's
+forms (Polish one / few / many: 1 punkt, 2 punkty, 5 punktów; French, Spanish, Italian and Portuguese also "many"),
+checked by lint. The translations were made with Claude, not by native speakers: see docs/play-release.md for the
+review before the public release. GNSS terms such as RTK fixed / float, mountpoint
 and caster follow common usage in each language; menu paths in the texts use the translated tab names.
 
 ### Outputs to other apps
@@ -248,20 +333,23 @@ With a real receiver, recording, NTRIP, mock location and the NMEA server keep r
 ## Code layout
 
 ```
-protocol/   Grid (UTM, LAEA, national grids, inverse, EPSG / WKT recognition), Nmea (NMEA 4.10/4.11 incl. signal IDs), Ubx (CFG-VALSET/VALGET/RST, MON-VER, F9 keys), Rtcm (CRC-24Q,
+protocol/   Datum (ITRF2020 -> ETRF2000 for PPP), Grid (UTM, LAEA, national grids, inverse, EPSG / WKT recognition), Nmea (NMEA 4.10/4.11 incl. signal IDs), Ubx (CFG-VALSET/VALGET/RST, MON-VER, F9 keys), Rtcm (CRC-24Q,
             1005/1006, WGS-84 geodesy), Ntrip (requests, replies, sourcetable, dechunker), StreamSplitter (NMEA/UBX/RTCM)
 core/       GnssModel (epoch assembly, satellites), Statistics (CEP, 2DRMS, TTFF, rates), GnssEngine (link, parsing,
             UBX requests, recording, survey, TTFF), NtripClient, Outputs (MockLocation, NmeaServer), LinkService,
             History (position history), BtServer (Bluetooth NMEA server), Alerts (fix-loss alert), FieldCapture,
-            Guidance (A-B lines), NtripCaster (local caster, JSON position)
+            Guidance (A-B lines, curves, headlands), Curves (polyline distance and offsets), Coverage (worked-area
+            map), NtripCaster (local caster, JSON position)
 link/       GnssLink, UsbSerialLink (usb-serial-for-android), BluetoothSppLink, TcpLink, SimulatedLink
 sim/        SimReceiver
 link/       ReplayLink (NMEA and phone raw replays)
-rtk/        RtkNative (JNI), PhoneRtk (options, solution, rover arrays, FixGate, phone profile and tuning); native engine in src/main/cpp (prtk.c over RTKLIB)
+rtk/        RtkNative (JNI), PhoneRtk (options, solution, rover arrays, FixGate, phone profile and tuning, PPP ionosphere
+            choice and convergence); native engine in src/main/cpp (prtk.c over RTKLIB: RTK and PPP with SSR corrections)
 raw/        RawConvert (GnssClock/GnssMeasurement -> pseudorange, phase, Doppler, RINEX codes), Rinex (3.04 obs writer),
             GnssLog (GnssLogger "Raw," format), RawAnalyzer (phone RTK capability verdict), PhoneRawLogger (Android side)
 data/       AppSettings (SharedPreferences StateFlow), Records (points CSV, session recorder, KML/GPX/GeoJSON/CSV), Fields
-            (boundaries, area), Shapefile (writer), Importer (CSV/GeoJSON/KML/GPX/shapefile)
+            (boundaries, area), Shapefile (writer), Importer (CSV/GeoJSON/KML/GPX/shapefile), IsoXml (ISOBUS task data), Geoid (height models: PROJ
+            GeoTIFF reader, catalogue, download; borders for the suggestion in resources/geoid_regions.txt)
 ui/         Compose screens; Buttons/Controls shared with PocketSpectro (bordered buttons, green ON / red OFF)
 ```
 
@@ -288,12 +376,16 @@ Versioning 1.MINOR.PATCH; only `appVersion` in `app/build.gradle.kts` is edited,
 (1*10000 + MINOR*100 + PATCH). `CHANGELOG.md` holds one paragraph per version for Play's "What's new".
 
 Tests: `ProtocolTest` (the D3.5 recorded sentences, UBX reference frames, RTCM CRC and 1005, NTRIP, geodesy),
-`SimulatorTest` (TTFF and fix progression, receiver versions, UBX round trip, reset, motion, exports), `PhoneGnssTest` (phone data to NMEA), `CasterProfileTest` (profiles, encrypted passwords), `ScreenshotTest`.
+`SimulatorTest` (TTFF and fix progression, receiver versions, UBX round trip, reset, motion, exports), `PhoneGnssTest` (phone data to NMEA), `CasterProfileTest` (profiles, encrypted passwords),
+`RtkEngineTest` / `ReplayTest` (RTK on real data), `PppTest` (Galileo HAS PPP on real data), `DatumTest`,
+`GeoidTest` (height models against PROJ; `-PgeoidDir=<folder with the 23 grids>` checks every model), `GridTest`,
+`FieldTest`, `GuidanceTest`, `CurveTest`, `CoverageTest`, `IsoXmlTest`, `CasterTest`, `OfflineMapTest`, `ScreenshotTest`.
 
 ## Google Play notes
 
-See `docs/play-listing.md` (listing text, permissions and foreground-service declarations, Data safety) and
-`docs/privacy-policy.md`.
+See `docs/play-release.md` (signing, the closed test with 12 testers for 14 days, invitation text, release notes in
+all eight languages, applying for production), `docs/play-listing.md` (listing text, permissions and
+foreground-service declarations, Data safety) and `docs/privacy-policy.md`.
 
 ## Not yet verified on hardware
 

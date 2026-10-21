@@ -63,6 +63,48 @@ is tuned:
 
 Setup shows the profile and the verdict, and can reset it.
 
+## PPP with Galileo HAS (no base station)
+
+Setup > Receiver connection > Phone RTK > Corrections > **PPP (HAS)** switches the engine from RTK to precise point
+positioning. There is no base: the NTRIP relay connects to a stream of state-space corrections (SSR: orbit, clock and
+code-bias corrections to the broadcast ephemerides) and the engine (RTKLIB `pppos`) processes the phone's own
+measurements with them.
+
+* **Galileo HAS Internet Data Distribution**: free; register at the European GNSS Service Centre (gsc-europa.eu >
+  Galileo HAS > HAS Internet Data Distribution). After approval the caster address and account come by e-mail; enter
+  them as a caster profile (Setup > NTRIP relay) and choose the mountpoint it names. The stream carries RTCM 3 SSR
+  1059 / 1060 (GPS) and 1242 / 1243 (Galileo) and the broadcast ephemerides 1019 / 1046.
+* **IGS real-time** `SSRA…` streams (free registration at igs-ip.net): profile "IGS products (PPP)"
+  (`products.igs-ip.net:2101`), Get mountpoints, pick an `SSRA…` stream, and switch on the ephemeris stream
+  (`BCEP00BKG0`), since SSR streams carry no orbits. `SSRC…` streams refer to the satellites' centre of mass and are
+  not usable.
+
+Engine settings in PPP: kinematic (or static when "Still on a point" is chosen), orbits and clocks from SSR referred to
+the antenna phase centre, absolute code biases, ionosphere-free combination (switching to the broadcast ionosphere
+model after 30 epochs with fewer than 4 satellites on a second frequency, and back after 60 epochs with L5 / E5a on at
+least 6 satellites), estimated zenith troposphere, solid-earth tides and phase wind-up, no ambiguity fixing (HAS has no phase
+biases yet). Satellites without SSR corrections are left out. GLONASS and BeiDou are used only if the stream corrects
+them (HAS: GPS and Galileo).
+
+What to expect, from `PppTest` (one hour of real HAS corrections with station OBE4, replayed through the app):
+
+| Signals | After 30 min, worst horizontal error | Mean |
+|---|---|---|
+| Survey receiver (GPS L1 / L2 / L5, Galileo E1 / E5a / E5b) | 0.16 m | 0.14 m |
+| Dual-frequency phone (GPS L1 + L5, Galileo E1 + E5a) | 0.43 m | 0.37 m |
+| L1 only (broadcast ionosphere) | 1.04 m | 0.93 m |
+
+A phone adds more code noise and multipath than a survey antenna, so real phones land between the second and third
+rows, and need 20–30 minutes under open sky with no long gaps to converge. Live shows "PPP converging" until 15
+minutes have passed and the filter's horizontal standard deviation is at most 0.3 m. In NMEA, PPP is GGA quality 2
+(differential), never 4 or 5.
+
+**Reference frame.** PPP coordinates are in ITRF2020 (the frame of the orbits) at the date of observation. Inside the
+ETRF area (Europe, 16°W–38°E) PocketGNSS converts them to ETRS89 (ETRF2000) with EPSG transformation 10586, the
+EUREF-recommended one: in 2026 the shift is about 1 m, mostly south-west. Positions, grid coordinates, field
+boundaries and national heights then match those of European RTK networks and land registries (to the few
+centimetres between ETRF2000 and a country's own ETRS89 realisation).
+
 ## How it works
 
 ```
@@ -71,7 +113,8 @@ GnssMeasurementsEvent ──RawConvert (Kotlin)──> code / phase / Doppler / 
 NTRIP relay ──RTCM 3──> PhoneRtkLink.write ──> input_rtcm3 ─> base epoch, 1005/1006, ephemeris ┘
 ```
 
-* `app/src/main/cpp/rtklib/`: unmodified RTKLIB demo5 sources (subset, BSD-2; see the README there).
+* `app/src/main/cpp/rtklib/`: RTKLIB demo5 sources (subset, BSD-2; unmodified except two marked additions in
+  `ppp.c` for absolute SSR code biases; see the README there).
 * `app/src/main/cpp/prtk.c`: the engine (one rover, one base, ephemeris merge, time reference from the phone's GNSS
   time so the RTCM decoder resolves weeks correctly even if the phone clock is wrong); `prtk_jni.c`: JNI bridge.
 * `rtk/RtkNative.kt`, `rtk/PhoneRtk.kt` (options, solution, arrays), `link/PhoneRtkLink.kt` (Android side; the link
@@ -87,6 +130,8 @@ NTRIP relay ──RTCM 3──> PhoneRtkLink.write ──> input_rtcm3 ─> base
   baseline (RTKLIB test data, GSI stations 0759 / 3040, GPS L1 + L2) through the JNI bridge, the rover in the arrays
   the phone side builds and the base as an RTCM 3 byte stream (1005 + 1019 + MSM7). It must reach RTK fixed within a
   few minutes and end within 2 cm of RTKLIB's own post-processed solution (it ends within 3 mm).
+* `PppTest`: Galileo HAS PPP on real data (above), the phone signal subsets, the L1-only fallback, SSR epoch times.
+* `DatumTest`: ITRF2020 -> ETRF2000 against PROJ 9.8.1.
 * `RawTest`: raw measurement conversion, RINEX output (checked with RTKLIB's RINEX reader).
 * On phones: the Live tab's *Phone RTK* and *Base data* lines, and recordings (Tools > Phone raw GNSS) for
   post-processing comparisons.

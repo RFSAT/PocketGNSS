@@ -62,7 +62,8 @@ class GuidanceTest {
         val g = GuidanceSession(File(dir, "g.csv"))
         g.add(line); g.activate(line); g.warnAt = 0.25
         for (i in 0..100) { val p = at(i * 1.0, 0.05); g.onFix(p.first, p.second, 90.0) }
-        assertEquals(100.0 * 6, g.state.value.worked, 1.0)
+        // coverage cells of 0.75 m (a 6 m implement): the ends of the run are within a cell
+        assertEquals(100.0 * 6, g.state.value.worked, 0.75 * 6)
         assertFalse(g.state.value.offLine)
         val off = at(101.0, 0.4); g.onFix(off.first, off.second, 90.0)
         assertTrue(g.state.value.offLine)

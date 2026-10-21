@@ -159,7 +159,8 @@ val KEY_WIDTH = 112.dp
 fun <T> ChoiceRow(label: String, options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(label, Modifier.width(LocalKeyWidth.current ?: KEY_WIDTH).padding(end = 8.dp), style = MaterialTheme.typography.bodyMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        // Chips that do not fit go to the next line whole, rather than squeezing their text (long translations).
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             for ((v, text) in options) ChoiceChip(selected == v, text, { onSelect(v) })
         }
     }

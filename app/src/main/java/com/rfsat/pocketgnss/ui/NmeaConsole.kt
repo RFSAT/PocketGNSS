@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -78,7 +79,7 @@ fun NmeaConsole(engine: GnssEngine, rows: Int = 40) {
             }, compact = true, enabled = shown.isNotEmpty()) { Text(stringResource(R.string.nmea_copy)) }
             ActionButton(onClick = { shareNmea(context, shown) }, compact = true, enabled = shown.isNotEmpty()) { Text(stringResource(R.string.nmea_share)) }
         }
-        Text(stringResource(R.string.nmea_count, shown.size, all.size), style = MaterialTheme.typography.bodySmall,
+        Text(pluralStringResource(R.plurals.nmea_count, all.size, shown.size, all.size), style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         // Newest at the bottom, like a terminal; long sentences scroll sideways instead of wrapping.
         Column(Modifier.fillMaxWidth().background(Color(0xFF0E1012), RoundedCornerShape(8.dp)).horizontalScroll(rememberScrollState()).padding(8.dp)) {

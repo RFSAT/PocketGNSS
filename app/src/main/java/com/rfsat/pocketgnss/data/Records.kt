@@ -70,6 +70,24 @@ class PointStore(private val file: File) {
 
 /** Exports to the formats the AgriBIT users asked for (D3.5 Table 1: KML, SHP...) plus GPX, CSV and GeoJSON. */
 object Exporters {
+    /**
+     * Worked area of the coverage map as GeoJSON: one MultiPolygon for the ground worked (cells merged into rectangles)
+     * and one for the ground worked twice or more, with their areas (m²).
+     */
+    fun coverageGeoJson(c: com.rfsat.pocketgnss.core.CoverageShapes, worked: Double, overlap: Double, field: String?): String = buildString {
+        fun multi(rings: List<List<Pair<Double, Double>>>) = rings.joinToString(",", "[", "]") { r ->
+            r.joinToString(",", "[[", "]]") { "[%.9f,%.9f]".format(Locale.US, it.second, it.first) } }
+        append("{\"type\":\"FeatureCollection\",\"features\":[")
+        append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"MultiPolygon\",\"coordinates\":").append(multi(c.covered))
+        append("},\"properties\":{\"layer\":\"worked\",\"area_m2\":%.1f".format(Locale.US, worked))
+        if (field != null) append(",\"field\":\"").append(json(field)).append('"')
+        append("}},{\"type\":\"Feature\",\"geometry\":{\"type\":\"MultiPolygon\",\"coordinates\":").append(multi(c.overlap))
+        append("},\"properties\":{\"layer\":\"overlap\",\"area_m2\":%.1f}}]}\n".format(Locale.US, overlap))
+    }
+
+    /** National height of a point: from its ellipsoidal height, or none. */
+    private fun nat(h: NationalHeights, p: SurveyPoint): Double? = h.of(p.latitude, p.longitude, p.heightEllipsoid.takeIf { !it.isNaN() })
+
     fun pointsKml(points: List<SurveyPoint>, title: String = "PocketGNSS points", photos: Boolean = false): String = buildString {
         append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<kml xmlns=\"http://www.opengis.net/kml/2.2\"><Document><name>").append(xml(title)).append("</name>\n")
         for (p in points) {
@@ -86,7 +104,8 @@ object Exporters {
         append("</Document></kml>\n")
     }
 
-    fun pointsGeoJson(points: List<SurveyPoint>): String = buildString {
+    /** Points as GeoJSON; with [heights], the national height system and height of each point are added to its properties. */
+    fun pointsGeoJson(points: List<SurveyPoint>, heights: NationalHeights? = null): String = buildString {
         append("{\"type\":\"FeatureCollection\",\"features\":[")
         points.forEachIndexed { i, p ->
             if (i > 0) append(',')
@@ -96,7 +115,10 @@ object Exporters {
             append("\"name\":\"").append(json(p.name)).append("\",\"quality\":\"").append(p.quality.name).append("\",")
             append("\"samples\":${p.samples},\"sd_e\":%.4f,\"sd_n\":%.4f,\"sd_u\":%.4f,".format(Locale.US, p.sdEast, p.sdNorth, p.sdUp))
             append("\"h_msl\":").append(p.heightMsl?.let { "%.4f".format(Locale.US, it) } ?: "null").append(",\"time\":\"").append(isoTime(p.timeMs))
-            append("\",\"code\":\"").append(json(p.code)).append("\",\"note\":\"").append(json(p.note)).append("\",\"photo\":\"").append(json(p.photo)).append("\"}}")
+            append("\",\"code\":\"").append(json(p.code)).append("\",\"note\":\"").append(json(p.note)).append("\",\"photo\":\"").append(json(p.photo)).append("\"")
+            if (heights != null) append(",\"height_system\":\"").append(json(heights.system)).append("\",\"h_national\":")
+                .append(nat(heights, p)?.let { "%.4f".format(Locale.US, it) } ?: "null")
+            append("}}")
         }
         append("]}\n")
     }
@@ -124,10 +146,14 @@ object Exporters {
         append("</coordinates></LineString></Placemark></Document></kml>\n")
     }
 
-    /** Points as CSV; with a [grid], three more columns: the grid's name, easting and northing (m). */
-    fun pointsCsv(points: List<SurveyPoint>, grid: GridSystem = GridSystem.NONE, utmZone: Int = 0): String = buildString {
+    /**
+     * Points as CSV; with a [grid], three more columns: the grid's name, easting and northing (m); with [heights], two more:
+     * the national height system and the height in it (m).
+     */
+    fun pointsCsv(points: List<SurveyPoint>, grid: GridSystem = GridSystem.NONE, utmZone: Int = 0, heights: NationalHeights? = null): String = buildString {
         append("name,latitude,longitude,h_ellipsoid_m,h_msl_m,sd_east_m,sd_north_m,sd_up_m,samples,quality,time_utc,code,note,photo")
-        append(if (grid != GridSystem.NONE) ",grid,easting_m,northing_m\n" else "\n")
+        if (grid != GridSystem.NONE) append(",grid,easting_m,northing_m")
+        append(if (heights != null) ",height_system,h_national_m\n" else "\n")
         for (p in points) {
             append("\"%s\",%.10f,%.10f,%s,%s,%.4f,%.4f,%.4f,%d,%s,%s".format(Locale.US, p.name.replace("\"", "'"),
                 p.latitude, p.longitude, opt4(p.heightEllipsoid), p.heightMsl?.let { "%.4f".format(Locale.US, it) } ?: "", p.sdEast, p.sdNorth, p.sdUp,
@@ -136,6 +162,7 @@ object Exporters {
             val g = Grid.of(grid, p.latitude, p.longitude, p.heightEllipsoid.takeIf { !it.isNaN() }, utmZone)
             if (g != null) append(",\"%s\",%.4f,%.4f".format(Locale.US, g.label, g.easting, g.northing))
             else if (grid != GridSystem.NONE) append(",,,")
+            if (heights != null) append(",\"%s\",%s".format(Locale.US, heights.system, nat(heights, p)?.let { "%.4f".format(Locale.US, it) } ?: ""))
             append("\n")
         }
     }
@@ -200,17 +227,20 @@ object Exporters {
         return Shapefile.zip(base, Shapefile.polygons(fields.map { f -> f.vertices.map { it.longitude to it.latitude } }, cols, rows))
     }
 
-    fun pointsShapefile(points: List<SurveyPoint>, grid: GridSystem = GridSystem.NONE, utmZone: Int = 0, base: String = "points"): ByteArray {
+    fun pointsShapefile(points: List<SurveyPoint>, grid: GridSystem = GridSystem.NONE, utmZone: Int = 0, base: String = "points",
+                        heights: NationalHeights? = null): ByteArray {
         val cols = mutableListOf(DbfField("NAME", 'C', 80), DbfField("H_ELL", 'N', 12, 4), DbfField("H_MSL", 'N', 12, 4), DbfField("SD_E", 'N', 10, 4),
             DbfField("SD_N", 'N', 10, 4), DbfField("SD_U", 'N', 10, 4), DbfField("SAMPLES", 'N', 8), DbfField("QUALITY", 'C', 10), DbfField("DATE", 'C', 24),
             DbfField("NOTE", 'C', 120), DbfField("CODE", 'C', 40), DbfField("PHOTO", 'C', 60))
         if (grid != GridSystem.NONE) cols += listOf(DbfField("GRID", 'C', 40), DbfField("EASTING", 'N', 15, 4), DbfField("NORTHING", 'N', 15, 4))
+        if (heights != null) cols += listOf(DbfField("H_SYSTEM", 'C', 40), DbfField("H_NAT", 'N', 12, 4))
         val rows = points.map { p ->
             val base0 = listOf<Any?>(p.name, p.heightEllipsoid, p.heightMsl, p.sdEast, p.sdNorth, p.sdUp, p.samples, p.quality.name, isoTime(p.timeMs), p.note, p.code, p.photo)
-            if (grid == GridSystem.NONE) base0 else {
+            val withGrid = if (grid == GridSystem.NONE) base0 else {
                 val g = Grid.of(grid, p.latitude, p.longitude, p.heightEllipsoid.takeIf { !it.isNaN() }, utmZone)
                 base0 + listOf(g?.label, g?.easting, g?.northing)
             }
+            if (heights == null) withGrid else withGrid + listOf(heights.system, nat(heights, p))
         }
         return Shapefile.zip(base, Shapefile.points(points.map { it.longitude to it.latitude }, cols, rows))
     }

@@ -24,8 +24,11 @@ its position to the centimetre.
 • Stake out saved points to the centimetre
 • Field boundaries: walk, drive or mark the corners of a field for its area in hectares and perimeter; export as
   KML, GeoJSON or shapefile
-• A-B guidance with a lightbar: parallel passes at your implement width, steering offset, pass number, shift to
-  existing tramlines, off-line beep
+• Guidance with a lightbar: A-B lines, curves recorded on the first pass, and headland passes round a field;
+  parallel passes at your implement width, steering offset, pass number, shift to existing tramlines, off-line beep
+• ISO-XML export (ISOBUS TASKDATA) of fields, guidance lines and points for tractor terminals and farm software
+• Coverage map: the worked ground painted as you drive, overlaps in red, the field's coverage and gaps; export
+  as GeoJSON
 • Import points and parcel boundaries (CSV, GeoJSON, KML, GPX, shapefile) and stake out the points
 • Record sessions and export NMEA, CSV, GPX, KML and GeoJSON
 • Configure the u-blox NMEA messages, ports and rate (1-20 Hz) without a PC
@@ -36,6 +39,10 @@ its position to the centimetre.
 • Provide the RTK position to other apps (mock location) or over a local NMEA TCP server
 • Phone RTK: use the phone's own GNSS chip with your NTRIP corrections (accuracy depends on the phone; best with
   dual-frequency phones)
+• Phone PPP with Galileo HAS: no base station and no subscription; free EU corrections bring dual-frequency phones
+  to a few decimetres after 20–30 minutes (IGS real-time streams work too); results in ETRS89 within Europe
+• National heights: the official geoid models of 21 European countries (DHHN2016, NGF-IGN69, EVRF2007-PL, Malin
+  Head, NAP, RH 2000 and more) and EGM2008 worldwide, downloaded once and used offline
 • Phone raw GNSS test: does this phone's GNSS chip deliver carrier phase for RTK? Record RINEX and the caster's
   RTCM stream for post-processing (RTKLIB, MATLAB)
 • Codes, notes and photos on points; KMZ export with photos

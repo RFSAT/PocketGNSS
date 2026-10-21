@@ -4,7 +4,7 @@ plugins {
 }
 
 // The one place to change the app version.
-val appVersion = "1.10.0"
+val appVersion = "1.12.0"
 val appVersionCode = appVersion.split(".").map { it.toInt() }.let { (a, b, c) -> a * 10000 + b * 100 + c }
 
 android {
@@ -141,4 +141,6 @@ val buildHostRtk by tasks.registering(Exec::class) {
 tasks.withType<Test>().configureEach {
     dependsOn(buildHostRtk)
     systemProperty("java.library.path", hostRtkDir.get().asFile.path)
+    // Optional: a folder with all PROJ-data geoid grids of HeightModels (-PgeoidDir=...), to check every model against PROJ.
+    (project.findProperty("geoidDir") as String?)?.let { systemProperty("geoid.dir", it) }
 }

@@ -49,6 +49,15 @@ fun MapScreen(engine: GnssEngine) {
     val guide by engine.guidance.state.collectAsState()
     val guideLines = guide.line?.let { l -> guide.solution?.let { com.rfsat.pocketgnss.core.Guidance.mapLines(l, it) } } ?: emptyList()
     val ntrip by engine.ntripClient.ntrip.collectAsState()
+    // Coverage map shapes, rebuilt off the main thread at most every 2 s while the map changes.
+    var coverage by remember { mutableStateOf<com.rfsat.pocketgnss.core.CoverageShapes?>(null) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        while (true) {
+            val v = engine.guidance.state.value.coverageVersion
+            if (v != (coverage?.version ?: -1L)) coverage = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { engine.guidance.coverageShapes() }
+            kotlinx.coroutines.delay(2000)
+        }
+    }
     var fitKey by remember { mutableIntStateOf(0) }
     var recenterKey by remember { mutableIntStateOf(0) }
     var follow by remember { mutableStateOf(false) }
@@ -64,7 +73,7 @@ fun MapScreen(engine: GnssEngine) {
 
     Box(Modifier.fillMaxSize()) {
         RtkMap(s.mapLayer, track, points, fix, ntrip.base?.geodetic, selected, follow, fitKey, recenterKey,
-            onPointTap = { selected = it }, modifier = Modifier.fillMaxSize(), fields = fields, capture = cap.vertices, guide = guideLines,
+            onPointTap = { selected = it }, modifier = Modifier.fillMaxSize(), fields = fields, capture = cap.vertices, guide = guideLines, coverage = coverage,
             ownMap = s.ownMap.takeIf { s.ownMapOn && it.isNotBlank() && java.io.File(it).isFile })
 
         Row(Modifier.align(Alignment.TopStart).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

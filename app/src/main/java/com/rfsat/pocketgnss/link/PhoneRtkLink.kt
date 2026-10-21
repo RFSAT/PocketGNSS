@@ -14,6 +14,8 @@ import android.os.HandlerThread
 import com.rfsat.pocketgnss.raw.AndroidRaw
 import com.rfsat.pocketgnss.raw.RawConvert
 import com.rfsat.pocketgnss.rtk.FixGate
+import com.rfsat.pocketgnss.rtk.IonoChooser
+import com.rfsat.pocketgnss.rtk.PppConvergence
 import com.rfsat.pocketgnss.rtk.PhoneProfile
 import com.rfsat.pocketgnss.rtk.ProfileLearner
 import com.rfsat.pocketgnss.rtk.RoverArrays
@@ -40,8 +42,11 @@ data class PhoneRtkState(
     val message: String = "",
     /** True while measurements arrive without carrier phase (code-only phone or duty cycling). */
     val noPhase: Boolean = false,
-    /** Method of the last position emitted: "RTK fixed", "RTK float", "Code DGNSS", "Single (RTKLIB)", "Android location". */
+    /** Method of the last position emitted: "RTK fixed", "RTK float", "PPP", "PPP converging", "Code DGNSS", "Single (RTKLIB)",
+     *  "Android location". */
     val source: String = "",
+    /** PPP mode: the engine uses the ionosphere-free combination (false: broadcast ionosphere, L1 only). */
+    val ionoFree: Boolean = true,
 )
 
 /**
@@ -50,6 +55,9 @@ data class PhoneRtkState(
  * caster's RTCM 3, which the existing NTRIP relay writes to this link exactly as it would to an external receiver
  * (the relay also sends the caster this link's GGA). The solution is emitted as NMEA (GGA quality 4 / 5 for RTK fixed
  * / float, GST from the filter's covariance), so every screen, the recorder and the outputs work unchanged.
+ *
+ * With [RtkOptions.ppp] there is no base: the caster stream carries SSR corrections (Galileo HAS, IGS real-time) and the
+ * engine runs float precise point positioning, reported in GGA as differential (quality 2), never as RTK.
  *
  * Without a caster the engine gives a single-point solution; without usable raw measurements (or before the first
  * solution) Android's own location is used, as with the plain phone source.
@@ -76,6 +84,8 @@ class PhoneRtkLink private constructor(
     @Volatile private var lastSolutionMs = 0L
     private var lastDisc: Int? = null
     private var lastEmitMs = 0L
+    private val iono = IonoChooser(options.ionoFree)
+    private val convergence = PppConvergence()
 
     private val _state get() = shared
 
@@ -109,10 +119,7 @@ class PhoneRtkLink private constructor(
     @SuppressLint("MissingPermission")
     private fun start() {
         if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) throw IOException("Location is off on this phone: turn it on in quick settings")
-        val ok = synchronized(engineLock) {
-            RtkNative.init(options.mode.code, options.navsys, options.elevationMaskDeg, options.snrMaskDbHz, options.arMode,
-                if (options.glonassAr) 1 else 0, options.errorRatio, options.arRatio, options.maxBaseAgeSec, options.minFixSats)
-        }
+        val ok = synchronized(engineLock) { RtkNative.start(options) }
         if (!ok) throw IOException("Phone RTK engine could not start")
         shared.value = PhoneRtkState()
         val t = HandlerThread("phone-rtk").apply { start() }
@@ -149,6 +156,10 @@ class PhoneRtkLink private constructor(
         val slipSats = e.obs.filter { it.phase != null && it.lli and 1 != 0 }.map { it.sat }.toSet()
         learner.add(phaseSats.size, slipSats.size)
         if (++learnedEpochs % 60 == 0) onProfile(learner.profile())
+        // PPP on a phone without a second frequency: broadcast ionosphere instead of the ionosphere-free combination.
+        if (options.ppp) iono.update(IonoChooser.dualSatellites(e))?.let { f ->
+            synchronized(engineLock) { RtkNative.setIono(if (f) 1 else 0) }; convergence.reset()
+        }
         val (status, sol, base, msg) = synchronized(engineLock) {
             val st = RtkNative.rover(e.gpsWeek, e.towSeconds, arrays.n, arrays.sys, arrays.prn, arrays.codes, arrays.p, arrays.l, arrays.d,
                 arrays.snr, arrays.lli, solOut)
@@ -159,14 +170,15 @@ class PhoneRtkLink private constructor(
         }
         val withPhase = e.obs.count { it.phase != null }
         _state.value = PhoneRtkState(if (status != 0) sol else _state.value.solution, base, _state.value.epochs + 1, e.obs.size, withPhase,
-            msg.trim().lineSequence().lastOrNull { it.isNotBlank() } ?: "", noPhase = withPhase == 0, source = _state.value.source)
+            msg.trim().lineSequence().lastOrNull { it.isNotBlank() } ?: "", noPhase = withPhase == 0, source = _state.value.source,
+            ionoFree = iono.ionoFree)
         if (status == RtkStatus.NONE.code) return
         lastSolutionMs = System.currentTimeMillis()
-        emitSolution(sol, base)
+        emitSolution(sol, base, convergence.converging(sol))
     }
 
-    private fun emitSolution(s: RtkSolution, base: RtkBase) {
-        if (emit(fixOf(s, base), System.currentTimeMillis())) _state.value = _state.value.copy(source = methodName(s.status))
+    private fun emitSolution(s: RtkSolution, base: RtkBase, converging: Boolean) {
+        if (emit(fixOf(s, base), System.currentTimeMillis())) _state.value = _state.value.copy(source = methodName(s.status, converging))
     }
 
     private fun emitLocation(l: Location) {
@@ -226,10 +238,13 @@ class PhoneRtkLink private constructor(
 
     companion object {
         const val METHOD_ANDROID = "Android location"
+        const val METHOD_PPP = "PPP"
+        const val METHOD_PPP_CONVERGING = "PPP converging"
 
-        fun methodName(st: RtkStatus) = when (st) {
+        fun methodName(st: RtkStatus, converging: Boolean = false) = when (st) {
             RtkStatus.FIX -> "RTK fixed"
             RtkStatus.FLOAT -> "RTK float"
+            RtkStatus.PPP -> if (converging) METHOD_PPP_CONVERGING else METHOD_PPP
             RtkStatus.DGPS -> "Code DGNSS"
             RtkStatus.SBAS -> "SBAS"
             RtkStatus.SINGLE -> "Single (RTKLIB)"
@@ -242,12 +257,23 @@ class PhoneRtkLink private constructor(
             val leap = 18_000L
             val utcMs = (s.week * 604_800_000L + (s.tow * 1000).toLong()) + GPS_EPOCH_MS - leap
             val differential = s.status == RtkStatus.FIX || s.status == RtkStatus.FLOAT || s.status == RtkStatus.DGPS
-            return PhoneFix(timeMs = utcMs, latitude = s.latitude, longitude = s.longitude, altitude = s.height,
-                altitudeMsl = s.height - s.geoid, accuracy = kotlin.math.hypot(s.stdEast, s.stdNorth).toFloat(), verticalAccuracy = s.stdUp.toFloat(),
+            val ppp = s.status == RtkStatus.PPP
+            // PPP is in ITRF2020 at the observation epoch; in Europe it is given in ETRS89 (ETRF2000) like RTK networks.
+            val p = if (ppp && com.rfsat.pocketgnss.protocol.Datum.inEtrfArea(s.latitude, s.longitude))
+                com.rfsat.pocketgnss.protocol.Datum.itrf2020ToEtrf2000(s.latitude, s.longitude, s.height,
+                    com.rfsat.pocketgnss.protocol.Datum.decimalYear(s.week, s.tow))
+            else com.rfsat.pocketgnss.protocol.Geodetic(s.latitude, s.longitude, s.height)
+            return PhoneFix(timeMs = utcMs, latitude = p.latitude, longitude = p.longitude, altitude = p.height,
+                altitudeMsl = p.height - s.geoid, accuracy = kotlin.math.hypot(s.stdEast, s.stdNorth).toFloat(), verticalAccuracy = s.stdUp.toFloat(),
                 speed = s.speed.toFloat(), bearing = s.courseDeg?.toFloat(), quality = s.status.ggaQuality,
-                diffAgeSec = if (differential) s.age else null, stationId = if (differential) base.stationId else null,
+                diffAgeSec = if (differential) s.age else if (ppp && base.ssrTow > 0) pppAge(s, base) else null,
+                stationId = if (differential) base.stationId else null,
                 stdEast = s.stdEast, stdNorth = s.stdNorth, stdUp = s.stdUp, satellitesUsed = s.satellites)
         }
+
+        /** Age of the SSR clock corrections at the solution time, s. */
+        fun pppAge(s: RtkSolution, base: RtkBase): Double =
+            ((s.week - base.ssrWeek) * 604_800.0 + s.tow - base.ssrTow).coerceAtLeast(0.0)
 
         /** One NMEA epoch (bytes) for a solution, without satellites in view (session replay). */
         fun nmea(s: RtkSolution, base: RtkBase): ByteArray =

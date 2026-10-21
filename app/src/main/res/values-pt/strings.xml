@@ -31,7 +31,6 @@
     <string name="api_broadcast_help">As aplicações Android que declaram e obtêm a permissão com.PocketGNSS.permission.POSITION recebem com.PocketGNSS.action.POSITION até 5 vezes por segundo.</string>
     <string name="api_help">Os seus programas (aplicações Android, MATLAB, Python num portátil ligado ao hotspot) podem ler a posição sem interpretar NMEA. Campos e exemplos em docs/app-interface.md.</string>
     <string name="api_json">Fluxo de posição JSON</string>
-    <string name="api_json_help">Uma linha JSON por posição em %1$s:%2$d (%3$d ligados)</string>
     <string name="api_title">Interface para as suas aplicações</string>
     <string name="bt_share_all">Todo o NMEA</string>
     <string name="bt_share_bt_off">Bluetooth desligado: toque em Repetir para o ligar</string>
@@ -55,7 +54,6 @@
     <string name="bt_share_title">O telefone como recetor GNSS (Bluetooth)</string>
     <string name="bt_share_visible">Tornar visível</string>
     <string name="bt_share_waiting">À espera de um dispositivo: emparelhe-o com \"%1$s\" e ligue-o à porta série \"PocketGNSS NMEA\"</string>
-    <string name="caster_clients">%1$d móveis %2$s · %3$.0f kB enviados</string>
     <string name="caster_help">Outros recetores na mesma Wi-Fi ou no hotspot deste telefone (um segundo trator, uma base de drone, um móvel topográfico) ligam-se ao telefone como a qualquer caster NTRIP e recebem as correções que o telefone recebe. O relé NTRIP do telefone tem de estar ativo.</string>
     <string name="caster_mount">Ponto de montagem</string>
     <string name="caster_no_source">Sem correções para retransmitir: ative o NTRIP (Ao vivo) com um perfil de caster.</string>
@@ -93,7 +91,7 @@
     <string name="corr_baseline_far">A mais de 50 km da base: a precisão RTK piora. Escolha um ponto de montagem mais próximo ou um de rede (VRS).</string>
     <string name="corr_caster">Caster</string>
     <string name="corr_data">Dados</string>
-    <string name="corr_data_value">%1$.1f kB · %2$.0f B/s · %3$d tramas · %4$d com erro</string>
+    <string name="corr_data_value">%1$.1f kB · %2$.0f B/s</string>
     <string name="corr_fetch">Obter pontos de montagem</string>
     <string name="corr_gga">Último GGA enviado</string>
     <string name="corr_intro">Três vias levam as correções ao recetor: o seu próprio cliente NTRIP pela rede móvel (versão LTE) ou por Wi-Fi (ambas as versões), configurado em Ferramentas &gt; Definições do recetor (secções 4 e 7); ou este relé: o telefone obtém RTCM pelos dados móveis e reencaminha-o para o recetor por Bluetooth ou USB, enviando ao caster o GGA do recetor. O relé serve também outros recetores RTCM 3 ligados por USB ou Bluetooth.</string>
@@ -115,6 +113,7 @@
     <string name="disp_grid_utm">UTM (ETRS89 / WGS 84)</string>
     <string name="disp_height">Altura</string>
     <string name="disp_msl">Nível médio do mar</string>
+    <string name="disp_national">Nacional</string>
     <string name="disp_screen_on">Manter o ecrã ligado durante a ligação</string>
     <string name="disp_utm_auto">Automático (fuso da posição)</string>
     <string name="disp_utm_zone">Fuso UTM</string>
@@ -126,14 +125,12 @@
     <string name="eph_status">Fluxo de efemérides: %1$s %2$s</string>
     <string name="eph_switch">Fluxo de efemérides</string>
     <string name="exit_idle">A ligação ao recetor, as correções e as saídas são fechadas.</string>
-    <string name="exit_logging">Está a decorrer uma gravação (%1$d posições). Será parada e os ficheiros fechados.</string>
     <string name="exit_title">Sair do PocketGNSS?</string>
     <string name="field_add_corner">Adicionar canto</string>
     <string name="field_add_vertex">Adicionar vértice</string>
     <string name="field_area">Área</string>
     <string name="field_average">Média (s)</string>
     <string name="field_average_now">Nenhuma</string>
-    <string name="field_averaging">A calcular a média do canto… %1$d posições</string>
     <string name="field_capturing">A registar o limite</string>
     <string name="field_crosses">Os lados deste limite cruzam-se: a área não é fiável.</string>
     <string name="field_delete_title">Eliminar esta parcela?</string>
@@ -155,9 +152,7 @@
     <string name="field_paused_note">Em pausa: não são acrescentados vértices durante o movimento.</string>
     <string name="field_perimeter">Perímetro</string>
     <string name="field_recording">A gravar</string>
-    <string name="field_rejected">%1$d posições não usadas (abaixo de %2$s)</string>
     <string name="field_rename">Mudar o nome</string>
-    <string name="field_row">%1$s · perímetro %2$s · %3$d vértices · %4$s</string>
     <string name="field_saved">Parcela %1$s guardada: %2$s</string>
     <string name="field_spacing">Vértice a cada (m)</string>
     <string name="field_start">Iniciar</string>
@@ -189,20 +184,45 @@
     <string name="guide_along">Ao longo da linha</string>
     <string name="guide_b_point">B a partir de um ponto</string>
     <string name="guide_bearing">Ou um rumo a partir de A</string>
+    <string name="guide_clear_cov">Limpar cobertura</string>
+    <string name="guide_clear_text">A área trabalhada, as sobreposições e a cobertura da parcela registadas até agora são eliminadas.</string>
+    <string name="guide_clear_title">Limpar o mapa de cobertura?</string>
+    <string name="guide_curve_finish">Terminar e usar</string>
+    <string name="guide_curve_help">Percorra a primeira passagem ao longo da curva: as passagens seguem-na depois, a uma largura de alfaia de distância, dos dois lados. Guarda-se um ponto a cada 0,5 m e o percurso é suavizado a 5 cm. Nome e largura como acima.</string>
+    <string name="guide_curve_recording">A registar a curva: %1$s</string>
+    <string name="guide_curve_short">Percorra pelo menos 10 m antes de terminar a curva.</string>
+    <string name="guide_curve_start">Registar curva</string>
+    <string name="guide_curve_title">Curva (curvas de nível, curvas)</string>
+    <string name="guide_curve_value">curva · %1$s de comprimento · largura %2$.2f m</string>
+    <string name="guide_export_cov">Partilhar área trabalhada (GeoJSON)</string>
+    <string name="guide_field_cov">%1$.0f %% coberto · falhas %2$s</string>
     <string name="guide_heading">Erro de rumo</string>
+    <string name="guide_headland_field">Parcela</string>
+    <string name="guide_headland_help">Passagens ao longo de um limite de parcela, por dentro: a primeira a meia largura de alfaia do limite, cada seguinte uma largura mais para dentro. Largura como acima.</string>
+    <string name="guide_headland_start">Iniciar a orientação na cabeceira</string>
+    <string name="guide_headland_suffix">cabeceira</string>
+    <string name="guide_headland_title">Cabeceira</string>
+    <string name="guide_headland_value">cabeceira · perímetro %1$s · largura %2$.2f m</string>
     <string name="guide_help">Percorra a primeira passagem: defina A no início e B no fim (ou use pontos guardados / importados, ou indique A e um rumo). As passagens seguem depois paralelas, afastadas de uma largura de trabalho, para ambos os lados.</string>
     <string name="guide_hold">Mantenha o rumo</string>
     <string name="guide_line">Linha</string>
     <string name="guide_line_value">rumo %1$.1f° · largura %2$.2f m</string>
     <string name="guide_name">Nome da linha</string>
     <string name="guide_new">Nova linha A-B</string>
+    <string name="guide_no_field">Sem limite de parcela aqui: registe ou importe um (Ferramentas &gt; Limite de parcela) para ver a cobertura e as falhas da parcela.</string>
+    <string name="guide_no_fields">Ainda sem limites de parcela: registe ou importe um em Ferramentas &gt; Limite de parcela.</string>
     <string name="guide_none">Ainda não há linhas.</string>
     <string name="guide_on_line">Na linha</string>
+    <string name="guide_overlap">Trabalhado duas vezes</string>
     <string name="guide_pass">Passagem</string>
     <string name="guide_pass_ab">Linha A-B</string>
-    <string name="guide_pass_left">%1$d à esquerda de A-B</string>
-    <string name="guide_pass_right">%1$d à direita de A-B</string>
-    <string name="guide_reset_area">Repor a área</string>
+    <string name="guide_pass_curve">a curva percorrida</string>
+    <string name="guide_pass_headland">passagem de cabeceira %1$d</string>
+    <string name="guide_pass_left">%1$d à esquerda</string>
+    <string name="guide_pass_outside">fora da parcela</string>
+    <string name="guide_pass_right">%1$d à direita</string>
+    <string name="guide_record">Registar cobertura</string>
+    <string name="guide_record_help">Pinta no mapa a faixa trabalhada (a largura da alfaia). Pause enquanto a alfaia estiver levantada: viragens na cabeceira, transporte.</string>
     <string name="guide_saved">Linhas guardadas (%1$d)</string>
     <string name="guide_set_a">Definir A aqui</string>
     <string name="guide_set_b">Definir B aqui</string>
@@ -221,6 +241,21 @@
     <string name="guide_warn_off">Não</string>
     <string name="guide_width">Largura de trabalho</string>
     <string name="guide_worked">Área trabalhada</string>
+    <string name="height_in">Altitude (%1$s)</string>
+    <string name="height_model">Modelo de altitudes</string>
+    <string name="height_model_choose">Escolha o modelo de altitudes do país onde trabalha.</string>
+    <string name="height_model_credit">%1$s · %2$s · EPSG:%3$d</string>
+    <string name="height_model_delete">Eliminar</string>
+    <string name="height_model_download">Descarregar (%1$s)</string>
+    <string name="height_model_downloading">A descarregar… %1$d %%</string>
+    <string name="height_model_failed">A transferência falhou: %1$s</string>
+    <string name="height_model_help">Altitudes no sistema altimétrico do seu país, a partir do modelo de geoide oficial da sua agência cartográfica (publicado no PROJ-data). É descarregado uma vez e verificado; depois funciona sem ligação. As altitudes estão certas para posições em ETRS89, como as dadas pelas redes RTK europeias e pelo PPP do PocketGNSS.</string>
+    <string name="height_model_missing">Descarregue o modelo de altitudes em Configuração &gt; Visualização.</string>
+    <string name="height_model_none">Escolha um modelo de altitudes em Configuração &gt; Visualização.</string>
+    <string name="height_model_outside">Fora de %1$s: escolha outro modelo de altitudes em Configuração &gt; Visualização.</string>
+    <string name="height_model_ready">Descarregado (%1$s), funciona sem ligação</string>
+    <string name="height_model_use">Usar %1$s (a sua posição)</string>
+    <string name="height_model_world">O EGM2008 é a melhor opção gratuita onde não há um modelo nacional aberto (por exemplo Grécia, Itália, Croácia, Roménia); pode diferir das altitudes nacionais em alguns decímetros.</string>
     <string name="help_bt">Bluetooth Classic (SPP), como usa o adaptador do recetor; o BLE não é usado. O recetor envia o mesmo NMEA que por USB. Emparelhe o telefone com o adaptador (BTU-ESPrtk : &lt;ID&gt;) nas definições do Android e escolha-o abaixo.</string>
     <string name="help_phone">O chip GNSS do próprio telefone, sem recetor externo. Com Phone RTK (Configuração) as suas medições em bruto são combinadas com correções de um caster através do relé NTRIP; a precisão depende do telefone (de decímetros a centímetros com fase da portadora em L1 + L5). Sem correções ou com Phone RTK desligado: nível métrico. Requer acesso à localização e a localização ativa.</string>
     <string name="help_sim">Um recetor RTK simulado: todos os ecrãs e ferramentas funcionam sem hardware.</string>
@@ -246,7 +281,6 @@
     <string name="hist_latest_help">Motor: n = satélites na solução, φ = sinais com fase da portadora, r = razão de ambiguidades (uma solução fixa precisa de cerca de 3 ou mais).</string>
     <string name="hist_log">Gravar cada posição num ficheiro CSV</string>
     <string name="hist_log_help">Guardado em Registo &gt; Sessões (\"Histórico de posições\"), com todas as colunas, incluindo os dados internos do motor.</string>
-    <string name="hist_log_on">%1$s · %2$d linhas</string>
     <string name="hist_ref_auto">média de %1$s</string>
     <string name="hist_ref_auto_btn">Automática</string>
     <string name="hist_ref_here">Referência aqui</string>
@@ -283,12 +317,13 @@
     <string name="home_version">v%1$s (compilação %2$d)</string>
     <string name="hotspot_open">Definições do hotspot do telefone</string>
     <string name="import_button">Importar pontos / limites</string>
-    <string name="import_done">Importados %1$d pontos e %2$d limites.</string>
+    <string name="import_done">Importados %1$s e %2$s.</string>
     <string name="import_format">Não foi possível ler este ficheiro (CSV, GeoJSON, KML, GPX ou shapefile comprimido).</string>
     <string name="import_help">CSV (latitude / longitude, ou M / P na quadrícula escolhida em Configuração &gt; Visualização), GeoJSON, KML, pontos GPX ou um shapefile comprimido (.shp, .dbf, .prj). Os pontos ficam prontos para implantação; os limites juntam-se à lista de parcelas.</string>
     <string name="import_no_grid">O ficheiro tem coordenadas planas: escolha a sua quadrícula em Configuração &gt; Visualização (em UTM um fuso fixo, ou ligue-se para o fuso atual) e importe de novo.</string>
     <string name="import_nothing">Não foram encontrados pontos nem limites neste ficheiro.</string>
-    <string name="import_skipped">Não foi possível ler %1$d entradas.</string>
+    <string name="isoxml_button">ISO-XML para terminais ISOBUS</string>
+    <string name="isoxml_help">TASKDATA.zip (ISO 11783-10, versão 4.3) com todas as parcelas, linhas de orientação (A-B, curvas, cabeceiras) e pontos, para terminais de tratores e software de gestão agrícola. Descomprima-o numa pen USB de forma a que a pasta TASKDATA fique no topo.</string>
     <string name="live_accuracy">Precisão</string>
     <string name="live_accuracy_value">H %1$s · V %2$s</string>
     <string name="live_age">Idade das correções</string>
@@ -316,25 +351,29 @@
     <string name="live_ntrip_value">%1$s · %2$s · %3$.0f B/s</string>
     <string name="live_phone_no_rtk">GNSS do telefone com Phone RTK desligado (Configuração): as correções não são aplicadas e a posição continua autónoma.</string>
     <string name="live_position">Posição</string>
+    <string name="live_ppp_frame_etrs">Coordenadas em ETRS89 (ETRF2000), convertidas do referencial global das correções (ITRF2020), como as usam as redes RTK europeias e os sistemas nacionais.</string>
+    <string name="live_ppp_frame_itrf">Coordenadas em ITRF2020 à data de hoje, o referencial global das correções.</string>
+    <string name="live_ppp_hint">Ative o relé NTRIP com um fluxo Galileo HAS ou IGS SSRA… (caster em Configuração &gt; Relé NTRIP); até lá o telefone dá uma posição autónoma.</string>
+    <string name="live_ppp_l1">Sem segunda frequência neste telefone: o PPP usa o modelo de ionosfera transmitido (cerca de um metro).</string>
+    <string name="live_ppp_noeph">Ainda sem efemérides transmitidas: se o fluxo de correções não as tiver, ative o fluxo de efemérides (Configuração &gt; Ligação ao recetor).</string>
+    <string name="live_ppp_nossr">Ainda sem correções SSR neste fluxo: o PPP precisa de um ponto de montagem Galileo HAS ou IGS SSRA… (Configuração &gt; Relé NTRIP).</string>
+    <string name="live_ppp_ssr">Correções SSR</string>
     <string name="live_rec_off">Grav. OFF</string>
     <string name="live_rec_on">Grav. ON</string>
     <string name="live_route">Versão do recetor</string>
     <string name="live_rtk_base">Dados da base</string>
-    <string name="live_rtk_base_value">estação %1$d · %2$d satélites · %3$d efemérides</string>
     <string name="live_rtk_engine">Phone RTK</string>
-    <string name="live_rtk_engine_value">%1$d sinais, %2$d com fase da portadora · razão AR %3$.1f</string>
     <string name="live_rtk_hint">Ative o relé NTRIP (caster e ponto de montagem em Configuração) para RTK; até lá o telefone dá uma posição autónoma.</string>
     <string name="live_rtk_no_basepos">ainda sem posição da estação (1005/1006)</string>
     <string name="live_rtk_noeph">O caster não envia efemérides transmitidas (RTCM 1019/1020/1045/1046/1042): o telefone não consegue calcular as posições dos satélites só com este fluxo. Escolha um ponto de montagem que as inclua (a maioria dos fluxos MSM).</string>
     <string name="live_rtk_nophase">Este telefone não está a dar fase da portadora: o RTK não consegue fixar (telefone só de código ou poupança de energia ainda ativa). A posição fica ao nível do metro.</string>
+    <string name="live_rtk_station">estação %1$d</string>
     <string name="live_sats">Satélites</string>
-    <string name="live_sats_value">%1$d usados / %2$d visíveis</string>
     <string name="live_sky">Céu e sinais</string>
     <string name="live_speed">Velocidade / rumo</string>
     <string name="live_time">Hora</string>
     <string name="live_waiting">À espera de uma posição…</string>
     <string name="log_any_fix">Qualquer solução</string>
-    <string name="log_counts">%1$d posições · %2$d linhas NMEA</string>
     <string name="log_delete_point">Eliminar este ponto?</string>
     <string name="log_delete_title">Eliminar esta sessão?</string>
     <string name="log_every_epoch">Cada época</string>
@@ -352,6 +391,8 @@
     <string name="log_replay">Reproduzir</string>
     <string name="log_replay_help">Reproduzir usa uma sessão gravada como fonte, para que Ao vivo, Mapa, as ferramentas e o histórico de posições trabalhem com ela. As sessões NMEA são reproduzidas como foram gravadas; as sessões em bruto do telefone (RINEX + RTCM) voltam a passar pelo Phone RTK com as definições atuais.</string>
     <string name="log_replay_max">Máx.</string>
+    <string name="log_replay_pause">Pausa</string>
+    <string name="log_replay_resume">Retomar</string>
     <string name="log_replay_running">A reproduzir %1$s: %2$d de %3$d</string>
     <string name="log_replay_speed">Velocidade de reprodução</string>
     <string name="log_replay_stop">Parar reprodução</string>
@@ -367,9 +408,12 @@
     <string name="map_tap_point">Toque num ponto para ver a distância e o rumo.</string>
     <string name="map_terrain">Relevo</string>
     <string name="map_to_point">%1$s a %2$.1f°</string>
+    <string name="method_android">Localização Android</string>
+    <string name="method_code_dgnss">DGNSS de código</string>
+    <string name="method_ppp">PPP</string>
+    <string name="method_ppp_conv">PPP a convergir</string>
     <string name="mount_dialog_empty">O caster não devolveu pontos de montagem.</string>
     <string name="mount_dialog_error">Não foi possível obter a tabela de fontes: %1$s</string>
-    <string name="mount_dialog_help">%1$d pontos de montagem. Primeiro os fluxos de rede (VRS, MAX, base mais próxima), depois as estações individuais, as mais próximas primeiro. Toque num para o usar; o envio da posição (GGA) é definido pela lista do caster.</string>
     <string name="mount_dialog_loading">A pedir a tabela de fontes ao caster…</string>
     <string name="mount_dialog_title">Pontos de montagem em %1$s:%2$d</string>
     <string name="nc_awaiting">À espera que permita o acesso USB.</string>
@@ -379,7 +423,6 @@
     <string name="nmea_all">Todas</string>
     <string name="nmea_copied">NMEA copiado</string>
     <string name="nmea_copy">Copiar</string>
-    <string name="nmea_count">%1$d mostradas das últimas %2$d frases</string>
     <string name="nmea_empty">Ainda não há frases deste tipo.</string>
     <string name="nmea_fewer">Menos</string>
     <string name="nmea_help">As frases do recetor à medida que chegam, sem guardar ficheiro. Filtre por tipo, pause para ler, copie ou partilhe o que é mostrado. Para um registo completo, use Gravação acima.</string>
@@ -389,13 +432,10 @@
     <string name="nmea_title">Mensagens NMEA (ao vivo)</string>
     <string name="no_gnss_short">Este telefone não tem recetor GNSS: ligue um externo</string>
     <string name="no_gnss_warning">Este telefone não tem recetor GNSS (posicionamento por satélite) próprio. O PocketGNSS só é útil com um recetor GNSS externo ligado por USB, Bluetooth ou rede; a fonte do telefone e as ferramentas de GNSS em bruto do telefone não estão disponíveis.</string>
-    <string name="notif_bt">Bluetooth: %1$d dispositivos</string>
     <string name="notif_channel">Ligação ao recetor</string>
     <string name="notif_channel_help">Mostrada enquanto a aplicação grava, envia correções ou publica a posição com o ecrã desligado.</string>
-    <string name="notif_logging">A gravar %1$d posições</string>
     <string name="notif_mock">Localização fictícia</string>
     <string name="notif_ntrip">NTRIP %1$s</string>
-    <string name="notif_raw">GNSS em bruto %1$d épocas</string>
     <string name="notif_server">Servidor NMEA (%1$d)</string>
     <string name="notif_stop">Parar</string>
     <string name="notif_title_fix">%1$s %2$s</string>
@@ -447,7 +487,6 @@
     <string name="out_mock_open_dev">Opções de programador</string>
     <string name="out_mock_phone">Indisponível com o telefone como fonte: uma localização fictícia substituiria o fornecedor GNSS do próprio telefone e, com ele, as suas medições.</string>
     <string name="out_server">Servidor NMEA TCP</string>
-    <string name="out_server_help">Disponibiliza o NMEA do recetor em %1$s:%2$d · %3$d cliente(s)</string>
     <string name="out_server_local">Só este telefone</string>
     <string name="out_server_local_help">Desligado: também se podem ligar PCs da mesma rede</string>
     <string name="out_server_port">Porta do servidor</string>
@@ -457,6 +496,8 @@
     <string name="phint_dgnss">Código com correções (pouca fase da portadora): nível do metro</string>
     <string name="phint_fixed">Fase da portadora, ambiguidades fixadas: centímetros se a solução estiver certa</string>
     <string name="phint_float">Fase da portadora, não fixada: decímetros</string>
+    <string name="phint_ppp">Posicionamento por ponto preciso, sem base: de decímetros a cerca de um metro num telefone</string>
+    <string name="phint_ppp_conv">A convergir: a precisão melhora nos primeiros 20–30 minutos a céu aberto</string>
     <string name="phint_single">Sem correções: metros</string>
     <string name="point_code">Código / categoria</string>
     <string name="point_edit">Editar ponto</string>
@@ -475,7 +516,6 @@
     <string name="raw_chip">Chip GNSS</string>
     <string name="raw_clock">Relógio do recetor</string>
     <string name="raw_clock_missing">sem full bias: medições inutilizáveis</string>
-    <string name="raw_clock_ok">full bias indicado · %1$d descontinuidades</string>
     <string name="raw_col_cn0">C/N0</string>
     <string name="raw_col_code">Código</string>
     <string name="raw_col_phase">Fase</string>
@@ -537,6 +577,9 @@
     <string name="setup_phone_auto_learning">A aprender: após cerca de 10 minutos de Phone RTK o motor é ajustado ao que este telefone fornece.</string>
     <string name="setup_phone_auto_noar">Este telefone raramente tem fase da portadora suficiente para fixar: a resolução de ambiguidades está desligada, por isso dá soluções flutuantes / de código honestas em vez de falsas soluções fixas.</string>
     <string name="setup_phone_auto_normal">Este telefone fornece fase da portadora utilizável: definições normais.</string>
+    <string name="setup_phone_corr">Correções</string>
+    <string name="setup_phone_corr_ppp">PPP (HAS)</string>
+    <string name="setup_phone_corr_rtk">RTK (base)</string>
     <string name="setup_phone_forget">Esquecer o aprendido</string>
     <string name="setup_phone_learned">Aprendido</string>
     <string name="setup_phone_learned_value">%1$.0f min · %2$.1f sat. com fase · suficiente para fixar %3$.0f %% · %4$.2f saltos / sat.-min</string>
@@ -547,6 +590,8 @@
     <string name="setup_phone_rtk_mode">O telefone está</string>
     <string name="setup_phone_rtk_moving">Em movimento</string>
     <string name="setup_phone_rtk_static">Imóvel num ponto</string>
+    <string name="setup_ppp_help">O PPP não precisa de estação base nem de assinatura: o relé NTRIP liga-se a um fluxo de correções de órbita, relógio e enviesamento de código dos satélites (SSR) e as medições em bruto do telefone são processadas sozinhas. O Galileo HAS é gratuito, da UE, após registo no European GNSS Service Centre (gsc-europa.eu, HAS Internet Data Distribution); também funcionam os fluxos em tempo real do IGS chamados SSRA… (registo gratuito). Conte com decímetros a cerca de um metro num telefone de dupla frequência após 20–30 minutos a céu aberto, e cerca de um metro em telefones só L1. Não há resolução de ambiguidades, por isso não centímetros.</string>
+    <string name="setup_ppp_ssrc">Os fluxos chamados SSRC… referem as órbitas ao centro de massa dos satélites, que o PocketGNSS não usa: escolha o Galileo HAS ou um fluxo SSRA… (centro de fase da antena).</string>
     <string name="setup_receiver">Definições web do recetor</string>
     <string name="setup_receiver_help">Serve para encontrar o hotspot do recetor (ESPrtk : &lt;ID&gt;, ID mostrado no LCD) e mostrar o acesso (RTKrover + número do dispositivo).</string>
     <string name="setup_receiver_id">ID do recetor (p. ex. AJG03)</string>
@@ -582,11 +627,9 @@
     <string name="state_server">servidor :%1$d</string>
     <string name="stream_baud">Velocidade (baud)</string>
     <string name="stream_bytes">Recebido</string>
-    <string name="stream_bytes_value">%1$d bytes · %2$d NMEA · %3$d UBX</string>
     <string name="stream_console">Consola NMEA</string>
     <string name="stream_counts">Mensagens e frequências</string>
     <string name="stream_errors">Erros</string>
-    <string name="stream_errors_value">%1$d somas de verificação erradas · %2$d outros bytes</string>
     <string name="stream_gap">Falha máx.</string>
     <string name="stream_live">Ao vivo</string>
     <string name="stream_paused">Em pausa</string>
@@ -619,7 +662,6 @@
     <string name="survey_rms">Erro RMS</string>
     <string name="survey_running">Média ON</string>
     <string name="survey_samples">Amostras</string>
-    <string name="survey_samples_value">%1$d usadas · %2$d rejeitadas · %3$s</string>
     <string name="survey_save">Guardar como ponto</string>
     <string name="survey_save_btn">Guardar ponto</string>
     <string name="survey_sd">Desvio-padrão</string>
@@ -636,8 +678,8 @@
     <string name="tool_corrections_sum">Relé NTRIP através do telefone, mensagens RTCM, distância à base, pontos de montagem</string>
     <string name="tool_field">Limite de parcela</string>
     <string name="tool_field_sum">Percorra uma parcela a pé ou de veículo, ou marque os cantos: área, perímetro, exportação KML / SHP</string>
-    <string name="tool_guide">Orientação A-B</string>
-    <string name="tool_guide_sum">Passagens paralelas à largura do equipamento com barra de luzes, para pulverizar, espalhar e semear</string>
+    <string name="tool_guide">Orientação</string>
+    <string name="tool_guide_sum">Linhas A-B, curvas e passagens de cabeceira à largura da alfaia, com barra de luzes e mapa de cobertura</string>
     <string name="tool_history">Histórico de posições</string>
     <string name="tool_history_sum">Cada posição calculada com método e precisão; declarada face à dispersão real; registo CSV</string>
     <string name="tool_nmea">Saída NMEA</string>
@@ -746,4 +788,164 @@
     <string name="web_warnings">Avisos</string>
     <string name="web_wifi_hotspot">Sem router no campo? Ligue o hotspot móvel deste telefone com o mesmo SSID e palavra-passe da secção 4: o recetor chega então ao serviço RTK pelos dados móveis do telefone. Muitos telefones não conseguem ter o hotspot ligado enquanto estão ligados à Wi-Fi do recetor, por isso termine primeiro estas definições.</string>
     <string name="web_wifi_steps">Versão Wi-Fi: na secção 4 escolha Internet via Wi-Fi, Number Access Point 1 AP Wi-Fi, e o SSID e a palavra-passe do router no campo (RFSAT por omissão); mantenha o Smart Scan ativo. Send e verifique a janela de estado.</string>
+    <plurals name="api_json_help">
+        <item quantity="one">Uma linha JSON por posição em %1$s:%2$d (%3$d ligado)</item>
+        <item quantity="many">Uma linha JSON por posição em %1$s:%2$d (%3$d ligados)</item>
+        <item quantity="other">Uma linha JSON por posição em %1$s:%2$d (%3$d ligados)</item>
+    </plurals>
+    <plurals name="caster_clients">
+        <item quantity="one">%1$d móvel %2$s · %3$.0f kB enviados</item>
+        <item quantity="many">%1$d móveis %2$s · %3$.0f kB enviados</item>
+        <item quantity="other">%1$d móveis %2$s · %3$.0f kB enviados</item>
+    </plurals>
+    <plurals name="corr_bad">
+        <item quantity="one">%1$d com erro</item>
+        <item quantity="many">%1$d com erro</item>
+        <item quantity="other">%1$d com erro</item>
+    </plurals>
+    <plurals name="corr_frames">
+        <item quantity="one">%1$d trama</item>
+        <item quantity="many">%1$d tramas</item>
+        <item quantity="other">%1$d tramas</item>
+    </plurals>
+    <plurals name="exit_logging">
+        <item quantity="one">Está a decorrer uma gravação (%1$d posição). Será parada e os ficheiros fechados.</item>
+        <item quantity="many">Está a decorrer uma gravação (%1$d posições). Será parada e os ficheiros fechados.</item>
+        <item quantity="other">Está a decorrer uma gravação (%1$d posições). Será parada e os ficheiros fechados.</item>
+    </plurals>
+    <plurals name="field_averaging">
+        <item quantity="one">A calcular a média do canto… %1$d posição</item>
+        <item quantity="many">A calcular a média do canto… %1$d posições</item>
+        <item quantity="other">A calcular a média do canto… %1$d posições</item>
+    </plurals>
+    <plurals name="field_rejected">
+        <item quantity="one">%1$d posição não usada (abaixo de %2$s)</item>
+        <item quantity="many">%1$d posições não usadas (abaixo de %2$s)</item>
+        <item quantity="other">%1$d posições não usadas (abaixo de %2$s)</item>
+    </plurals>
+    <plurals name="field_row">
+        <item quantity="one">%1$s · perímetro %2$s · %3$d vértice · %4$s</item>
+        <item quantity="many">%1$s · perímetro %2$s · %3$d vértices · %4$s</item>
+        <item quantity="other">%1$s · perímetro %2$s · %3$d vértices · %4$s</item>
+    </plurals>
+    <plurals name="hist_log_on">
+        <item quantity="one">%1$s · %2$d linha</item>
+        <item quantity="many">%1$s · %2$d linhas</item>
+        <item quantity="other">%1$s · %2$d linhas</item>
+    </plurals>
+    <plurals name="import_boundaries">
+        <item quantity="one">%1$d limite</item>
+        <item quantity="many">%1$d limites</item>
+        <item quantity="other">%1$d limites</item>
+    </plurals>
+    <plurals name="import_points">
+        <item quantity="one">%1$d ponto</item>
+        <item quantity="many">%1$d pontos</item>
+        <item quantity="other">%1$d pontos</item>
+    </plurals>
+    <plurals name="import_skipped">
+        <item quantity="one">Não foi possível ler %1$d entrada.</item>
+        <item quantity="many">Não foi possível ler %1$d entradas.</item>
+        <item quantity="other">Não foi possível ler %1$d entradas.</item>
+    </plurals>
+    <plurals name="live_ppp_ssr_value">
+        <item quantity="one">%1$d satélite · %2$d com enviesamentos de código · há %3$.0f s</item>
+        <item quantity="many">%1$d satélites · %2$d com enviesamentos de código · há %3$.0f s</item>
+        <item quantity="other">%1$d satélites · %2$d com enviesamentos de código · há %3$.0f s</item>
+    </plurals>
+    <plurals name="live_rtk_engine_value">
+        <item quantity="one">%1$d sinal, %2$d com fase da portadora · razão AR %3$.1f</item>
+        <item quantity="many">%1$d sinais, %2$d com fase da portadora · razão AR %3$.1f</item>
+        <item quantity="other">%1$d sinais, %2$d com fase da portadora · razão AR %3$.1f</item>
+    </plurals>
+    <plurals name="mount_dialog_help">
+        <item quantity="one">%1$d ponto de montagem. Primeiro os fluxos de rede (VRS, MAX, base mais próxima), depois as estações individuais, as mais próximas primeiro. Toque num para o usar; o envio da posição (GGA) é definido pela lista do caster.</item>
+        <item quantity="many">%1$d pontos de montagem. Primeiro os fluxos de rede (VRS, MAX, base mais próxima), depois as estações individuais, as mais próximas primeiro. Toque num para o usar; o envio da posição (GGA) é definido pela lista do caster.</item>
+        <item quantity="other">%1$d pontos de montagem. Primeiro os fluxos de rede (VRS, MAX, base mais próxima), depois as estações individuais, as mais próximas primeiro. Toque num para o usar; o envio da posição (GGA) é definido pela lista do caster.</item>
+    </plurals>
+    <plurals name="n_bad_checksums">
+        <item quantity="one">%1$d soma de verificação errada</item>
+        <item quantity="many">%1$d somas de verificação erradas</item>
+        <item quantity="other">%1$d somas de verificação erradas</item>
+    </plurals>
+    <plurals name="n_ephemerides">
+        <item quantity="one">%1$d efeméride</item>
+        <item quantity="many">%1$d efemérides</item>
+        <item quantity="other">%1$d efemérides</item>
+    </plurals>
+    <plurals name="n_fixes">
+        <item quantity="one">%1$d posição</item>
+        <item quantity="many">%1$d posições</item>
+        <item quantity="other">%1$d posições</item>
+    </plurals>
+    <plurals name="n_nmea_lines">
+        <item quantity="one">%1$d linha NMEA</item>
+        <item quantity="many">%1$d linhas NMEA</item>
+        <item quantity="other">%1$d linhas NMEA</item>
+    </plurals>
+    <plurals name="n_other_bytes">
+        <item quantity="one">%1$d outro byte</item>
+        <item quantity="many">%1$d outros bytes</item>
+        <item quantity="other">%1$d outros bytes</item>
+    </plurals>
+    <plurals name="n_rejected">
+        <item quantity="one">%1$d rejeitada</item>
+        <item quantity="many">%1$d rejeitadas</item>
+        <item quantity="other">%1$d rejeitadas</item>
+    </plurals>
+    <plurals name="n_satellites">
+        <item quantity="one">%1$d satélite</item>
+        <item quantity="many">%1$d satélites</item>
+        <item quantity="other">%1$d satélites</item>
+    </plurals>
+    <plurals name="n_used">
+        <item quantity="one">%1$d usada</item>
+        <item quantity="many">%1$d usadas</item>
+        <item quantity="other">%1$d usadas</item>
+    </plurals>
+    <plurals name="nmea_count">
+        <item quantity="one">%1$d mostrada de %2$d frase recente</item>
+        <item quantity="many">%1$d mostradas das últimas %2$d frases</item>
+        <item quantity="other">%1$d mostradas das últimas %2$d frases</item>
+    </plurals>
+    <plurals name="notif_bt">
+        <item quantity="one">Bluetooth: %1$d dispositivo</item>
+        <item quantity="many">Bluetooth: %1$d dispositivos</item>
+        <item quantity="other">Bluetooth: %1$d dispositivos</item>
+    </plurals>
+    <plurals name="notif_logging">
+        <item quantity="one">A gravar %1$d posição</item>
+        <item quantity="many">A gravar %1$d posições</item>
+        <item quantity="other">A gravar %1$d posições</item>
+    </plurals>
+    <plurals name="notif_raw">
+        <item quantity="one">GNSS em bruto %1$d época</item>
+        <item quantity="many">GNSS em bruto %1$d épocas</item>
+        <item quantity="other">GNSS em bruto %1$d épocas</item>
+    </plurals>
+    <plurals name="out_server_help">
+        <item quantity="one">Disponibiliza o NMEA do recetor em %1$s:%2$d · %3$d cliente</item>
+        <item quantity="many">Disponibiliza o NMEA do recetor em %1$s:%2$d · %3$d clientes</item>
+        <item quantity="other">Disponibiliza o NMEA do recetor em %1$s:%2$d · %3$d clientes</item>
+    </plurals>
+    <plurals name="raw_clock_ok">
+        <item quantity="one">full bias indicado · %1$d descontinuidade</item>
+        <item quantity="many">full bias indicado · %1$d descontinuidades</item>
+        <item quantity="other">full bias indicado · %1$d descontinuidades</item>
+    </plurals>
+    <plurals name="sats_in_view">
+        <item quantity="one">%1$d visível</item>
+        <item quantity="many">%1$d visíveis</item>
+        <item quantity="other">%1$d visíveis</item>
+    </plurals>
+    <plurals name="sats_used">
+        <item quantity="one">%1$d usado</item>
+        <item quantity="many">%1$d usados</item>
+        <item quantity="other">%1$d usados</item>
+    </plurals>
+    <plurals name="stream_bytes_value">
+        <item quantity="one">%1$d byte · %2$d NMEA · %3$d UBX</item>
+        <item quantity="many">%1$d bytes · %2$d NMEA · %3$d UBX</item>
+        <item quantity="other">%1$d bytes · %2$d NMEA · %3$d UBX</item>
+    </plurals>
 </resources>

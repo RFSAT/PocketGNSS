@@ -86,6 +86,7 @@ private const val TGT_SRC = "r-tgt"; private const val TGT_LYR = "r-tgt-l"
 private const val FLD_SRC = "r-fld"; private const val FLD_FILL = "r-fld-f"; private const val FLD_LINE = "r-fld-l"; private const val FLD_LBL = "r-fld-t"
 private const val CAP_SRC = "r-cap"; private const val CAP_LYR = "r-cap-l"
 private const val GDE_SRC = "r-gde"; private const val GDE_LYR = "r-gde-l"
+private const val COV_SRC = "r-cov"; private const val COV_LYR = "r-cov-f"; private const val OVL_SRC = "r-ovl"; private const val OVL_LYR = "r-ovl-f"
 
 /**
  * MapLibre map of the live position (coloured by fix type), the recent track (segments coloured by fix
@@ -110,6 +111,7 @@ fun RtkMap(
     capture: List<Vertex> = emptyList(),
     guide: List<List<Pair<Double, Double>>> = emptyList(),
     ownMap: String? = null,
+    coverage: com.rfsat.pocketgnss.core.CoverageShapes? = null,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -123,6 +125,7 @@ fun RtkMap(
     val placed = remember { mutableStateOf(false) }
     val lastFit = remember { mutableStateOf(fitKey) }
     val lastRecenter = remember { mutableStateOf(recenterKey) }
+    val drawnCoverage = remember { mutableStateOf<Long?>(null) }
     val currentPoints = remember { mutableStateOf(points) }
     val currentTap = remember { mutableStateOf(onPointTap) }
     currentPoints.value = points; currentTap.value = onPointTap
@@ -158,6 +161,7 @@ fun RtkMap(
                 m.setStyle(Style.Builder().fromJson(MapStyles.styleFor(layer, ownMap))) { style ->
                     styleHolder.value = style; loadedLayer.value = layer
                     ensureLayers(style); updateData(style, track, points, position, base, target); updateFields(style, fields, capture, guide)
+                    updateCoverage(style, coverage); drawnCoverage.value = coverage?.version
                     if (!didInitial.value) {
                         fitCamera(m, track, points, position, false, fields); didInitial.value = true
                         placed.value = track.isNotEmpty() || points.isNotEmpty() || fields.isNotEmpty() || position != null
@@ -170,8 +174,12 @@ fun RtkMap(
                 map.setStyle(Style.Builder().fromJson(MapStyles.styleFor(layer, ownMap))) { style ->
                     styleHolder.value = style; loadedLayer.value = layer
                     ensureLayers(style); updateData(style, track, points, position, base, target); updateFields(style, fields, capture, guide)
+                    updateCoverage(style, coverage); drawnCoverage.value = coverage?.version
                 }
-            } else styleHolder.value?.let { updateData(it, track, points, position, base, target); updateFields(it, fields, capture, guide) }
+            } else styleHolder.value?.let {
+                updateData(it, track, points, position, base, target); updateFields(it, fields, capture, guide)
+                if (drawnCoverage.value != coverage?.version) { updateCoverage(it, coverage); drawnCoverage.value = coverage?.version }
+            }
             if (!placed.value && didInitial.value && position != null) {
                 map.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(position.latitude, position.longitude), VIEW_ZOOM))
                 placed.value = true
@@ -189,12 +197,17 @@ fun RtkMap(
 }
 
 private fun ensureLayers(style: Style) {
-    for (id in listOf(FLD_SRC, CAP_SRC, GDE_SRC, TRACK_SRC, PTS_SRC, POS_SRC, BASE_SRC, TGT_SRC)) if (style.getSource(id) == null) style.addSource(GeoJsonSource(id))
+    for (id in listOf(FLD_SRC, COV_SRC, OVL_SRC, CAP_SRC, GDE_SRC, TRACK_SRC, PTS_SRC, POS_SRC, BASE_SRC, TGT_SRC)) if (style.getSource(id) == null) style.addSource(GeoJsonSource(id))
     // Fields under everything else: translucent fill, yellow outline, name and area at the centroid.
     if (style.getLayer(FLD_FILL) == null) style.addLayer(FillLayer(FLD_FILL, FLD_SRC).withProperties(
         PropertyFactory.fillColor("#FFD600"), PropertyFactory.fillOpacity(0.18f)))
     if (style.getLayer(FLD_LINE) == null) style.addLayer(LineLayer(FLD_LINE, FLD_SRC).withProperties(
         PropertyFactory.lineColor("#FFD600"), PropertyFactory.lineWidth(2.5f)))
+    // Coverage over the field fill: worked ground green, ground worked twice or more orange-red; gaps stay unpainted.
+    if (style.getLayer(COV_LYR) == null) style.addLayer(FillLayer(COV_LYR, COV_SRC).withProperties(
+        PropertyFactory.fillColor("#00C853"), PropertyFactory.fillOpacity(0.38f), PropertyFactory.fillAntialias(false)))
+    if (style.getLayer(OVL_LYR) == null) style.addLayer(FillLayer(OVL_LYR, OVL_SRC).withProperties(
+        PropertyFactory.fillColor("#FF3D00"), PropertyFactory.fillOpacity(0.55f), PropertyFactory.fillAntialias(false)))
     if (style.getLayer(GDE_LYR) == null) style.addLayer(LineLayer(GDE_LYR, GDE_SRC).withProperties(
         PropertyFactory.lineColor(Expression.toColor(Expression.get("c"))), PropertyFactory.lineWidth(Expression.get("w")), PropertyFactory.lineOpacity(0.85f)))
     if (style.getLayer(CAP_LYR) == null) style.addLayer(LineLayer(CAP_LYR, CAP_SRC).withProperties(
@@ -267,6 +280,14 @@ private fun updateFields(style: Style, fields: List<Field>, capture: List<Vertex
             it.addStringProperty("c", if (i == 0) "#00E676" else "#B0BEC5"); it.addNumberProperty("w", if (i == 0) 4f else 1.5f)
         }
     }))
+}
+
+private fun updateCoverage(style: Style, c: com.rfsat.pocketgnss.core.CoverageShapes?) {
+    fun fc(rings: List<List<Pair<Double, Double>>>?) = FeatureCollection.fromFeatures((rings ?: emptyList()).map { r ->
+        Feature.fromGeometry(Polygon.fromLngLats(listOf(r.map { Point.fromLngLat(it.second, it.first) })))
+    })
+    style.getSourceAs<GeoJsonSource>(COV_SRC)?.setGeoJson(fc(c?.covered))
+    style.getSourceAs<GeoJsonSource>(OVL_SRC)?.setGeoJson(fc(c?.overlap))
 }
 
 private fun fitCamera(map: MapLibreMap, track: List<TrackPoint>, points: List<SurveyPoint>, pos: GnssFix?, animate: Boolean, fields: List<Field> = emptyList()) {

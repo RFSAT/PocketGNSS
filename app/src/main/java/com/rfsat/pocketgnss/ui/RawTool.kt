@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -144,7 +145,7 @@ private fun Report(r: RawReport, running: Boolean, muted: Color) {
         Text(stringResource(R.string.raw_duty), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
     KeyValue(stringResource(R.string.raw_epochs), "${r.epochs} · %.0f s".format(Locale.US, r.seconds), live = running)
     r.interval?.let { KeyValue(stringResource(R.string.raw_interval), "%.2f s · gaps %.0f %%".format(Locale.US, it, r.gapShare * 100), live = running) }
-    KeyValue(stringResource(R.string.raw_clock), if (r.hasFullBias) stringResource(R.string.raw_clock_ok, r.clockDiscontinuities) else stringResource(R.string.raw_clock_missing),
+    KeyValue(stringResource(R.string.raw_clock), if (r.hasFullBias) pluralStringResource(R.plurals.raw_clock_ok, r.clockDiscontinuities, r.clockDiscontinuities) else stringResource(R.string.raw_clock_missing),
         live = running)
     if (r.bands.isNotEmpty()) {
         Row(Modifier.fillMaxWidth()) {

@@ -4,6 +4,7 @@
  * Data flow, as in RTKLIB's rtksvr but without its threads and streams:
  *   caster RTCM 3 -> input_rtcm3 -> base epoch (obs rcv=2), station position (rtk.rb), ephemeris (nav)
  *   phone epoch   -> obsd_t (rcv=1)  -> rtkpos(rover + latest base epoch, nav) -> solution
+ * PPP modes: caster RTCM 3 -> SSR orbit / clock / code bias (nav.ssr) + ephemeris; rtkpos runs pppos on the rover.
  */
 #include <stdlib.h>
 #include <string.h>
@@ -21,6 +22,8 @@ static int nbase = 0;
 static long frames = 0;
 static char message[256] = "";
 static double maxage = 30.0;
+static int ppp = 0;          /* PPP mode: no base, SSR corrections */
+extern int ppp_ssr_absbias;  /* ppp.c */
 
 void prtk_default_opt(prtk_opt_t *o)
 {
@@ -34,6 +37,7 @@ void prtk_default_opt(prtk_opt_t *o)
     o->thresar = 3.0;
     o->maxage = 30.0;
     o->minfixsats = 5;
+    o->iono_free = 1;
 }
 
 static void free_nav(void)
@@ -80,8 +84,11 @@ int prtk_init(const prtk_opt_t *o)
     switch (o->mode) {
         case PRTK_MODE_SINGLE: opt.mode = PMODE_SINGLE; break;
         case PRTK_MODE_STATIC: opt.mode = PMODE_STATIC; break;
+        case PRTK_MODE_PPP_KINEMATIC: opt.mode = PMODE_PPP_KINEMA; break;
+        case PRTK_MODE_PPP_STATIC: opt.mode = PMODE_PPP_STATIC; break;
         default:               opt.mode = PMODE_KINEMA; break;
     }
+    ppp = opt.mode >= PMODE_PPP_KINEMA;
     opt.nf = 3;                        /* L1, L2, L5 slots: phones fill L1 (+ L5) */
     opt.navsys = o->navsys;
     opt.elmin = o->elmask_deg * D2R;
@@ -104,6 +111,18 @@ int prtk_init(const prtk_opt_t *o)
     opt.minfixsats = o->minfixsats > 0 ? o->minfixsats : 5;
     opt.minholdsats = opt.minfixsats + 1;
     opt.arfilter = 1;
+    if (ppp) {
+        /* Float PPP: SSR orbits / clocks referred to the antenna phase centre (HAS, IGS SSRA streams), estimated
+           troposphere, solid earth tides, phase wind-up. No phase biases in HAS yet, so no ambiguity fixing. */
+        opt.sateph = EPHOPT_SSRAPC;
+        ppp_ssr_absbias = 1;   /* HAS / RTCM SSR code biases are absolute */
+        opt.ionoopt = o->iono_free == 2 ? IONOOPT_EST : o->iono_free ? IONOOPT_IFLC : IONOOPT_BRDC;
+        opt.tropopt = TROPOPT_EST;
+        opt.tidecorr = 1;
+        opt.posopt[2] = 1;
+        opt.modear = ARMODE_OFF;
+        opt.dynamics = 0;
+    }
     maxage = o->maxage;
 
     if (!alloc_nav()) { strcpy(message, "out of memory"); return 0; }
@@ -166,6 +185,23 @@ static int input(rtcm_t *r, const uint8_t *data, int n, int use_obs)
             }
         } else if (ret == 9) {               /* ion/utc */
             matcpy(nav.ion_gps, r->nav.ion_gps, 8, 1);
+        } else if (ret == 10) {              /* SSR corrections (as rtksvr: only when the ephemeris they refer to is held) */
+            for (j = 0; j < MAXSAT; j++) {
+                int prn, sys, k, iode;
+                if (!r->ssr[j].update) continue;
+                r->ssr[j].update = 0;
+                iode = r->ssr[j].iode;
+                sys = satsys(j + 1, &prn);
+                if (sys == SYS_GPS || sys == SYS_GAL || sys == SYS_QZS || sys == SYS_CMP) {
+                    for (k = 0; k < 4 && nav.eph[j + MAXSAT * k].iode != iode; k++) ;
+                    if (k == 4 && r->ssr[j].t0[0].time) {   /* orbit for an ephemeris not (yet) held: keep biases only */
+                        memcpy(nav.ssr[j].cbias, r->ssr[j].cbias, sizeof(nav.ssr[j].cbias));
+                        continue;
+                    }
+                }
+                nav.ssr[j] = r->ssr[j];
+            }
+            flags |= 8;
         }
     }
     return flags;
@@ -184,6 +220,20 @@ static void set_time(gtime_t t)
 }
 
 void prtk_set_time(int week, double tow) { if (initialised) set_time(gpst2time(week, tow)); }
+
+void prtk_set_iono(int iono_free)
+{
+    prcopt_t o;
+    int want;
+    if (!initialised || !ppp) return;
+    want = iono_free == 2 ? IONOOPT_EST : iono_free ? IONOOPT_IFLC : IONOOPT_BRDC;
+    if (rtk.opt.ionoopt == want) return;
+    /* restart the filter with the other ionosphere model; ephemerides and SSR corrections are kept */
+    o = rtk.opt;
+    o.ionoopt = want;
+    rtkfree(&rtk);
+    rtkinit(&rtk, &o);
+}
 
 int prtk_input_rtcm(const uint8_t *data, int n) { return input(&rtcm, data, n, 1); }
 int prtk_input_rtcm_nav(const uint8_t *data, int n) { return input(&rtcm_nav, data, n, 0); }
@@ -249,7 +299,7 @@ int prtk_rover(int week, double tow, int n, const char *sys, const int *prn, con
     qsort(rov, nr, sizeof(obsd_t), cmp_obs);
     for (i = 0; i < nr; i++) obs[nobs++] = rov[i];
     /* the latest base epoch, if recent enough */
-    if (nbase > 0 && fabs(timediff(t, base[0].time)) <= maxage && norm(rtk.rb, 3) > 0.0) {
+    if (!ppp && nbase > 0 && fabs(timediff(t, base[0].time)) <= maxage && norm(rtk.rb, 3) > 0.0) {
         for (i = 0; i < nbase; i++) obs[nobs++] = base[i];
     }
 
@@ -328,6 +378,21 @@ void prtk_base(prtk_base_t *b)
     for (i = 0; i < NSATGLO; i++) if (nav.geph[i].sat > 0) ng++;
     b->neph = n; b->ngeph = ng;
     b->frames = frames;
+    {
+        gtime_t last = {0};
+        gtime_t now = rtk.sol.time.time ? rtk.sol.time : rtcm.time;
+        for (i = 0; i < MAXSAT; i++) {
+            const ssr_t *s = nav.ssr + i;
+            int k, nb = 0;
+            for (k = 0; k < MAXCODE; k++) if (s->cbias[k] != 0.0f) nb = 1;
+            b->ncbias += nb;
+            if (!s->t0[0].time || !s->t0[1].time) continue;
+            if (now.time && (fabs(timediff(now, s->t0[0])) > 90.0 || fabs(timediff(now, s->t0[1])) > 90.0)) continue;
+            b->nssr++;
+            if (timediff(s->t0[1], last) > 0) last = s->t0[1];
+        }
+        if (last.time) b->ssr_tow = time2gpst(last, &b->ssr_week);
+    }
 }
 
 const char *prtk_message(void) { return message; }

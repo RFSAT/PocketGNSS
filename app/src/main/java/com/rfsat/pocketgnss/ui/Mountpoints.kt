@@ -20,6 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -83,7 +84,7 @@ fun MountpointDialog(engine: GnssEngine, onDismiss: () -> Unit, onPicked: (Mount
                     l == null -> Text(stringResource(R.string.mount_dialog_loading), style = MaterialTheme.typography.bodySmall)
                     l.isEmpty() -> Text(stringResource(R.string.mount_dialog_empty), style = MaterialTheme.typography.bodySmall)
                     else -> {
-                        Text(stringResource(R.string.mount_dialog_help, l.size), style = MaterialTheme.typography.bodySmall,
+                        Text(pluralStringResource(R.plurals.mount_dialog_help, l.size, l.size), style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         MountpointList(l, here?.first, here?.second, s.ntrip.mountpoint, { m ->
                             engine.store.update { it.copy(ntrip = it.ntrip.copy(mountpoint = m.name, ggaIntervalSec = if (m.needsGga) 10 else 0)) }

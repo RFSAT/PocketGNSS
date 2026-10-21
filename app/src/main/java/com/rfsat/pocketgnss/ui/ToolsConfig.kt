@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -144,7 +145,8 @@ fun CorrectionsTool(engine: GnssEngine) {
             KeyValue(stringResource(R.string.corr_caster), if (s.ntrip.host.isBlank()) "—" else "${s.ntrip.host}:${s.ntrip.port}/${s.ntrip.mountpoint}")
             KeyValue(stringResource(R.string.corr_state), stringResource(ntripStatusLabel(n.status)) + (if (n.message.isNotEmpty()) " · ${n.message}" else ""), live = true,
                 valueColor = when (n.status) { NtripStatus.STREAMING -> SafeGreen; NtripStatus.ERROR -> AlarmRed; NtripStatus.OFF -> androidx.compose.ui.graphics.Color.Unspecified; else -> WarnAmber })
-            KeyValue(stringResource(R.string.corr_data), stringResource(R.string.corr_data_value, n.bytes / 1024.0, n.bytesPerSec, n.frames, n.badFrames), live = true)
+            KeyValue(stringResource(R.string.corr_data), stringResource(R.string.corr_data_value, n.bytes / 1024.0, n.bytesPerSec) + " · " +
+                pluralStringResource(R.plurals.corr_frames, n.frames.toPlural(), n.frames) + " · " + pluralStringResource(R.plurals.corr_bad, n.badFrames.toPlural(), n.badFrames), live = true)
             if (n.lastDataMs > 0) KeyValue(stringResource(R.string.corr_last), "%.1f s".format(Locale.US, (System.currentTimeMillis() - n.lastDataMs) / 1000.0), live = true)
             if (n.lastGgaSentMs > 0) KeyValue(stringResource(R.string.corr_gga), "%.0f s".format(Locale.US, (System.currentTimeMillis() - n.lastGgaSentMs) / 1000.0), live = true)
             n.base?.let { b ->

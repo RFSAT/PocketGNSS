@@ -7,6 +7,12 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.12.0 (build 11200)
+Guidance follows curves and headlands: record the first pass along a contour or bend and drive parallel curved passes, or follow passes round a field boundary inside it. Export fields, guidance lines and points as ISO-XML (ISOBUS TASKDATA) for tractor terminals and farm software. Replay can be paused. Choice buttons wrap neatly in every language.
+
+## 1.11.0 (build 11100)
+Phone PPP with Galileo HAS: positions to a few decimetres on dual-frequency phones with no base station and no subscription, using the free EU corrections (or IGS SSRA streams), given in ETRS89 within Europe. National heights: the official geoid models of 21 European countries, and EGM2008 elsewhere, on screen and in exports. A-B guidance paints a coverage map with overlaps and the field's gaps. Counts read correctly in every language.
+
 ## 1.10.0 (build 11000)
 Now in Greek, German, French, Spanish, Italian, Polish and Portuguese. Points take a code, a note and a photo (KMZ export). Replay recorded sessions, also phone raw sessions through phone RTK. Offline maps: viewed tiles are kept and your own MBTiles map works without signal. Phone RTK can use a second ephemeris stream. Relay corrections to other rovers with a local NTRIP caster, and read the position from your own apps (JSON stream, broadcast).
 

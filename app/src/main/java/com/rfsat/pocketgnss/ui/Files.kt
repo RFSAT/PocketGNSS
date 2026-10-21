@@ -44,22 +44,23 @@ private fun displayName(context: Context, uri: Uri): String = try {
 @Composable
 fun rememberImport(engine: GnssEngine): () -> Unit {
     val context = LocalContext.current
-    val msgDone = stringResource(R.string.import_done)
+    val res = androidx.compose.ui.platform.LocalResources.current
     val msgGrid = stringResource(R.string.import_no_grid)
     val msgFormat = stringResource(R.string.import_format)
     val msgNothing = stringResource(R.string.import_nothing)
-    val msgSkipped = stringResource(R.string.import_skipped)
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         val bytes = try { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } } catch (_: Exception) { null }
         if (bytes == null || bytes.size > 50_000_000) { engine.toast(msgFormat); return@rememberLauncherForActivityResult }
         val r = engine.importFile(bytes, displayName(context, uri))
+        val msgDone = res.getString(R.string.import_done, res.getQuantityString(R.plurals.import_points, r.points.size, r.points.size),
+            res.getQuantityString(R.plurals.import_boundaries, r.fields.size, r.fields.size))
         engine.toast(when (r.issue) {
             ImportIssue.NO_GRID -> msgGrid
             ImportIssue.UNKNOWN_FORMAT -> msgFormat
             ImportIssue.NOTHING_FOUND -> msgNothing
-            ImportIssue.SKIPPED -> msgDone.format(r.points.size, r.fields.size) + " " + msgSkipped.format(r.skipped)
-            null -> msgDone.format(r.points.size, r.fields.size)
+            ImportIssue.SKIPPED -> msgDone + " " + res.getQuantityString(R.plurals.import_skipped, r.skipped, r.skipped)
+            null -> msgDone
         })
     }
     return { launcher.launch(arrayOf("*/*")) }

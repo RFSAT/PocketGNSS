@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -110,6 +111,15 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
                             enabled = com.rfsat.pocketgnss.link.PhoneRtkLink.engineAvailable)
                         if (s.phoneRtk) ChoiceRow(stringResource(R.string.setup_phone_rtk_mode), listOf(false to stringResource(R.string.setup_phone_rtk_moving),
                             true to stringResource(R.string.setup_phone_rtk_static)), s.phoneRtkStatic) { v -> upd { it.copy(phoneRtkStatic = v) } }
+                        if (s.phoneRtk) {
+                            ChoiceRow(stringResource(R.string.setup_phone_corr), listOf(false to stringResource(R.string.setup_phone_corr_rtk),
+                                true to stringResource(R.string.setup_phone_corr_ppp)), s.phonePpp) { v -> upd { it.copy(phonePpp = v) } }
+                            if (s.phonePpp) {
+                                Text(stringResource(R.string.setup_ppp_help), style = MaterialTheme.typography.bodySmall, color = muted)
+                                if (s.ntrip.mountpoint.uppercase().startsWith("SSRC"))
+                                    Text(stringResource(R.string.setup_ppp_ssrc), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+                            }
+                        }
                         if (s.phoneRtk) PhoneProfileRows(engine)
                         if (s.phoneRtk) EphStreamRows(engine)
                         Text(stringResource(R.string.setup_phone_rtk_apply), style = MaterialTheme.typography.bodySmall, color = muted)
@@ -202,7 +212,7 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
                 ActionButton(onClick = { engine.mock.stop(); engine.mock.start() }, compact = true) { Text(stringResource(R.string.action_retry)) }
             }
             SwitchRow(stringResource(R.string.out_server), s.nmeaServer, { v -> upd { it.copy(nmeaServer = v) } },
-                stringResource(R.string.out_server_help, if (s.nmeaServerLocalOnly) "127.0.0.1" else "0.0.0.0", s.nmeaServerPort, clients))
+                pluralStringResource(R.plurals.out_server_help, clients, if (s.nmeaServerLocalOnly) "127.0.0.1" else "0.0.0.0", s.nmeaServerPort, clients))
             NumberField(stringResource(R.string.out_server_port), s.nmeaServerPort.toDouble(), { v -> upd { it.copy(nmeaServerPort = v.toInt(), nmeaServer = false) } },
                 Modifier.fillMaxWidth(), min = 1024.0, max = 65535.0)
             SwitchRow(stringResource(R.string.out_server_local), s.nmeaServerLocalOnly, { v -> upd { it.copy(nmeaServerLocalOnly = v, nmeaServer = false) } },
@@ -237,7 +247,8 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
             Text(stringResource(R.string.disp_grid_help), style = MaterialTheme.typography.bodySmall, color = muted)
             if (s.gridSystem != GridSystem.NONE) Text(stringResource(R.string.grid_frame), style = MaterialTheme.typography.bodySmall, color = muted)
             ChoiceRow(stringResource(R.string.disp_height), listOf(HeightRef.MSL to stringResource(R.string.disp_msl),
-                HeightRef.ELLIPSOID to stringResource(R.string.disp_ellipsoid)), s.heightRef) { v -> upd { it.copy(heightRef = v) } }
+                HeightRef.ELLIPSOID to stringResource(R.string.disp_ellipsoid), HeightRef.MODEL to stringResource(R.string.disp_national)), s.heightRef) { v -> upd { it.copy(heightRef = v) } }
+            if (s.heightRef == HeightRef.MODEL) HeightModelSection(engine)
             SwitchRow(stringResource(R.string.disp_screen_on), s.keepScreenOn, { v -> upd { it.copy(keepScreenOn = v) } })
         }
         OfflineMapsSection(engine)
@@ -301,7 +312,7 @@ private fun CasterSection(engine: GnssEngine) {
             val addrs = com.rfsat.pocketgnss.core.NtripCaster.addresses()
             Text(stringResource(R.string.caster_running, addrs.joinToString(", ").ifEmpty { "—" }, st.port, s.casterMount), color = SafeGreen,
                 style = MaterialTheme.typography.bodySmall)
-            Text(stringResource(R.string.caster_clients, st.clients.size, st.clients.joinToString(", "), st.bytes / 1024.0), style = MaterialTheme.typography.bodySmall, color = muted)
+            Text(pluralStringResource(R.plurals.caster_clients, st.clients.size, st.clients.size, st.clients.joinToString(", "), st.bytes / 1024.0), style = MaterialTheme.typography.bodySmall, color = muted)
             val ntrip by engine.ntripClient.ntrip.collectAsState()
             if (ntrip.status != com.rfsat.pocketgnss.core.NtripStatus.STREAMING) Text(stringResource(R.string.caster_no_source), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
         }
@@ -320,7 +331,7 @@ private fun AppInterfaceSection(engine: GnssEngine) {
     Section(stringResource(R.string.api_title)) {
         Text(stringResource(R.string.api_help), style = MaterialTheme.typography.bodySmall, color = muted)
         SwitchRow(stringResource(R.string.api_json), s.apiJson, { v -> upd { it.copy(apiJson = v) } },
-            stringResource(R.string.api_json_help, if (s.apiJsonLocalOnly) "127.0.0.1" else "0.0.0.0", s.apiJsonPort, clients))
+            pluralStringResource(R.plurals.api_json_help, clients, if (s.apiJsonLocalOnly) "127.0.0.1" else "0.0.0.0", s.apiJsonPort, clients))
         NumberField(stringResource(R.string.out_server_port), s.apiJsonPort.toDouble(), { v -> upd { it.copy(apiJsonPort = v.toInt(), apiJson = false) } },
             Modifier.fillMaxWidth(), min = 1024.0, max = 65535.0)
         SwitchRow(stringResource(R.string.out_server_local), s.apiJsonLocalOnly, { v -> upd { it.copy(apiJsonLocalOnly = v, apiJson = false) } })

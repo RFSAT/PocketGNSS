@@ -13,7 +13,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 enum class CoordFormat { DECIMAL, DMS }
-enum class HeightRef { MSL, ELLIPSOID }
+/** Heights shown: above sea level as the receiver reports it, ellipsoidal, or in a national height system (heightModel). */
+enum class HeightRef { MSL, ELLIPSOID, MODEL }
 
 data class AppSettings(
     // Source
@@ -29,6 +30,8 @@ data class AppSettings(
     val phoneRtk: Boolean = true,
     /** Phone RTK: phone held still on a point (static) instead of moving (kinematic). */
     val phoneRtkStatic: Boolean = false,
+    /** Phone RTK engine: PPP with SSR corrections (Galileo HAS, IGS real-time) from the NTRIP relay instead of RTK with a base. */
+    val phonePpp: Boolean = false,
     /** Adapt the RTK engine to what this phone has shown in past sessions (PhoneTuning). */
     val phoneRtkAuto: Boolean = true,
     /** Learned profile of this phone (PhoneProfile.encode), "" = none yet. */
@@ -83,6 +86,8 @@ data class AppSettings(
     /** UTM zone: 0 = the zone of the position, else a fixed zone (1..60). */
     val utmZone: Int = 0,
     val heightRef: HeightRef = HeightRef.MSL,
+    /** Height model (HeightModels id) for HeightRef.MODEL: the national geoid grid, "" = none chosen yet. */
+    val heightModel: String = "",
     val keepScreenOn: Boolean = true,
     val mapLayer: MapLayer = MapLayer.SATELLITE,
     /** Own map (MBTiles) copied into the app, shown over the base map when [ownMapOn]; "" = none. */
@@ -134,6 +139,7 @@ class SettingsStore(context: Context, private val cipher: SecretCipher = Keystor
             autoReconnect = prefs.getBoolean("autoReconnect", d.autoReconnect),
             phoneRtk = prefs.getBoolean("phoneRtk", d.phoneRtk),
             phoneRtkStatic = prefs.getBoolean("phoneRtkStatic", d.phoneRtkStatic),
+            phonePpp = prefs.getBoolean("phonePpp", d.phonePpp),
             phoneRtkAuto = prefs.getBoolean("phoneRtkAuto", d.phoneRtkAuto),
             phoneProfile = prefs.getString("phoneProfile", d.phoneProfile) ?: "",
             ntripEnabled = prefs.getBoolean("ntripOn", d.ntripEnabled),
@@ -177,6 +183,7 @@ class SettingsStore(context: Context, private val cipher: SecretCipher = Keystor
             gridSystem = enumOr(prefs.getString("gridSystem", null), d.gridSystem),
             utmZone = prefs.getInt("utmZone", d.utmZone).coerceIn(0, 60),
             heightRef = enumOr(prefs.getString("heightRef", null), d.heightRef),
+            heightModel = prefs.getString("heightModel", d.heightModel) ?: "",
             keepScreenOn = prefs.getBoolean("screenOn", d.keepScreenOn),
             mapLayer = enumOr(prefs.getString("mapLayer", null), d.mapLayer),
             ephStream = prefs.getBoolean("ephStream", d.ephStream),
@@ -202,7 +209,7 @@ class SettingsStore(context: Context, private val cipher: SecretCipher = Keystor
             .putString("btAddress", s.btAddress).putString("btName", s.btName)
             .putString("tcpHost", s.tcpHost).putInt("tcpPort", s.tcpPort)
             .putBoolean("autoReconnect", s.autoReconnect)
-            .putBoolean("phoneRtk", s.phoneRtk).putBoolean("phoneRtkStatic", s.phoneRtkStatic)
+            .putBoolean("phoneRtk", s.phoneRtk).putBoolean("phoneRtkStatic", s.phoneRtkStatic).putBoolean("phonePpp", s.phonePpp)
             .putBoolean("phoneRtkAuto", s.phoneRtkAuto).putString("phoneProfile", s.phoneProfile)
             .putBoolean("ntripOn", s.ntripEnabled)
             .putString("ntripHost", s.ntrip.host).putInt("ntripPort", s.ntrip.port)
@@ -222,7 +229,7 @@ class SettingsStore(context: Context, private val cipher: SecretCipher = Keystor
             .putBoolean("apiJson", s.apiJson).putInt("apiJsonPort", s.apiJsonPort).putBoolean("apiJsonLocal", s.apiJsonLocalOnly)
             .putBoolean("apiBroadcast", s.apiBroadcast)
             .putBoolean("server", s.nmeaServer).putInt("serverPort", s.nmeaServerPort).putBoolean("serverLocal", s.nmeaServerLocalOnly)
-            .putString("coordFormat", s.coordFormat.name).putString("gridSystem", s.gridSystem.name).putInt("utmZone", s.utmZone).putString("heightRef", s.heightRef.name)
+            .putString("coordFormat", s.coordFormat.name).putString("gridSystem", s.gridSystem.name).putInt("utmZone", s.utmZone).putString("heightRef", s.heightRef.name).putString("heightModel", s.heightModel)
             .putBoolean("screenOn", s.keepScreenOn).putString("mapLayer", s.mapLayer.name)
             .putBoolean("ephStream", s.ephStream).putString("ephProfile", s.ephProfile).putString("ephMount", s.ephMount)
             .putString("ownMap", s.ownMap).putBoolean("ownMapOn", s.ownMapOn).putInt("tileCacheMb", s.tileCacheMb)

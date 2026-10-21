@@ -168,7 +168,8 @@ class NtripCaster {
 object PositionJson {
     private fun n(v: Double?, d: Int) = v?.takeIf { !it.isNaN() }?.let { "%.${d}f".format(Locale.US, it) } ?: "null"
 
-    fun of(f: GnssFix, grid: com.rfsat.pocketgnss.protocol.GridPoint?, method: String? = null): String = buildString {
+    /** One JSON line; [height] = (height system, height in it) when a national height model is chosen (docs/app-interface.md). */
+    fun of(f: GnssFix, grid: com.rfsat.pocketgnss.protocol.GridPoint?, method: String? = null, height: Pair<String, Double?>? = null): String = buildString {
         append("{\"utc\":").append(f.time?.let { "\"$it\"" } ?: "null")
         append(",\"date\":").append(f.date?.let { "\"%04d-%02d-%02d\"".format(Locale.US, it.year, it.month, it.day) } ?: "null")
         append(",\"lat\":").append(n(f.latitude, 9)).append(",\"lon\":").append(n(f.longitude, 9))
@@ -181,6 +182,7 @@ object PositionJson {
         append(",\"speed\":").append(n(f.speedMs, 3)).append(",\"course\":").append(n(f.courseDeg, 2))
         append(",\"age\":").append(n(f.diffAgeSec, 1)).append(",\"station\":").append(f.diffStation?.let { "\"" + it.replace("\"", "") + "\"" } ?: "null")
         if (grid != null) append(",\"grid\":{\"name\":\"").append(grid.label).append("\",\"e\":").append(n(grid.easting, 3)).append(",\"n\":").append(n(grid.northing, 3)).append('}')
+        if (height != null) append(",\"height\":{\"system\":\"").append(height.first.replace("\"", "'")).append("\",\"h\":").append(n(height.second, 3)).append('}')
         append('}')
     }
 

@@ -82,16 +82,18 @@ private fun GuidanceActive(engine: GnssEngine) {
     Section(line.name) {
         if (sol != null) {
             KeyValue(stringResource(R.string.guide_pass), when {
-                sol.pass == 0 -> stringResource(R.string.guide_pass_ab)
+                line.closed -> com.rfsat.pocketgnss.core.Guidance.headlandPass(sol).let { h ->
+                    if (h == 0) stringResource(R.string.guide_pass_outside) else stringResource(R.string.guide_pass_headland, h) }
+                sol.pass == 0 -> stringResource(if (line.isCurve) R.string.guide_pass_curve else R.string.guide_pass_ab)
                 sol.pass > 0 -> stringResource(R.string.guide_pass_right, sol.pass)
                 else -> stringResource(R.string.guide_pass_left, -sol.pass)
             }, live = true)
             KeyValue(stringResource(R.string.guide_heading), sol.headingError?.let { "%+.1f°".format(Locale.US, it) } ?: "—", live = true)
             KeyValue(stringResource(R.string.guide_along), "%.1f m".format(Locale.US, sol.along), live = true)
-            KeyValue(stringResource(R.string.guide_worked), formatArea(st.worked), live = true)
         }
+        CoverageRows(engine)
         fix?.let { KeyValue(stringResource(R.string.live_fix), stringResource(fixLabel(it.quality)) + " " + formatAccuracy(it.horizontalAccuracy), live = true, valueColor = fixColor(it.quality)) }
-        KeyValue(stringResource(R.string.guide_line), stringResource(R.string.guide_line_value, line.bearing, line.width), live = true)
+        KeyValue(stringResource(R.string.guide_line), lineText(line), live = true)
         if (line.shift != 0.0) KeyValue(stringResource(R.string.guide_shift), "%+.2f m".format(Locale.US, line.shift), live = true)
         Text(stringResource(R.string.guide_shift_help), style = MaterialTheme.typography.bodySmall, color = muted)
         // Shift as the driver sees it (the line's own right is the driver's left when driving from B to A).
@@ -100,11 +102,40 @@ private fun GuidanceActive(engine: GnssEngine) {
             ActionButton(onClick = { engine.guidance.setShift(line.shift - dir * 0.05) }, compact = true) { Text("◀ 5 cm") }
             ActionButton(onClick = { engine.guidance.setShift(line.shift + dir * 0.05) }, compact = true) { Text("5 cm ▶") }
             ActionButton(onClick = { engine.guidance.setShift(0.0) }, compact = true, enabled = line.shift != 0.0) { Text(stringResource(R.string.guide_shift_reset)) }
-            ActionButton(onClick = { engine.guidance.resetWorked() }, compact = true) { Text(stringResource(R.string.guide_reset_area)) }
         }
         ActionButton(onClick = { engine.guidance.activate(null) }, emphasis = true) { Text(stringResource(R.string.guide_stop)) }
     }
     GuidanceSettings(engine)
+}
+
+/** Worked area, overlaps and field coverage, with recording on / off and clearing the coverage map. */
+@Composable
+private fun CoverageRows(engine: GnssEngine) {
+    val st by engine.guidance.state.collectAsState()
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    var confirm by rememberSaveable { mutableStateOf(false) }
+    SwitchRow(stringResource(R.string.guide_record), st.recording, { engine.guidance.setRecording(it) }, stringResource(R.string.guide_record_help))
+    KeyValue(stringResource(R.string.guide_worked), formatArea(st.worked), live = true)
+    KeyValue(stringResource(R.string.guide_overlap), formatArea(st.overlap) + if (st.worked > 0) " (%.1f %%)".format(Locale.US, 100 * st.overlap / st.worked) else "",
+        live = true, valueColor = if (st.worked > 0 && st.overlap / st.worked > 0.05) WarnAmber else Color.Unspecified)
+    val share = st.fieldShare
+    if (st.field != null && share != null)
+        KeyValue(st.field ?: "", stringResource(R.string.guide_field_cov, 100 * share, formatArea(st.gaps ?: 0.0)), live = true)
+    else Text(stringResource(R.string.guide_no_field), style = MaterialTheme.typography.bodySmall, color = muted)
+    val context = androidx.compose.ui.platform.LocalContext.current
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        ActionButton(onClick = {
+            engine.guidance.coverageShapes()?.let { c ->
+                share(context, export(context, "worked_area.geojson", com.rfsat.pocketgnss.data.Exporters.coverageGeoJson(c, st.worked, st.overlap, st.field)),
+                    "application/geo+json")
+            }
+        }, compact = true, enabled = st.worked > 0) { Text(stringResource(R.string.guide_export_cov)) }
+        ActionButton(onClick = { confirm = true }, compact = true, enabled = st.worked > 0) { Text(stringResource(R.string.guide_clear_cov)) }
+    }
+    if (confirm) androidx.compose.material3.AlertDialog(onDismissRequest = { confirm = false },
+        title = { Text(stringResource(R.string.guide_clear_title)) }, text = { Text(stringResource(R.string.guide_clear_text)) },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { engine.guidance.resetWorked(); confirm = false }) { Text(stringResource(R.string.guide_clear_cov)) } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { confirm = false }) { Text(stringResource(R.string.action_cancel)) } })
 }
 
 @Composable
@@ -163,11 +194,13 @@ private fun GuidanceSetup(engine: GnssEngine) {
             }
         }, emphasis = true, enabled = ready) { Text(stringResource(R.string.guide_start)) }
     }
+    CurveSetup(engine, name) { name = "AB${lines.size + 2}" }
+    HeadlandSetup(engine)
     Section(stringResource(R.string.guide_saved, lines.size)) {
         if (lines.isEmpty()) Text(stringResource(R.string.guide_none), style = MaterialTheme.typography.bodySmall, color = muted)
         for (l in lines.reversed()) {
             Text(l.name, fontWeight = FontWeight.SemiBold)
-            Text(stringResource(R.string.guide_line_value, l.bearing, l.width), style = MaterialTheme.typography.bodySmall, color = muted)
+            Text(lineText(l), style = MaterialTheme.typography.bodySmall, color = muted)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton(onClick = { engine.guidance.activate(l) }, compact = true, emphasis = true) {
                     Text(stringResource(R.string.guide_use))
@@ -178,4 +211,65 @@ private fun GuidanceSetup(engine: GnssEngine) {
         }
     }
     GuidanceSettings(engine)
+}
+
+/** Kind, size and width of a guidance pattern. */
+@Composable
+private fun lineText(l: AbLine): String = when {
+    l.closed -> stringResource(R.string.guide_headland_value, "%.0f m".format(Locale.US, l.length), l.width)
+    l.isCurve -> stringResource(R.string.guide_curve_value, "%.0f m".format(Locale.US, l.length), l.width)
+    else -> stringResource(R.string.guide_line_value, l.bearing, l.width)
+}
+
+/** A curve pattern from the path driven: record the first pass, then follow parallel passes. */
+@Composable
+private fun CurveSetup(engine: GnssEngine, name: String, onDone: () -> Unit) {
+    val s by engine.store.settings.collectAsState()
+    val fix by engine.fix.collectAsState()
+    val rec by engine.guidance.curveRecording.collectAsState()
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val noFix = stringResource(R.string.field_no_fix)
+    val short = stringResource(R.string.guide_curve_short)
+    Section(stringResource(R.string.guide_curve_title)) {
+        Text(stringResource(R.string.guide_curve_help), style = MaterialTheme.typography.bodySmall, color = muted)
+        if (!rec.active) ActionButton(onClick = { if (fix == null) engine.toast(noFix) else engine.guidance.startCurve() }, compact = true) {
+            Text(stringResource(R.string.guide_curve_start))
+        } else {
+            Text(stringResource(R.string.guide_curve_recording, "%.1f m".format(Locale.US, rec.length)), color = SafeGreen,
+                fontWeight = FontWeight.SemiBold)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                ActionButton(onClick = {
+                    val l = engine.guidance.finishCurve(name.ifBlank { "Curve" }, s.guideWidth, System.currentTimeMillis())
+                    if (l == null) engine.toast(short) else onDone()
+                }, compact = true, emphasis = true) { Text(stringResource(R.string.guide_curve_finish)) }
+                ActionButton(onClick = { engine.guidance.cancelCurve() }, compact = true) { Text(stringResource(R.string.action_cancel)) }
+            }
+        }
+    }
+}
+
+/** Headland passes round a saved field boundary. */
+@Composable
+private fun HeadlandSetup(engine: GnssEngine) {
+    val s by engine.store.settings.collectAsState()
+    val fields by engine.fields.collectAsState()
+    val fix by engine.fix.collectAsState()
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val usable = fields.filter { it.vertices.size >= 3 }
+    // the field under the vehicle first
+    val here = fix?.let { f -> usable.firstOrNull { com.rfsat.pocketgnss.core.insideField(it, f.latitude, f.longitude) } }
+    var chosen by rememberSaveable { mutableStateOf<String?>(null) }
+    val field = usable.firstOrNull { it.key == chosen } ?: here ?: usable.firstOrNull()
+    val suffix = stringResource(R.string.guide_headland_suffix)
+    Section(stringResource(R.string.guide_headland_title)) {
+        Text(stringResource(R.string.guide_headland_help), style = MaterialTheme.typography.bodySmall, color = muted)
+        if (field == null) Text(stringResource(R.string.guide_no_fields), style = MaterialTheme.typography.bodySmall, color = muted)
+        else {
+            Picker(stringResource(R.string.guide_headland_field), usable, field, { it.name }, { chosen = it.key }, Modifier.fillMaxWidth())
+            ActionButton(onClick = {
+                val l = AbLine.headland(field.name + " " + suffix, field.vertices.map { it.latitude to it.longitude }, s.guideWidth, System.currentTimeMillis())
+                engine.guidance.add(l); engine.guidance.activate(l)
+            }, emphasis = true) { Text(stringResource(R.string.guide_headland_start)) }
+        }
+    }
 }

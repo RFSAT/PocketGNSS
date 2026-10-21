@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -39,7 +40,6 @@ import com.rfsat.pocketgnss.core.Connection
 import com.rfsat.pocketgnss.core.GnssEngine
 import com.rfsat.pocketgnss.core.NtripStatus
 import com.rfsat.pocketgnss.core.SatInfo
-import com.rfsat.pocketgnss.data.HeightRef
 import com.rfsat.pocketgnss.protocol.Constellation
 import com.rfsat.pocketgnss.protocol.FixQuality
 import com.rfsat.pocketgnss.protocol.Geo
@@ -63,6 +63,8 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
     // The phone's GNSS: with the RTK engine it takes corrections like a receiver; without, it cannot use them.
     val phoneChip = linkInfo?.kind == com.rfsat.pocketgnss.link.LinkKind.PHONE
     val phoneRtk = linkInfo?.phoneRtk == true
+    // A replay brings its own recorded corrections: no hints about switching the NTRIP relay on.
+    val replaying = linkInfo?.kind == com.rfsat.pocketgnss.link.LinkKind.REPLAY
     val rtkState by com.rfsat.pocketgnss.link.PhoneRtkLink.state.collectAsState()
 
     Column(Modifier.verticalScroll(rememberScrollState()).padding(vertical = 6.dp)) {
@@ -75,7 +77,7 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).background(fixColor(q), RoundedCornerShape(14.dp)).padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val method = if (phoneRtk) rtkState.source.takeIf { it.isNotEmpty() } else null
-                Text(method ?: stringResource(fixLabel(q)), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 26.sp, modifier = Modifier.weight(1f),
+                Text(method?.let { m -> phoneMethodLabel(m)?.let { stringResource(it) } ?: m } ?: stringResource(fixLabel(q)), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 26.sp, modifier = Modifier.weight(1f),
                     maxLines = 1)
                 Text(if (f != null) formatAccuracy(f.horizontalAccuracy) else "—", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 26.sp)
             }
@@ -102,11 +104,10 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
                 KeyValue(stringResource(R.string.live_lat), formatLat(f.latitude, s.coordFormat), live = true)
                 KeyValue(stringResource(R.string.live_lon), formatLon(f.longitude, s.coordFormat), live = true)
                 GridRows(s, f.latitude, f.longitude, f.ellipsoidHeight)
-                KeyValue(stringResource(if (s.heightRef == HeightRef.MSL) R.string.live_height_msl else R.string.live_height_ell),
-                    formatHeight(heightOf(f, s.heightRef)), live = true)
+                HeightRow(engine, s, f.latitude, f.longitude, f.ellipsoidHeight, f.altitudeMsl)
                 KeyValue(stringResource(R.string.live_accuracy), stringResource(R.string.live_accuracy_value, formatAccuracy(f.horizontalAccuracy),
                     formatAccuracy(f.verticalAccuracy)), live = true)
-                KeyValue(stringResource(R.string.live_sats), stringResource(R.string.live_sats_value, f.satellitesUsed ?: sats.count { it.used }, sats.size), live = true)
+                KeyValue(stringResource(R.string.live_sats), (f.satellitesUsed ?: sats.count { it.used }).let { u -> pluralStringResource(R.plurals.sats_used, u, u) } + " / " + pluralStringResource(R.plurals.sats_in_view, sats.size, sats.size), live = true)
                 KeyValue(stringResource(R.string.live_dop), "HDOP %s · VDOP %s · PDOP %s".format(Locale.US, d2(f.hdop), d2(f.vdop), d2(f.pdop)), live = true)
                 KeyValue(stringResource(R.string.live_speed), (f.speedMs?.let { "%.2f km/h".format(Locale.US, it * 3.6) } ?: "—") +
                     (f.courseDeg?.let { " · %.1f°".format(Locale.US, it) } ?: ""), live = true)
@@ -157,13 +158,31 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
             }
             if (phoneRtk) {
                 val b = rtkState.base
-                KeyValue(stringResource(R.string.live_rtk_engine), stringResource(R.string.live_rtk_engine_value, rtkState.signals, rtkState.withPhase,
+                KeyValue(stringResource(R.string.live_rtk_engine), pluralStringResource(R.plurals.live_rtk_engine_value, rtkState.signals, rtkState.signals, rtkState.withPhase,
                     rtkState.solution?.ratio ?: 0.0), live = true, valueColor = if (rtkState.noPhase && rtkState.epochs > 5) WarnAmber else Color.Unspecified)
-                if (b != null && b.frames > 0) KeyValue(stringResource(R.string.live_rtk_base), stringResource(R.string.live_rtk_base_value, b.stationId, b.satellites,
-                    b.ephemerides + b.glonassEphemerides) + if (!b.hasPosition) " · " + stringResource(R.string.live_rtk_no_basepos) else "", live = true)
-                if (rtkState.noPhase && rtkState.epochs > 5) Text(stringResource(R.string.live_rtk_nophase), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
-                else if (!s.ntripEnabled) Text(stringResource(R.string.live_rtk_hint), style = MaterialTheme.typography.bodySmall, color = muted)
-                else if (b != null && b.frames > 0 && b.ephemerides == 0) Text(stringResource(R.string.live_rtk_noeph), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+                val small = MaterialTheme.typography.bodySmall
+                if (s.phonePpp) {
+                    // PPP: SSR corrections instead of a base station
+                    val sol = rtkState.solution
+                    if (b != null && b.frames > 0 && b.ssrSatellites > 0) KeyValue(stringResource(R.string.live_ppp_ssr), pluralStringResource(R.plurals.live_ppp_ssr_value,
+                        b.ssrSatellites, b.ssrSatellites, b.codeBiasSatellites, if (sol != null) com.rfsat.pocketgnss.link.PhoneRtkLink.pppAge(sol, b) else 0.0), live = true)
+                    when {
+                        rtkState.noPhase && rtkState.epochs > 5 -> Text(stringResource(R.string.live_rtk_nophase), style = small, color = WarnAmber)
+                        !s.ntripEnabled && !replaying -> Text(stringResource(R.string.live_ppp_hint), style = small, color = muted)
+                        b != null && b.frames > 20 && b.ephemerides == 0 -> Text(stringResource(R.string.live_ppp_noeph), style = small, color = WarnAmber)
+                        b != null && b.frames > 20 && b.ssrSatellites == 0 -> Text(stringResource(R.string.live_ppp_nossr), style = small, color = WarnAmber)
+                        !rtkState.ionoFree -> Text(stringResource(R.string.live_ppp_l1), style = small, color = muted)
+                    }
+                    if (sol?.status == com.rfsat.pocketgnss.rtk.RtkStatus.PPP) Text(stringResource(
+                        if (com.rfsat.pocketgnss.protocol.Datum.inEtrfArea(sol.latitude, sol.longitude)) R.string.live_ppp_frame_etrs else R.string.live_ppp_frame_itrf),
+                        style = small, color = muted)
+                } else {
+                    if (b != null && b.frames > 0) KeyValue(stringResource(R.string.live_rtk_base), stringResource(R.string.live_rtk_station, b.stationId) + " · " + pluralStringResource(R.plurals.n_satellites, b.satellites, b.satellites) + " · " +
+                        (b.ephemerides + b.glonassEphemerides).let { pluralStringResource(R.plurals.n_ephemerides, it, it) } + if (!b.hasPosition) " · " + stringResource(R.string.live_rtk_no_basepos) else "", live = true)
+                    if (rtkState.noPhase && rtkState.epochs > 5) Text(stringResource(R.string.live_rtk_nophase), style = small, color = WarnAmber)
+                    else if (!s.ntripEnabled && !replaying) Text(stringResource(R.string.live_rtk_hint), style = small, color = muted)
+                    else if (b != null && b.frames > 0 && b.ephemerides == 0) Text(stringResource(R.string.live_rtk_noeph), style = small, color = WarnAmber)
+                }
             } else if (phoneChip) Text(stringResource(R.string.live_phone_no_rtk), style = MaterialTheme.typography.bodySmall, color = muted)
             else if (s.ntrip.host.isBlank() && !s.ntripEnabled) Text(stringResource(R.string.live_ntrip_setup), style = MaterialTheme.typography.bodySmall, color = muted)
         }
@@ -254,6 +273,28 @@ private fun phoneMethodHint(method: String): Int = when (method) {
     "RTK float" -> R.string.phint_float
     "Code DGNSS" -> R.string.phint_dgnss
     "Single (RTKLIB)" -> R.string.phint_single
+    com.rfsat.pocketgnss.link.PhoneRtkLink.METHOD_PPP -> R.string.phint_ppp
+    com.rfsat.pocketgnss.link.PhoneRtkLink.METHOD_PPP_CONVERGING -> R.string.phint_ppp_conv
     com.rfsat.pocketgnss.link.PhoneRtkLink.METHOD_ANDROID -> R.string.phint_android
     else -> R.string.phint_single
 }
+
+/** A positioning method (phone RTK engine or receiver fix class, stored in English) in the user's language. */
+fun phoneMethodLabel(method: String): Int? = when (method) {
+    "DGNSS / SBAS" -> R.string.fix_dgnss
+    "Dead reckoning" -> R.string.fix_dr
+    "Autonomous" -> R.string.fix_single
+    "RTK fixed" -> R.string.fix_rtk_fixed
+    "RTK float" -> R.string.fix_rtk_float
+    "Code DGNSS" -> R.string.method_code_dgnss
+    "SBAS" -> R.string.fix_dgnss
+    "Single (RTKLIB)" -> R.string.fix_single
+    com.rfsat.pocketgnss.link.PhoneRtkLink.METHOD_PPP -> R.string.method_ppp
+    com.rfsat.pocketgnss.link.PhoneRtkLink.METHOD_PPP_CONVERGING -> R.string.method_ppp_conv
+    com.rfsat.pocketgnss.link.PhoneRtkLink.METHOD_ANDROID -> R.string.method_android
+    else -> null
+}
+
+/** [phoneMethodLabel] as text, or the method itself when it has no translation. */
+@Composable
+fun methodText(method: String): String = phoneMethodLabel(method)?.let { stringResource(it) } ?: method

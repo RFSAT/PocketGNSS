@@ -124,6 +124,70 @@ class ScreenshotTest {
         shot("08_tool_guidance", Tab.TOOLS, ToolId.GUIDANCE)
     }
     @Test fun tool_guidance_setup() { simulatorAtFix(); shot("08b_tool_guidance_setup", Tab.TOOLS, ToolId.GUIDANCE) }
+    @Test fun tool_guidance_coverage() {
+        simulatorAtFix(); demoFields(); engine.fieldCapture.cancel()
+        val f = engine.fix.value!!
+        val a = com.rfsat.pocketgnss.protocol.Geo.fromEnu(f.latitude, f.longitude, -40.0, -30.0)
+        val l = com.rfsat.pocketgnss.core.AbLine.fromBearing("Wheat 2026", a.first, a.second, 90.0, 6.0, 1)
+        engine.guidance.resetWorked(); engine.guidance.add(l); engine.guidance.activate(l)
+        // four passes up and down the field, the third drifting 1 m into the second; the simulator is stopped meanwhile
+        // so that only these positions reach the guidance, then reconnected for the live view
+        engine.disconnect(); Thread.sleep(300)
+        var ms = 1_000_000L
+        for (k in 0 until 4) {
+            val n = -30.0 + 6.0 * k - (if (k == 2) 1.0 else 0.0)
+            for (i in 0..180) {
+                val e = if (k % 2 == 0) -50.0 + i else 130.0 - i
+                val p = com.rfsat.pocketgnss.protocol.Geo.fromEnu(f.latitude, f.longitude, e, n)
+                engine.guidance.onFix(p.first, p.second, if (k % 2 == 0) 90.0 else 270.0, ms); ms += 200
+            }
+            ms += 30_000
+        }
+        simulatorAtFix()
+        shot("08c_tool_guidance_coverage", Tab.TOOLS, ToolId.GUIDANCE, scrollTo = "Ground worked")
+    }
+    @Test fun tool_guidance_headland() {
+        simulatorAtFix(); demoFields(); engine.fieldCapture.cancel()
+        val f = engine.fields.value.first()
+        val l = com.rfsat.pocketgnss.core.AbLine.headland(f.name + " headland", f.vertices.map { it.latitude to it.longitude }, 6.0, 1)
+        engine.guidance.add(l); engine.guidance.activate(l)
+        Thread.sleep(1500)
+        shot("08d_tool_guidance_headland", Tab.TOOLS, ToolId.GUIDANCE)
+    }
+    @Test fun tool_guidance_curve_setup() {
+        simulatorAtFix(); demoFields(); engine.fieldCapture.cancel()
+        engine.guidance.startCurve()
+        val f = engine.fix.value!!
+        for (i in 0..120) { val p = com.rfsat.pocketgnss.protocol.Geo.fromEnu(f.latitude, f.longitude, i * 0.6, 5 * kotlin.math.sin(i / 20.0)); engine.guidance.recordCurve(p.first, p.second) }
+        shot("08e_tool_guidance_curve", Tab.TOOLS, ToolId.GUIDANCE, scrollTo = "Start headland guidance")
+        engine.guidance.cancelCurve()
+    }
+    /** EGM96 from the test resources installed as the chosen height model. */
+    private fun heightModel() {
+        val dir = java.io.File(RuntimeEnvironment.getApplication().filesDir, "geoid").apply { mkdirs() }
+        java.io.File(dir, "us_nga_egm96_15.tif").writeBytes(javaClass.getResourceAsStream("/geoid/us_nga_egm96_15.tif")!!.readBytes())
+        engine.store.update { it.copy(heightRef = com.rfsat.pocketgnss.data.HeightRef.MODEL, heightModel = "EGM96") }
+    }
+    @Test fun live_height() { simulatorAtFix(); heightModel(); shot("02d_live_height", Tab.LIVE) }
+    @Test fun setup_height() { simulatorAtFix(); heightModel(); shot("14g_setup_height", Tab.SETUP, scrollTo = "Keep the screen on while connected") }
+    @Test fun setup_ppp() { simulatorAtFix(); engine.store.update { it.copy(source = LinkKind.PHONE, phonePpp = true) }; shot("14h_setup_ppp", Tab.SETUP) }
+    /** Live during a replay of real Galileo HAS corrections (PppTest data) through phone PPP. */
+    @Test fun live_ppp() {
+        org.junit.Assume.assumeTrue(com.rfsat.pocketgnss.rtk.RtkNative.available)
+        val dir = java.io.File(engine.sessionsRoot, "raw_20230817_020000").apply { mkdirs() }
+        fun res(n: String) = java.util.zip.GZIPInputStream(javaClass.getResourceAsStream("/ppp/$n")!!).readBytes()
+        java.io.File(dir, "raw.obs").writeBytes(res("obe4_2023229c_5s.obs.gz"))
+        java.io.File(dir, "base.rtcm3").writeBytes(res("idd2023229c.rtc.gz"))
+        engine.store.update { it.copy(phonePpp = true, phoneRtk = true, heightRef = com.rfsat.pocketgnss.data.HeightRef.ELLIPSOID) }
+        engine.replay(dir, 0.0)
+        val t0 = System.currentTimeMillis()
+        while (com.rfsat.pocketgnss.link.Replay.state.value.done < 560 && System.currentTimeMillis() - t0 < 120_000) Thread.sleep(20)
+        com.rfsat.pocketgnss.link.Replay.setPaused(true)
+        Thread.sleep(500)
+        shot("02e_live_ppp", Tab.LIVE)
+        com.rfsat.pocketgnss.link.Replay.setPaused(false)
+        engine.disconnect()
+    }
     @Config(qualifiers = "el-" + PHONE) @Test fun live_greek() { simulatorAtFix(); shot("20_live_el", Tab.LIVE) }
     @Config(qualifiers = "de-" + PHONE) @Test fun live_german() { simulatorAtFix(); shot("21_live_de", Tab.LIVE) }
     @Config(qualifiers = "pl-" + PHONE) @Test fun field_polish() { simulatorAtFix(); demoFields(); engine.fieldCapture.cancel(); shot("22_field_pl", Tab.TOOLS, ToolId.FIELD) }

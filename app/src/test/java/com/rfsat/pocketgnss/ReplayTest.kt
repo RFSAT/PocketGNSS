@@ -110,7 +110,7 @@ class ReplayTest {
         assumeTrue("host build of the RTK engine not available", RtkNative.available)
         val dir = session()
         val o = RtkOptions(glonass = false, galileo = false, beidou = false, qzss = false)
-        RtkNative.init(o.mode.code, o.navsys, o.elevationMaskDeg, o.snrMaskDbHz, o.arMode, 0, o.errorRatio, o.arRatio, o.maxBaseAgeSec, o.minFixSats)
+        RtkNative.start(o)
         RtkNative.setTime(1316, 518400.0)
         for (f in RtcmFrames.split(File(dir, "base.rtcm3").readBytes())) RtkNative.inputRtcmNav(f, 0, f.size)
         val b = com.rfsat.pocketgnss.rtk.RtkBase.from(DoubleArray(com.rfsat.pocketgnss.rtk.RtkBase.SIZE).also { RtkNative.base(it) })

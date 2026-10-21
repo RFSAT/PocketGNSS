@@ -152,6 +152,11 @@ object RtcmFrames {
                 if (dow < 7) wrap(dow * 86_400_000L + utcTod) else glonassNear(utcTod, nearTowMs)
             }
             in 1009..1012 -> glonassNear(Rtcm.bits(frame, 48, 27) - 10_800_000L + 18_000L, nearTowMs)
+            // SSR corrections (Galileo HAS, IGS real-time): epoch time in whole seconds right after the message number
+            in 1057..1062, in 1240..1257 -> wrap(Rtcm.bits(frame, 36, 20) * 1000)
+            in 1063..1068 -> glonassNear(Rtcm.bits(frame, 36, 17) * 1000 - 10_800_000L + 18_000L, nearTowMs)
+            in 1258..1263 -> wrap(Rtcm.bits(frame, 36, 20) * 1000 + 14_000)
+            4076 -> wrap(Rtcm.bits(frame, 47, 20) * 1000)  // IGS SSR: version (3) + subtype (8) first
             else -> null
         }
     }
