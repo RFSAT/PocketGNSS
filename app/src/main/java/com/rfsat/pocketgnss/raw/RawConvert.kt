@@ -98,8 +98,12 @@ object RawConvert {
     // Accumulated delta range state bits.
     const val ADR_VALID = 1; const val ADR_RESET = 2; const val ADR_CYCLE_SLIP = 4; const val ADR_HALF_RESOLVED = 8; const val ADR_HALF_REPORTED = 16
 
-    /** Uncertainty limit for a usable pseudorange (500 ns = 150 m), as in Google's tools. */
-    const val MAX_TIME_UNCERTAINTY_NS = 500L
+    /**
+     * Uncertainty limit for a usable pseudorange: 50 ns = 15 m. Well-tracked signals report a few to 20 ns; above
+     * that the code is often off by tens to hundreds of metres, and RTKLIB, which weights by elevation and signal
+     * strength only, would take it for a metre-level measurement and jump (up to 1.12.0 the limit was 500 ns = 150 m).
+     */
+    const val MAX_TIME_UNCERTAINTY_NS = 50L
 
     private const val DEFAULT_LEAP = 18
     private const val BDS_GPS_OFFSET_NS = 14_000_000_000L

@@ -104,6 +104,8 @@ void prtk_set_time(int week, double tow);
 /* PPP: switch the ionosphere model (as prtk_opt_t.iono_free) without losing ephemerides or corrections; the filter
  * restarts. Used when a phone turns out to have no second frequency (or gains one). */
 void prtk_set_iono(int iono_free);
+/* restart the position filter; ephemerides, corrections, base position and options are kept */
+void prtk_reset(void);
 
 /* feed RTCM 3 bytes from the caster; returns a bit mask: 1 = base epoch complete, 2 = ephemeris,
  * 4 = station position, 8 = SSR corrections */

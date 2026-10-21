@@ -121,12 +121,14 @@ class SettingsStore(context: Context, private val cipher: SecretCipher = Keystor
     val value: AppSettings get() = state.value
 
     fun update(change: (AppSettings) -> AppSettings) {
-        val next = change(state.value)
+        val next = CasterProfiles.keepInSync(state.value, change(state.value))
         state.value = next
         save(next)
     }
 
-    private fun load(): AppSettings {
+    private fun load(): AppSettings = loadStored().let { it.copy(profiles = CasterProfiles.fillPasswords(it.profiles, it.ntrip)) }
+
+    private fun loadStored(): AppSettings {
         val d = AppSettings()
         val n = d.ntrip
         return AppSettings(

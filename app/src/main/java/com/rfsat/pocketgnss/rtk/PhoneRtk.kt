@@ -224,6 +224,45 @@ object FixGate {
 }
 
 /**
+ * Cross-check of the engine against the phone's own position (Android's GNSS fix, usually within 5-15 m). Phone
+ * pseudoranges carry occasional gross errors (multipath, weak or badly tracked signals) that the filter takes for
+ * metre-level ones: its solution can then sit tens to hundreds of metres away while reporting a few metres of
+ * uncertainty. A solution further from the phone's fix than [limit] is not used (the phone's fix is shown instead);
+ * when that lasts [resetAfterMs], the filter is restarted, at most once every [resetIntervalMs].
+ */
+class PositionCheck(private val resetAfterMs: Long = 10_000, private val resetIntervalMs: Long = 30_000) {
+    var rejected = 0; private set
+    var resets = 0; private set
+    private var firstBadMs = 0L
+    private var lastResetMs: Long? = null
+
+    enum class Verdict { USE, REJECT, REJECT_AND_RESET }
+
+    /**
+     * [engineAcc] / [phoneAcc]: horizontal accuracies (m) of the engine solution and of the phone's fix; without a
+     * recent phone fix ([phoneLat] null) the solution is used unchecked.
+     */
+    fun check(nowMs: Long, lat: Double, lon: Double, engineAcc: Double, phoneLat: Double?, phoneLon: Double?, phoneAcc: Double?): Verdict {
+        if (phoneLat == null || phoneLon == null) return Verdict.USE
+        val d = com.rfsat.pocketgnss.protocol.Geo.distance(lat, lon, phoneLat, phoneLon)
+        if (d <= limit(engineAcc, phoneAcc)) { firstBadMs = 0; return Verdict.USE }
+        rejected++
+        if (firstBadMs == 0L) firstBadMs = nowMs
+        if (nowMs - firstBadMs >= resetAfterMs && lastResetMs.let { it == null || nowMs - it >= resetIntervalMs }) {
+            resets++; lastResetMs = nowMs; firstBadMs = 0
+            return Verdict.REJECT_AND_RESET
+        }
+        return Verdict.REJECT
+    }
+
+    companion object {
+        /** Largest credible distance: 30 m, or more when either position says it is that uncertain. */
+        fun limit(engineAcc: Double, phoneAcc: Double?): Double =
+            maxOf(30.0, 4.0 * (phoneAcc ?: 10.0) + 3.0 * engineAcc.coerceIn(0.0, 50.0))
+    }
+}
+
+/**
  * What PocketGNSS has learned about this phone's raw measurements over past phone RTK sessions: how often enough
  * satellites carried carrier phase to fix ambiguities, and how often the phase slipped. Stored per phone model.
  */

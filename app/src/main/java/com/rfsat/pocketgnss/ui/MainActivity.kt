@@ -328,9 +328,12 @@ fun NotConnected(conn: Connection, onReconnect: () -> Unit) {
     }
 }
 
-/** Fix type for the top bar: with phone RTK the method in use (e.g. PPP, which GGA can only call DGNSS), else the fix class. */
+/**
+ * Fix type for the top bar and the map: with phone RTK the method in use (code DGNSS from a base, PPP... which GGA can
+ * only call "DGNSS / SBAS"), else the fix class.
+ */
 @Composable
-private fun methodOrFix(phoneRtk: Boolean, q: com.rfsat.pocketgnss.protocol.FixQuality): String {
+internal fun methodOrFix(phoneRtk: Boolean, q: com.rfsat.pocketgnss.protocol.FixQuality): String {
     val st by com.rfsat.pocketgnss.link.PhoneRtkLink.state.collectAsState()
     val m = if (phoneRtk) st.source.takeIf { it.isNotEmpty() } else null
     return m?.let { methodText(it) } ?: stringResource(fixLabel(q))

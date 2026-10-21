@@ -195,6 +195,7 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
             SwitchRow(stringResource(R.string.ntrip_tls), s.ntrip.tls, { v -> upd { it.copy(ntrip = it.ntrip.copy(tls = v)) } })
             NumberField(stringResource(R.string.ntrip_gga), s.ntrip.ggaIntervalSec.toDouble(), { v -> upd { it.copy(ntrip = it.ntrip.copy(ggaIntervalSec = v.toInt())) } },
                 Modifier.fillMaxWidth(), min = 0.0, max = 600.0, suffix = "s")
+            Text(stringResource(R.string.ntrip_profile_autosave), style = MaterialTheme.typography.bodySmall, color = muted)
             Text(stringResource(R.string.ntrip_store_note), style = MaterialTheme.typography.bodySmall, color = muted)
         }
 

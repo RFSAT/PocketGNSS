@@ -42,6 +42,35 @@ class CasterProfileTest {
         assertEquals("user1", back[0].config.user)
     }
 
+    @Test fun editsAreSavedToTheSelectedProfile() {
+        val start = com.rfsat.pocketgnss.data.AppSettings(profiles = profiles, activeProfile = "Metrica VRS", ntrip = profiles[0].config)
+        // typing a new password while the profile is selected: saved to it, in its place
+        val typed = CasterProfiles.keepInSync(start, start.copy(ntrip = start.ntrip.copy(password = "new")))
+        assertEquals("new", typed.profiles[0].config.password); assertEquals(listOf("Metrica VRS", "EOS base"), typed.profiles.map { it.name })
+        // a preset selected and its account typed becomes a saved profile of that name
+        val preset = CasterProfiles.presets.first { it.name == "EUREF-IP (ROB, Belgium)" }
+        val chosen = CasterProfiles.keepInSync(typed, typed.copy(ntrip = preset.config, activeProfile = preset.name))
+        assertEquals(2, chosen.profiles.size)                  // choosing saves nothing
+        val withLogin = CasterProfiles.keepInSync(chosen, chosen.copy(ntrip = chosen.ntrip.copy(user = "artur", password = "pw", mountpoint = "BCEP00BKG0")))
+        val rob = withLogin.profiles.single { it.name == preset.name }.config
+        assertEquals("www.euref-ip.be", rob.host); assertEquals("artur", rob.user); assertEquals("pw", rob.password)
+        // switching back to Metrica keeps both logins
+        val back = CasterProfiles.keepInSync(withLogin, withLogin.copy(ntrip = withLogin.profiles[0].config, activeProfile = "Metrica VRS"))
+        assertEquals("new", back.ntrip.password); assertEquals("pw", back.profiles.single { it.name == preset.name }.config.password)
+        // without a selected profile edits stay in the connection only
+        val none = start.copy(activeProfile = "")
+        assertEquals(profiles, CasterProfiles.keepInSync(none, none.copy(ntrip = none.ntrip.copy(password = "x"))).profiles)
+    }
+
+    @Test fun profilesSavedWithoutPasswordTakeItFromTheSameAccount() {
+        val noPw = profiles[0].copy(config = profiles[0].config.copy(password = ""))
+        val other = CasterProfile("Other user", profiles[0].config.copy(user = "user2", password = ""))
+        val fixed = CasterProfiles.fillPasswords(listOf(noPw, other, profiles[1]), profiles[0].config)
+        assertEquals("s3cret\tpw", fixed[0].config.password)
+        assertEquals("", fixed[1].config.password)
+        assertEquals(profiles[1], fixed[2])
+    }
+
     @Test fun presetsHavePublicHostsOnly() {
         assertTrue(CasterProfiles.presets.all { it.config.host.isNotBlank() && it.config.user.isEmpty() && it.config.password.isEmpty() })
     }

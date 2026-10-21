@@ -365,7 +365,7 @@
     <string name="live_rtk_engine">Phone RTK</string>
     <string name="live_rtk_hint">Ative o relé NTRIP (caster e ponto de montagem em Configuração) para RTK; até lá o telefone dá uma posição autónoma.</string>
     <string name="live_rtk_no_basepos">ainda sem posição da estação (1005/1006)</string>
-    <string name="live_rtk_noeph">O caster não envia efemérides transmitidas (RTCM 1019/1020/1045/1046/1042): o telefone não consegue calcular as posições dos satélites só com este fluxo. Escolha um ponto de montagem que as inclua (a maioria dos fluxos MSM).</string>
+    <string name="live_rtk_noeph">Ainda não chegaram efemérides transmitidas do caster (RTCM 1019/1020/1045/1046/1042) e o telefone precisa delas para calcular as posições dos satélites. Muitos fluxos de rede (VRS, estação mais próxima) não as incluem: ative o fluxo de efemérides (Configuração &gt; Ligação ao recetor).</string>
     <string name="live_rtk_nophase">Este telefone não está a dar fase da portadora: o RTK não consegue fixar (telefone só de código ou poupança de energia ainda ativa). A posição fica ao nível do metro.</string>
     <string name="live_rtk_station">estação %1$d</string>
     <string name="live_sats">Satélites</string>
@@ -450,6 +450,7 @@
     <string name="ntrip_pass">Palavra-passe</string>
     <string name="ntrip_port">Porta</string>
     <string name="ntrip_profile">Perfil de caster</string>
+    <string name="ntrip_profile_autosave">As alterações ao caster, ponto de montagem, nome de utilizador ou palavra-passe são guardadas de imediato no perfil selecionado.</string>
     <string name="ntrip_profile_delete">Eliminar perfil</string>
     <string name="ntrip_profile_name">Nome do perfil (p. ex. Metrica VRS, base EOS)</string>
     <string name="ntrip_profile_none">— nenhum —</string>
@@ -857,6 +858,11 @@
         <item quantity="one">%1$d sinal, %2$d com fase da portadora · razão AR %3$.1f</item>
         <item quantity="many">%1$d sinais, %2$d com fase da portadora · razão AR %3$.1f</item>
         <item quantity="other">%1$d sinais, %2$d com fase da portadora · razão AR %3$.1f</item>
+    </plurals>
+    <plurals name="live_rtk_rejected">
+        <item quantity="one">%1$d posição demasiado longe da do próprio telefone não foi usada · reinícios do filtro: %2$d</item>
+        <item quantity="many">%1$d posições demasiado longe da do próprio telefone não foram usadas · reinícios do filtro: %2$d</item>
+        <item quantity="other">%1$d posições demasiado longe da do próprio telefone não foram usadas · reinícios do filtro: %2$d</item>
     </plurals>
     <plurals name="mount_dialog_help">
         <item quantity="one">%1$d ponto de montagem. Primeiro os fluxos de rede (VRS, MAX, base mais próxima), depois as estações individuais, as mais próximas primeiro. Toque num para o usar; o envio da posição (GGA) é definido pela lista do caster.</item>

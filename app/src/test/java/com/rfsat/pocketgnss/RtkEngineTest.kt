@@ -159,6 +159,31 @@ class RtkEngineTest {
         assertEquals(RtkStatus.SINGLE, com.rfsat.pocketgnss.rtk.FixGate.apply(fix.copy(status = RtkStatus.SINGLE), o).status)
     }
 
+    @Test fun positionCheckAgainstThePhonesOwnFix() {
+        val c = com.rfsat.pocketgnss.rtk.PositionCheck(resetAfterMs = 10_000, resetIntervalMs = 30_000)
+        val use = com.rfsat.pocketgnss.rtk.PositionCheck.Verdict.USE; val rej = com.rfsat.pocketgnss.rtk.PositionCheck.Verdict.REJECT
+        val reset = com.rfsat.pocketgnss.rtk.PositionCheck.Verdict.REJECT_AND_RESET
+        val lat = 40.76; val lon = 22.52
+        val dLat = 1.0 / 111_000                                      // about 1 m north
+        // a few metres apart: used; no phone fix: used unchecked
+        assertEquals(use, c.check(0, lat + 5 * dLat, lon, 0.5, lat, lon, 4.0))
+        assertEquals(use, c.check(0, lat + 5000 * dLat, lon, 0.5, null, null, null))
+        // 25 m away with the phone reporting 12 m: still credible (limit 4 x 12 + 3 x 0.5 = 49.5 m)
+        assertEquals(use, c.check(0, lat + 25 * dLat, lon, 0.5, lat, lon, 12.0))
+        assertEquals(30.0, com.rfsat.pocketgnss.rtk.PositionCheck.limit(0.2, 3.0), 1e-9)
+        // 300 m away while claiming 2 m: rejected; after 10 s of that, a filter restart, then not again for 30 s
+        var t = 1_000L
+        assertEquals(rej, c.check(t, lat + 300 * dLat, lon, 2.0, lat, lon, 5.0))
+        while (t < 10_000) { t += 1000; assertEquals(rej, c.check(t, lat + 300 * dLat, lon, 2.0, lat, lon, 5.0)) }
+        t += 1000; assertEquals(reset, c.check(t, lat + 300 * dLat, lon, 2.0, lat, lon, 5.0))
+        repeat(20) { t += 1000; assertEquals(rej, c.check(t, lat + 300 * dLat, lon, 2.0, lat, lon, 5.0)) }
+        t += 10_000; assertEquals(reset, c.check(t, lat + 300 * dLat, lon, 2.0, lat, lon, 5.0))
+        assertEquals(2, c.resets); assertEquals(32, c.rejected)
+        // a good solution clears the run of bad ones
+        assertEquals(use, c.check(t + 1000, lat, lon, 0.5, lat, lon, 5.0))
+        assertEquals(rej, c.check(t + 2000, lat + 300 * dLat, lon, 2.0, lat, lon, 5.0))
+    }
+
     @Test fun phoneLearning() {
         val o = RtkOptions()
         // A phone with 3 satellites with phase (never enough to fix): after 10 minutes, no ambiguity fixing.

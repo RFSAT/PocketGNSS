@@ -367,7 +367,7 @@
     <string name="live_rtk_engine">Phone RTK</string>
     <string name="live_rtk_hint">Switch the NTRIP relay on (caster and mountpoint in Setup) for RTK; until then the phone gives a standalone position.</string>
     <string name="live_rtk_no_basepos">no station position (1005/1006) yet</string>
-    <string name="live_rtk_noeph">The caster sends no broadcast ephemerides (RTCM 1019/1020/1045/1046/1042): the phone cannot compute satellite positions from this stream alone. Choose a mountpoint that includes them (most MSM streams do).</string>
+    <string name="live_rtk_noeph">No broadcast ephemerides from the caster yet (RTCM 1019/1020/1045/1046/1042), and the phone needs them to compute satellite positions. Many network streams (VRS, nearest base) leave them out: switch on the ephemeris stream (Setup &gt; Receiver connection).</string>
     <string name="live_rtk_nophase">No carrier phase from this phone at the moment: RTK cannot fix (code-only phone, or power saving still on). The position stays at metre level.</string>
     <string name="live_rtk_station">station %1$d</string>
     <string name="live_sats">Satellites</string>
@@ -452,6 +452,7 @@
     <string name="ntrip_pass">Password</string>
     <string name="ntrip_port">Port</string>
     <string name="ntrip_profile">Caster profile</string>
+    <string name="ntrip_profile_autosave">Changes to the caster, mountpoint, user name or password are saved to the selected profile at once.</string>
     <string name="ntrip_profile_delete">Delete profile</string>
     <string name="ntrip_profile_name">Profile name (e.g. Metrica VRS, EOS base)</string>
     <string name="ntrip_profile_none">— none —</string>
@@ -845,6 +846,10 @@
     <plurals name="live_rtk_engine_value">
         <item quantity="one">%1$d signal, %2$d with carrier phase · AR ratio %3$.1f</item>
         <item quantity="other">%1$d signals, %2$d with carrier phase · AR ratio %3$.1f</item>
+    </plurals>
+    <plurals name="live_rtk_rejected">
+        <item quantity="one">%1$d position too far from the phone\'s own fix was not used · filter restarts: %2$d</item>
+        <item quantity="other">%1$d positions too far from the phone\'s own fix were not used · filter restarts: %2$d</item>
     </plurals>
     <plurals name="mount_dialog_help">
         <item quantity="one">%1$d mountpoint. Network streams (VRS, MAX, nearest base) first, then single stations nearest first. Tap one to use it; the position reporting (GGA) is set from the caster\'s list.</item>

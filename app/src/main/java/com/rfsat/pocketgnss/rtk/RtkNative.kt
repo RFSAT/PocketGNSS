@@ -12,6 +12,8 @@ object RtkNative {
                       thresar: Double, maxage: Double, minfixsats: Int, ionoFree: Int): Boolean
     /** PPP: 1 = ionosphere-free combination, 0 = broadcast ionosphere model; the filter restarts, orbits and corrections stay. */
     external fun setIono(ionoFree: Int)
+    /** Restarts the position filter, keeping ephemerides, corrections and the base station. */
+    external fun reset()
     external fun free()
     external fun setTime(week: Int, tow: Double)
     /** RTCM 3 from the caster; returns 1 = base epoch, 2 = ephemeris, 4 = station position (bit mask). */

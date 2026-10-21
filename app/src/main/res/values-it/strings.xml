@@ -365,7 +365,7 @@
     <string name="live_rtk_engine">Phone RTK</string>
     <string name="live_rtk_hint">Attivate il relay NTRIP (caster e mountpoint in Impostazioni) per l’RTK; fino ad allora il telefono dà una posizione autonoma.</string>
     <string name="live_rtk_no_basepos">ancora nessuna posizione della stazione (1005/1006)</string>
-    <string name="live_rtk_noeph">Il caster non invia effemeridi trasmesse (RTCM 1019/1020/1045/1046/1042): il telefono non può calcolare le posizioni dei satelliti solo da questo flusso. Scegliete un mountpoint che le includa (la maggior parte dei flussi MSM).</string>
+    <string name="live_rtk_noeph">Dal caster non sono ancora arrivate effemeridi trasmesse (RTCM 1019/1020/1045/1046/1042) e il telefono ne ha bisogno per calcolare le posizioni dei satelliti. Molti flussi di rete (VRS, stazione più vicina) non le includono: attivare il flusso di effemeridi (Configurazione &gt; Connessione al ricevitore).</string>
     <string name="live_rtk_nophase">Al momento nessuna fase portante da questo telefono: l’RTK non può fissare (telefono solo codice o risparmio energetico ancora attivo). La posizione resta a livello metrico.</string>
     <string name="live_rtk_station">stazione %1$d</string>
     <string name="live_sats">Satelliti</string>
@@ -450,6 +450,7 @@
     <string name="ntrip_pass">Password</string>
     <string name="ntrip_port">Porta</string>
     <string name="ntrip_profile">Profilo caster</string>
+    <string name="ntrip_profile_autosave">Le modifiche a caster, mountpoint, nome utente o password vengono salvate subito nel profilo selezionato.</string>
     <string name="ntrip_profile_delete">Elimina profilo</string>
     <string name="ntrip_profile_name">Nome profilo (ad es. Metrica VRS, base EOS)</string>
     <string name="ntrip_profile_none">— nessuno —</string>
@@ -857,6 +858,11 @@
         <item quantity="one">%1$d segnale, %2$d con fase portante · rapporto AR %3$.1f</item>
         <item quantity="many">%1$d segnali, %2$d con fase portante · rapporto AR %3$.1f</item>
         <item quantity="other">%1$d segnali, %2$d con fase portante · rapporto AR %3$.1f</item>
+    </plurals>
+    <plurals name="live_rtk_rejected">
+        <item quantity="one">%1$d posizione troppo lontana da quella del telefono non è stata usata · riavvii del filtro: %2$d</item>
+        <item quantity="many">%1$d posizioni troppo lontane da quella del telefono non sono state usate · riavvii del filtro: %2$d</item>
+        <item quantity="other">%1$d posizioni troppo lontane da quella del telefono non sono state usate · riavvii del filtro: %2$d</item>
     </plurals>
     <plurals name="mount_dialog_help">
         <item quantity="one">%1$d mountpoint. Prima i flussi di rete (VRS, MAX, base più vicina), poi le stazioni singole, le più vicine prima. Toccarne uno per usarlo; l’invio della posizione (GGA) è impostato dall’elenco del caster.</item>

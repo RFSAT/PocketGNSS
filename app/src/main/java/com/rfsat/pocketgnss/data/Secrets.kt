@@ -80,6 +80,34 @@ object CasterProfiles {
     }.toList()
 
     /**
+     * Edits of the connection (host, mountpoint, user, password...) while a caster profile is selected are saved to
+     * that profile, so its login is remembered without pressing Save; selecting a public preset and typing the
+     * account turns it into a saved profile of the same name. Choosing another profile (the active name changes at
+     * the same time) or no profile saves nothing.
+     */
+    fun keepInSync(before: AppSettings, after: AppSettings): AppSettings {
+        val name = after.activeProfile
+        if (name.isEmpty() || name != before.activeProfile || after.ntrip == before.ntrip) return after
+        if (after.profiles.firstOrNull { it.name == name }?.config == after.ntrip) return after
+        return after.copy(profiles = remember(after.profiles, name, after.ntrip))
+    }
+
+    /** [profiles] with the profile [name] set to [cfg], in its place, or added at the end. */
+    fun remember(profiles: List<CasterProfile>, name: String, cfg: NtripConfig): List<CasterProfile> =
+        if (profiles.any { it.name == name }) profiles.map { if (it.name == name) CasterProfile(name, cfg) else it }
+        else profiles + CasterProfile(name, cfg)
+
+    /**
+     * Repair for profiles saved before 1.12.1 without their password: one with the same caster and user as the
+     * current connection takes the connection's password.
+     */
+    fun fillPasswords(profiles: List<CasterProfile>, current: NtripConfig): List<CasterProfile> = profiles.map { p ->
+        val c = p.config
+        if (c.password.isEmpty() && current.password.isNotEmpty() && c.user.isNotEmpty() && c.user == current.user &&
+            c.host.equals(current.host, ignoreCase = true) && c.port == current.port) p.copy(config = c.copy(password = current.password)) else p
+    }
+
+    /**
      * Starting points with public hosts and ports, checked against the casters' sourcetables (October 2026). The user
      * adds the account (user, password) and can pick another mountpoint with Tools > Corrections > Get mountpoints.
      *

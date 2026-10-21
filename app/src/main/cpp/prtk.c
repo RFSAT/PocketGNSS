@@ -111,6 +111,9 @@ int prtk_init(const prtk_opt_t *o)
     opt.minfixsats = o->minfixsats > 0 ? o->minfixsats : 5;
     opt.minholdsats = opt.minfixsats + 1;
     opt.arfilter = 1;
+    /* RAIM fault detection and exclusion in the single-point solution that starts and re-starts the filter: one
+       phone pseudorange with a gross error (multipath, a weak signal) otherwise moves it by tens to hundreds of m */
+    opt.posopt[4] = 1;
     if (ppp) {
         /* Float PPP: SSR orbits / clocks referred to the antenna phase centre (HAS, IGS SSRA streams), estimated
            troposphere, solid earth tides, phase wind-up. No phase biases in HAS yet, so no ambiguity fixing. */
@@ -235,6 +238,21 @@ void prtk_set_iono(int iono_free)
     rtkinit(&rtk, &o);
 }
 
+/* Restarts the position filter (a solution that left the phone's own position), keeping ephemerides, SSR
+   corrections, the base station and the options. */
+void prtk_reset(void)
+{
+    prcopt_t o;
+    double rb[6];
+    int i;
+    if (!initialised) return;
+    o = rtk.opt;
+    for (i = 0; i < 6; i++) rb[i] = rtk.rb[i];
+    rtkfree(&rtk);
+    rtkinit(&rtk, &o);
+    for (i = 0; i < 6; i++) rtk.rb[i] = rb[i];
+}
+
 int prtk_input_rtcm(const uint8_t *data, int n) { return input(&rtcm, data, n, 1); }
 int prtk_input_rtcm_nav(const uint8_t *data, int n) { return input(&rtcm_nav, data, n, 0); }
 
@@ -350,6 +368,20 @@ int prtk_rover(int week, double tow, int n, const char *sys, const int *prn, con
     sol->nfix = rtk.nfix;
     sol->geoid = geoidh(pos);
     sol->ns = rtk.sol.ns;
+    if (rtk.sol.stat == SOLQ_DGPS) {
+        /* RTKLIB's count is of satellites with valid carrier phase (fewer than 4 is what makes it DGPS, often 0):
+           report the satellites whose code was used, i.e. tracked by rover and base above the elevation mask */
+        int nc = 0, f, ok;
+        for (i = 0; i < nr; i++) {
+            int sv = rov[i].sat;
+            if (rtk.ssat[sv - 1].azel[1] < rtk.opt.elmin) continue;
+            for (j = 0; j < nbase && base[j].sat != sv; j++) ;
+            if (j == nbase) continue;
+            for (ok = 0, f = 0; f < NFREQ; f++) if (rov[i].P[f] != 0.0 && base[j].P[f] != 0.0) ok = 1;
+            nc += ok;
+        }
+        sol->ns = nc;
+    }
     sol->ratio = rtk.sol.ratio;
     sol->age = rtk.sol.age;
     if (norm(rtk.rb, 3) > 0.0 && (rtk.sol.stat == SOLQ_FIX || rtk.sol.stat == SOLQ_FLOAT)) {

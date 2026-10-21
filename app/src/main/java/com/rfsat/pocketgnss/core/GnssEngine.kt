@@ -135,14 +135,16 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     val ephClient = NtripClient(scope, forward = { com.rfsat.pocketgnss.link.PhoneRtkLink.current?.writeNav(it); raw.onRtcmNav(it) }, gga = { null })
 
     /** Starts or stops the ephemeris stream to match the settings and the link. */
+    @Volatile private var ephConfig: com.rfsat.pocketgnss.protocol.NtripConfig? = null
     fun updateEphStream() {
         val s = store.value
         val want = s.ephStream && linkInfo?.let { it.phoneRtk && it.kind == LinkKind.PHONE } == true
         val p = s.profiles.firstOrNull { it.name == s.ephProfile }
         if (want && p != null && s.ephMount.isNotBlank()) {
             val cfg = p.config.copy(mountpoint = s.ephMount.trim(), ggaIntervalSec = 0)
-            if (!ephClient.running || ephClient.ntrip.value.mountpoint != cfg.mountpoint) ephClient.start(cfg)
-        } else if (ephClient.running) ephClient.stop()
+            // restarted when the account changes too (a corrected password), not only the mountpoint
+            if (!ephClient.running || ephConfig != cfg) { ephConfig = cfg; ephClient.start(cfg) }
+        } else { ephConfig = null; if (ephClient.running) ephClient.stop() }
     }
     /** The phone's raw GNSS measurements: capability test and RINEX / RTCM recording (Tools > Phone raw GNSS). */
     val raw: com.rfsat.pocketgnss.raw.PhoneRawLogger by lazy {
@@ -214,7 +216,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
             store.settings.collect { s ->
                 simulator?.configure(s.simConfig)
                 guidance.warnAt = s.guideWarn
-                if (s.ephStream != ephClient.running) updateEphStream()
+                if (s.ephStream || ephClient.running) updateEphStream()
                 if (s.mockLocation) { if (mock.status.value == MockStatus.OFF) mock.start() } else mock.stop()
                 if (s.nmeaServer) { if (!server.running) server.start(s.nmeaServerPort, s.nmeaServerLocalOnly) } else if (server.running) server.stop()
                 if (s.casterOn) { if (!caster.running || caster.state.value.port != s.casterPort) caster.start(s.casterPort, s.casterMount, s.casterUser, s.casterPass) }

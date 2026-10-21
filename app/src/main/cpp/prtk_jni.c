@@ -21,6 +21,8 @@ JNIEXPORT void JNICALL FN(free)(JNIEnv *env, jobject thiz) { prtk_free(); }
 
 JNIEXPORT void JNICALL FN(setIono)(JNIEnv *env, jobject thiz, jint ionoFree) { prtk_set_iono(ionoFree); }
 
+JNIEXPORT void JNICALL FN(reset)(JNIEnv *env, jobject thiz) { prtk_reset(); }
+
 JNIEXPORT void JNICALL FN(setTime)(JNIEnv *env, jobject thiz, jint week, jdouble tow) { prtk_set_time(week, tow); }
 
 JNIEXPORT jint JNICALL FN(inputRtcm)(JNIEnv *env, jobject thiz, jbyteArray data, jint off, jint len)

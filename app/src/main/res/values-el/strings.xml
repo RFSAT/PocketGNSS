@@ -365,7 +365,7 @@
     <string name="live_rtk_engine">Phone RTK</string>
     <string name="live_rtk_hint">Ενεργοποιήστε την αναμετάδοση NTRIP (caster και mountpoint στις Ρυθμίσεις) για RTK· μέχρι τότε το τηλέφωνο δίνει αυτόνομη θέση.</string>
     <string name="live_rtk_no_basepos">δεν υπάρχει ακόμη θέση σταθμού (1005/1006)</string>
-    <string name="live_rtk_noeph">Ο caster δεν στέλνει εφημερίδες (RTCM 1019/1020/1045/1046/1042): το τηλέφωνο δεν μπορεί να υπολογίσει θέσεις δορυφόρων μόνο από αυτή τη ροή. Επιλέξτε mountpoint που τις περιλαμβάνει (οι περισσότερες ροές MSM).</string>
+    <string name="live_rtk_noeph">Δεν έχουν φτάσει ακόμη εφημερίδες από τον caster (RTCM 1019/1020/1045/1046/1042) και το τηλέφωνο τις χρειάζεται για να υπολογίσει τις θέσεις των δορυφόρων. Πολλές ροές δικτύου (VRS, πλησιέστερος σταθμός) δεν τις περιλαμβάνουν: ενεργοποιήστε τη ροή εφημερίδων (Ρυθμίσεις &gt; Σύνδεση δέκτη).</string>
     <string name="live_rtk_nophase">Αυτή τη στιγμή δεν υπάρχει φάση φέροντος από το τηλέφωνο: το RTK δεν μπορεί να δώσει fixed (τηλέφωνο μόνο κώδικα ή ενεργή εξοικονόμηση ενέργειας). Η θέση μένει σε επίπεδο μέτρου.</string>
     <string name="live_rtk_station">σταθμός %1$d</string>
     <string name="live_sats">Δορυφόροι</string>
@@ -450,6 +450,7 @@
     <string name="ntrip_pass">Κωδικός</string>
     <string name="ntrip_port">Θύρα</string>
     <string name="ntrip_profile">Προφίλ caster</string>
+    <string name="ntrip_profile_autosave">Οι αλλαγές σε caster, mountpoint, όνομα χρήστη ή κωδικό αποθηκεύονται αμέσως στο επιλεγμένο προφίλ.</string>
     <string name="ntrip_profile_delete">Διαγραφή προφίλ</string>
     <string name="ntrip_profile_name">Όνομα προφίλ (π.χ. Metrica VRS, βάση EOS)</string>
     <string name="ntrip_profile_none">— κανένα —</string>
@@ -843,6 +844,10 @@
     <plurals name="live_rtk_engine_value">
         <item quantity="one">%1$d σήμα, %2$d με φάση φέροντος · λόγος AR %3$.1f</item>
         <item quantity="other">%1$d σήματα, %2$d με φάση φέροντος · λόγος AR %3$.1f</item>
+    </plurals>
+    <plurals name="live_rtk_rejected">
+        <item quantity="one">%1$d θέση πολύ μακριά από τη θέση του ίδιου του τηλεφώνου δεν χρησιμοποιήθηκε · επανεκκινήσεις φίλτρου: %2$d</item>
+        <item quantity="other">%1$d θέσεις πολύ μακριά από τη θέση του ίδιου του τηλεφώνου δεν χρησιμοποιήθηκαν · επανεκκινήσεις φίλτρου: %2$d</item>
     </plurals>
     <plurals name="mount_dialog_help">
         <item quantity="one">%1$d mountpoint. Πρώτα ροές δικτύου (VRS, MAX, πλησιέστερη βάση), μετά μεμονωμένοι σταθμοί, οι πλησιέστεροι πρώτοι. Πατήστε ένα για χρήση· η αποστολή θέσης (GGA) ρυθμίζεται από τη λίστα του caster.</item>

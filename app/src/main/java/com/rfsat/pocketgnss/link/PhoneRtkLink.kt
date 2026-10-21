@@ -17,6 +17,7 @@ import com.rfsat.pocketgnss.rtk.FixGate
 import com.rfsat.pocketgnss.rtk.IonoChooser
 import com.rfsat.pocketgnss.rtk.PppConvergence
 import com.rfsat.pocketgnss.rtk.PhoneProfile
+import com.rfsat.pocketgnss.rtk.PositionCheck
 import com.rfsat.pocketgnss.rtk.ProfileLearner
 import com.rfsat.pocketgnss.rtk.RoverArrays
 import com.rfsat.pocketgnss.rtk.RtkBase
@@ -47,6 +48,9 @@ data class PhoneRtkState(
     val source: String = "",
     /** PPP mode: the engine uses the ionosphere-free combination (false: broadcast ionosphere, L1 only). */
     val ionoFree: Boolean = true,
+    /** Engine solutions not used because they were too far from the phone's own fix ([PositionCheck]), and filter restarts. */
+    val rejected: Int = 0,
+    val resets: Int = 0,
 )
 
 /**
@@ -81,6 +85,8 @@ class PhoneRtkLink private constructor(
     @Volatile private var closed = false
     @Volatile private var sats: List<PhoneSat> = emptyList()
     @Volatile private var lastLocation: Location? = null
+    @Volatile private var lastLocationMs = 0L
+    private val check = PositionCheck()
     @Volatile private var lastSolutionMs = 0L
     private var lastDisc: Int? = null
     private var lastEmitMs = 0L
@@ -104,7 +110,7 @@ class PhoneRtkLink private constructor(
 
     private val listener = LocationListener { loc ->
         if (isMock(loc)) return@LocationListener
-        lastLocation = loc
+        lastLocation = loc; lastLocationMs = System.currentTimeMillis()
         // Before the engine has a solution (or when raw measurements stop), Android's position keeps the link alive.
         if (System.currentTimeMillis() - lastSolutionMs > 3000) emitLocation(loc)
     }
@@ -171,9 +177,20 @@ class PhoneRtkLink private constructor(
         val withPhase = e.obs.count { it.phase != null }
         _state.value = PhoneRtkState(if (status != 0) sol else _state.value.solution, base, _state.value.epochs + 1, e.obs.size, withPhase,
             msg.trim().lineSequence().lastOrNull { it.isNotBlank() } ?: "", noPhase = withPhase == 0, source = _state.value.source,
-            ionoFree = iono.ionoFree)
+            ionoFree = iono.ionoFree, rejected = check.rejected, resets = check.resets)
         if (status == RtkStatus.NONE.code) return
-        lastSolutionMs = System.currentTimeMillis()
+        // The phone's own fix as a sanity check: a solution far from it is not used, and a filter stuck there restarts.
+        val now = System.currentTimeMillis()
+        val phone = lastLocation?.takeIf { now - lastLocationMs <= 2_500 }
+        val verdict = check.check(now, sol.latitude, sol.longitude, kotlin.math.hypot(sol.stdEast, sol.stdNorth),
+            phone?.latitude, phone?.longitude, phone?.takeIf { it.hasAccuracy() }?.accuracy?.toDouble())
+        if (verdict != PositionCheck.Verdict.USE) {
+            if (verdict == PositionCheck.Verdict.REJECT_AND_RESET) { synchronized(engineLock) { RtkNative.reset() }; convergence.reset() }
+            _state.value = _state.value.copy(rejected = check.rejected, resets = check.resets)
+            phone?.let { emitLocation(it) }
+            return
+        }
+        lastSolutionMs = now
         emitSolution(sol, base, convergence.converging(sol))
     }
 

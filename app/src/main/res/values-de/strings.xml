@@ -365,7 +365,7 @@
     <string name="live_rtk_engine">Phone RTK</string>
     <string name="live_rtk_hint">Für RTK das NTRIP-Relay einschalten (Caster und Mountpoint in der Einrichtung); bis dahin liefert das Telefon eine autonome Position.</string>
     <string name="live_rtk_no_basepos">noch keine Stationsposition (1005/1006)</string>
-    <string name="live_rtk_noeph">Der Caster sendet keine Broadcast-Ephemeriden (RTCM 1019/1020/1045/1046/1042): Das Telefon kann aus diesem Strom allein keine Satellitenpositionen berechnen. Wählen Sie einen Mountpoint, der sie enthält (die meisten MSM-Ströme).</string>
+    <string name="live_rtk_noeph">Vom Caster sind noch keine Broadcast-Ephemeriden gekommen (RTCM 1019/1020/1045/1046/1042), und das Telefon braucht sie, um die Satellitenpositionen zu berechnen. Viele Netzströme (VRS, nächste Station) enthalten keine: den Ephemeridenstrom einschalten (Einrichtung &gt; Empfängerverbindung).</string>
     <string name="live_rtk_nophase">Derzeit keine Trägerphase von diesem Telefon: RTK kann nicht fixen (Telefon nur mit Code oder Energiesparen noch aktiv). Die Position bleibt im Meterbereich.</string>
     <string name="live_rtk_station">Station %1$d</string>
     <string name="live_sats">Satelliten</string>
@@ -450,6 +450,7 @@
     <string name="ntrip_pass">Passwort</string>
     <string name="ntrip_port">Port</string>
     <string name="ntrip_profile">Caster-Profil</string>
+    <string name="ntrip_profile_autosave">Änderungen an Caster, Mountpoint, Benutzername oder Passwort werden sofort im gewählten Profil gespeichert.</string>
     <string name="ntrip_profile_delete">Profil löschen</string>
     <string name="ntrip_profile_name">Profilname (z. B. Metrica VRS, EOS-Basis)</string>
     <string name="ntrip_profile_none">— keines —</string>
@@ -843,6 +844,10 @@
     <plurals name="live_rtk_engine_value">
         <item quantity="one">%1$d Signal, %2$d mit Trägerphase · AR-Verhältnis %3$.1f</item>
         <item quantity="other">%1$d Signale, %2$d mit Trägerphase · AR-Verhältnis %3$.1f</item>
+    </plurals>
+    <plurals name="live_rtk_rejected">
+        <item quantity="one">%1$d Position zu weit von der telefoneigenen Position nicht verwendet · Filterneustarts: %2$d</item>
+        <item quantity="other">%1$d Positionen zu weit von der telefoneigenen Position nicht verwendet · Filterneustarts: %2$d</item>
     </plurals>
     <plurals name="mount_dialog_help">
         <item quantity="one">%1$d Mountpoint. Zuerst Netzwerkströme (VRS, MAX, nächste Basis), dann Einzelstationen, die nächsten zuerst. Zum Verwenden antippen; das Senden der Position (GGA) wird aus der Liste des Casters eingestellt.</item>

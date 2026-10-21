@@ -43,6 +43,7 @@ fun MapScreen(engine: GnssEngine) {
     val s by engine.store.settings.collectAsState()
     val fix by engine.fix.collectAsState()
     val track by engine.track.collectAsState()
+    val conn by engine.connection.collectAsState()
     val points by engine.points.collectAsState()
     val fields by engine.fields.collectAsState()
     val cap by engine.fieldCapture.state.collectAsState()
@@ -101,7 +102,7 @@ fun MapScreen(engine: GnssEngine) {
                 else {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("● ", color = fixColor(f.quality))
-                        FitText(stringResource(fixLabel(f.quality)) + "  " + formatAccuracy(f.horizontalAccuracy) + "  ·  " +
+                        FitText(methodOrFix((conn as? com.rfsat.pocketgnss.core.Connection.Ready)?.info?.phoneRtk == true, f.quality) + "  " + formatAccuracy(f.horizontalAccuracy) + "  ·  " +
                             formatLat(f.latitude, s.coordFormat) + "  " + formatLon(f.longitude, s.coordFormat), fontWeight = FontWeight.SemiBold)
                     }
                 }

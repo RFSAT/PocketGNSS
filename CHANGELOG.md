@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.12.1 (build 11201)
+Phone RTK positions no longer jump hundreds of metres: weak phone signals are left out, faulty ones are rejected, and a position far from the phone's own fix is not used (the filter restarts if that persists). Caster profiles remember their login as you type it, so the ephemeris stream connects with it. The map names the method in use, as the Live screen does. Clearer hint when a caster sends no satellite orbits.
+
 ## 1.12.0 (build 11200)
 Guidance follows curves and headlands: record the first pass along a contour or bend and drive parallel curved passes, or follow passes round a field boundary inside it. Export fields, guidance lines and points as ISO-XML (ISOBUS TASKDATA) for tractor terminals and farm software. Replay can be paused. Choice buttons wrap neatly in every language.
 

@@ -181,8 +181,10 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
                         (b.ephemerides + b.glonassEphemerides).let { pluralStringResource(R.plurals.n_ephemerides, it, it) } + if (!b.hasPosition) " · " + stringResource(R.string.live_rtk_no_basepos) else "", live = true)
                     if (rtkState.noPhase && rtkState.epochs > 5) Text(stringResource(R.string.live_rtk_nophase), style = small, color = WarnAmber)
                     else if (!s.ntripEnabled && !replaying) Text(stringResource(R.string.live_rtk_hint), style = small, color = muted)
-                    else if (b != null && b.frames > 0 && b.ephemerides == 0) Text(stringResource(R.string.live_rtk_noeph), style = small, color = WarnAmber)
+                    else if (b != null && b.frames > 120 && b.ephemerides == 0) Text(stringResource(R.string.live_rtk_noeph), style = small, color = WarnAmber)
                 }
+                if (rtkState.rejected > 0) Text(pluralStringResource(R.plurals.live_rtk_rejected, rtkState.rejected, rtkState.rejected, rtkState.resets),
+                    style = small, color = muted)
             } else if (phoneChip) Text(stringResource(R.string.live_phone_no_rtk), style = MaterialTheme.typography.bodySmall, color = muted)
             else if (s.ntrip.host.isBlank() && !s.ntripEnabled) Text(stringResource(R.string.live_ntrip_setup), style = MaterialTheme.typography.bodySmall, color = muted)
         }
