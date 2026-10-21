@@ -18,6 +18,9 @@ its position to the centimetre.
   RTCM message monitor and base-station distance
 • Map with satellite, street and terrain layers; track coloured by fix type; saved points
 • Survey points by averaging, with standard deviations, CEP and 2DRMS, and comparison with a known coordinate
+• Grid coordinates: UTM across Europe and worldwide, ETRS89-LAEA and national grids of EU Member States (e.g.
+  Lambert-93, ITM, PL-1992, PT-TM06, SWEREF 99 TM), shown live and exported with points
+• Fix-loss alert: sound, vibration and notification when the RTK fix drops or corrections stop
 • Stake out saved points to the centimetre
 • Record sessions and export NMEA, CSV, GPX, KML and GeoJSON
 • Configure the u-blox NMEA messages, ports and rate (1-20 Hz) without a PC
@@ -54,7 +57,7 @@ Made by RFSAT Limited, a non-profit R&D company in Dublin and Athens. Developed 
 user chooses it as a source or runs the phone raw GNSS test / recording; positions and measurements stay on the
 phone unless the user shares a file), `ACCESS_MOCK_LOCATION` (provider for the mock location feature, active only when the user
 selects the app in Developer options), `BLUETOOTH_CONNECT` (paired receiver; serving NMEA to paired devices), `BLUETOOTH_ADVERTISE` (only when the user
-makes the phone visible for pairing), `POST_NOTIFICATIONS`.
+makes the phone visible for pairing), `POST_NOTIFICATIONS`, `VIBRATE` (fix-loss alert).
 No background location access is requested.
 
 **Data safety:**

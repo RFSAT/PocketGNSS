@@ -2,6 +2,8 @@ package com.rfsat.pocketgnss.data
 
 import com.rfsat.pocketgnss.core.GnssFix
 import com.rfsat.pocketgnss.protocol.FixQuality
+import com.rfsat.pocketgnss.protocol.Grid
+import com.rfsat.pocketgnss.protocol.GridSystem
 import java.io.BufferedWriter
 import java.io.File
 import java.text.SimpleDateFormat
@@ -111,11 +113,19 @@ object Exporters {
         append("</coordinates></LineString></Placemark></Document></kml>\n")
     }
 
-    fun pointsCsv(points: List<SurveyPoint>): String = buildString {
-        append("name,latitude,longitude,h_ellipsoid_m,h_msl_m,sd_east_m,sd_north_m,sd_up_m,samples,quality,time_utc\n")
-        for (p in points) append("\"%s\",%.10f,%.10f,%.4f,%s,%.4f,%.4f,%.4f,%d,%s,%s\n".format(Locale.US, p.name.replace("\"", "'"),
-            p.latitude, p.longitude, p.heightEllipsoid, p.heightMsl?.let { "%.4f".format(Locale.US, it) } ?: "", p.sdEast, p.sdNorth, p.sdUp,
-            p.samples, p.quality.name, isoTime(p.timeMs)))
+    /** Points as CSV; with a [grid], three more columns: the grid's name, easting and northing (m). */
+    fun pointsCsv(points: List<SurveyPoint>, grid: GridSystem = GridSystem.NONE, utmZone: Int = 0): String = buildString {
+        append("name,latitude,longitude,h_ellipsoid_m,h_msl_m,sd_east_m,sd_north_m,sd_up_m,samples,quality,time_utc")
+        append(if (grid != GridSystem.NONE) ",grid,easting_m,northing_m\n" else "\n")
+        for (p in points) {
+            append("\"%s\",%.10f,%.10f,%.4f,%s,%.4f,%.4f,%.4f,%d,%s,%s".format(Locale.US, p.name.replace("\"", "'"),
+                p.latitude, p.longitude, p.heightEllipsoid, p.heightMsl?.let { "%.4f".format(Locale.US, it) } ?: "", p.sdEast, p.sdNorth, p.sdUp,
+                p.samples, p.quality.name, isoTime(p.timeMs)))
+            val g = Grid.of(grid, p.latitude, p.longitude, p.heightEllipsoid, utmZone)
+            if (g != null) append(",\"%s\",%.4f,%.4f".format(Locale.US, g.label, g.easting, g.northing))
+            else if (grid != GridSystem.NONE) append(",,,")
+            append("\n")
+        }
     }
 
     private fun xml(s: String) = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")

@@ -36,6 +36,7 @@ import com.rfsat.pocketgnss.core.Connection
 import com.rfsat.pocketgnss.core.GnssEngine
 import com.rfsat.pocketgnss.core.MockStatus
 import com.rfsat.pocketgnss.data.CoordFormat
+import com.rfsat.pocketgnss.protocol.GridSystem
 import com.rfsat.pocketgnss.data.HeightRef
 import com.rfsat.pocketgnss.data.CasterProfile
 import com.rfsat.pocketgnss.data.CasterProfiles
@@ -109,6 +110,7 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
                             enabled = com.rfsat.pocketgnss.link.PhoneRtkLink.engineAvailable)
                         if (s.phoneRtk) ChoiceRow(stringResource(R.string.setup_phone_rtk_mode), listOf(false to stringResource(R.string.setup_phone_rtk_moving),
                             true to stringResource(R.string.setup_phone_rtk_static)), s.phoneRtkStatic) { v -> upd { it.copy(phoneRtkStatic = v) } }
+                        if (s.phoneRtk) PhoneProfileRows(engine)
                         Text(stringResource(R.string.setup_phone_rtk_apply), style = MaterialTheme.typography.bodySmall, color = muted)
                     }
                 }
@@ -127,6 +129,19 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
         }
 
         BtShareSection(engine, Modifier.bringIntoViewRequester(btRequester))
+
+        Section(stringResource(R.string.alert_title)) {
+            SwitchRow(stringResource(R.string.alert_switch), s.alertEnabled, { v -> upd { it.copy(alertEnabled = v) } }, stringResource(R.string.alert_help))
+            if (s.alertEnabled) {
+                ChoiceRow(stringResource(R.string.alert_level), listOf(false to stringResource(R.string.fix_rtk_fixed), true to stringResource(R.string.fix_rtk_float)),
+                    s.alertFloat) { v -> upd { it.copy(alertFloat = v) } }
+                ChoiceRow(stringResource(R.string.alert_stale_label), listOf(5 to "5 s", 10 to "10 s", 30 to "30 s"), s.alertStaleSec) { v -> upd { it.copy(alertStaleSec = v) } }
+                ChoiceRow(stringResource(R.string.alert_how), listOf(0 to stringResource(R.string.alert_both), 1 to stringResource(R.string.alert_sound_only),
+                    2 to stringResource(R.string.alert_vibrate_only)), when { s.alertSound && s.alertVibrate -> 0; s.alertSound -> 1; else -> 2 }) { v ->
+                    upd { it.copy(alertSound = v != 2, alertVibrate = v != 1) }
+                }
+            }
+        }
 
         val noProfile = stringResource(R.string.ntrip_profile_none)
         var profileName by remember(s.activeProfile) { mutableStateOf(s.activeProfile) }
@@ -203,9 +218,43 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
         Section(stringResource(R.string.setup_display)) {
             ChoiceRow(stringResource(R.string.disp_coords), listOf(CoordFormat.DECIMAL to stringResource(R.string.disp_decimal),
                 CoordFormat.DMS to stringResource(R.string.disp_dms)), s.coordFormat) { v -> upd { it.copy(coordFormat = v) } }
+            val gridNone = stringResource(R.string.disp_grid_none)
+            val gridUtm = stringResource(R.string.disp_grid_utm)
+            Picker(stringResource(R.string.disp_grid), GridSystem.entries, s.gridSystem, { g ->
+                when (g) { GridSystem.NONE -> gridNone; GridSystem.UTM -> gridUtm; else -> g.label + (g.epsg?.let { " (EPSG:$it)" } ?: "") }
+            }, { v -> upd { it.copy(gridSystem = v) } })
+            if (s.gridSystem == GridSystem.UTM) {
+                val auto = stringResource(R.string.disp_utm_auto)
+                val zoneFmt = stringResource(R.string.disp_utm_zone_n)
+                Picker(stringResource(R.string.disp_utm_zone), (0..60).toList(), s.utmZone, { z ->
+                    if (z == 0) auto else zoneFmt.format(z, z * 6 - 183)
+                }, { v -> upd { it.copy(utmZone = v) } })
+            }
+            Text(stringResource(R.string.disp_grid_help), style = MaterialTheme.typography.bodySmall, color = muted)
+            if (s.gridSystem != GridSystem.NONE) Text(stringResource(R.string.grid_frame), style = MaterialTheme.typography.bodySmall, color = muted)
             ChoiceRow(stringResource(R.string.disp_height), listOf(HeightRef.MSL to stringResource(R.string.disp_msl),
                 HeightRef.ELLIPSOID to stringResource(R.string.disp_ellipsoid)), s.heightRef) { v -> upd { it.copy(heightRef = v) } }
             SwitchRow(stringResource(R.string.disp_screen_on), s.keepScreenOn, { v -> upd { it.copy(keepScreenOn = v) } })
         }
+    }
+}
+
+/** What has been learned about this phone, and whether the engine adapts to it. */
+@Composable
+private fun PhoneProfileRows(engine: GnssEngine) {
+    val s by engine.store.settings.collectAsState()
+    val p = remember(s.phoneProfile) { engine.currentPhoneProfile() }
+    val v = com.rfsat.pocketgnss.rtk.PhoneTuning.verdict(p)
+    SwitchRow(stringResource(R.string.setup_phone_auto), s.phoneRtkAuto, { on -> engine.store.update { it.copy(phoneRtkAuto = on) } },
+        stringResource(when (v) {
+            com.rfsat.pocketgnss.rtk.PhoneTuning.Verdict.LEARNING -> R.string.setup_phone_auto_learning
+            com.rfsat.pocketgnss.rtk.PhoneTuning.Verdict.NO_AR -> R.string.setup_phone_auto_noar
+            com.rfsat.pocketgnss.rtk.PhoneTuning.Verdict.CAUTIOUS -> R.string.setup_phone_auto_cautious
+            com.rfsat.pocketgnss.rtk.PhoneTuning.Verdict.NORMAL -> R.string.setup_phone_auto_normal
+        }))
+    if (p != null && p.epochs > 0) {
+        KeyValue(stringResource(R.string.setup_phone_learned), stringResource(R.string.setup_phone_learned_value, p.epochs / 60.0, p.meanPhaseSats,
+            p.fixableShare * 100, p.slipsPerSatMin))
+        ActionButton(onClick = { engine.store.update { it.copy(phoneProfile = "") } }, compact = true) { Text(stringResource(R.string.setup_phone_forget)) }
     }
 }

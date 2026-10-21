@@ -13,6 +13,9 @@ import android.os.Handler
 import android.os.HandlerThread
 import com.rfsat.pocketgnss.raw.AndroidRaw
 import com.rfsat.pocketgnss.raw.RawConvert
+import com.rfsat.pocketgnss.rtk.FixGate
+import com.rfsat.pocketgnss.rtk.PhoneProfile
+import com.rfsat.pocketgnss.rtk.ProfileLearner
 import com.rfsat.pocketgnss.rtk.RoverArrays
 import com.rfsat.pocketgnss.rtk.RtkBase
 import com.rfsat.pocketgnss.rtk.RtkNative
@@ -51,7 +54,14 @@ data class PhoneRtkState(
  * Without a caster the engine gives a single-point solution; without usable raw measurements (or before the first
  * solution) Android's own location is used, as with the plain phone source.
  */
-class PhoneRtkLink private constructor(private val context: Context, private val options: RtkOptions) : GnssLink {
+class PhoneRtkLink private constructor(
+    private val context: Context,
+    private val options: RtkOptions,
+    profile: PhoneProfile,
+    private val onProfile: (PhoneProfile) -> Unit,
+) : GnssLink {
+    private val learner = ProfileLearner(profile, options.minFixSats)
+    private var learnedEpochs = 0
     private val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
     private val queue = LinkedBlockingQueue<ByteArray>()
     private val engineLock = Any()
@@ -101,7 +111,7 @@ class PhoneRtkLink private constructor(private val context: Context, private val
         if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) throw IOException("Location is off on this phone: turn it on in quick settings")
         val ok = synchronized(engineLock) {
             RtkNative.init(options.mode.code, options.navsys, options.elevationMaskDeg, options.snrMaskDbHz, options.arMode,
-                if (options.glonassAr) 1 else 0, options.errorRatio, options.arRatio, options.maxBaseAgeSec)
+                if (options.glonassAr) 1 else 0, options.errorRatio, options.arRatio, options.maxBaseAgeSec, options.minFixSats)
         }
         if (!ok) throw IOException("Phone RTK engine could not start")
         shared.value = PhoneRtkState()
@@ -134,11 +144,18 @@ class PhoneRtkLink private constructor(private val context: Context, private val
             return
         }
         arrays.fill(e)
+        // Learn this phone: satellites with carrier phase, and how many slipped, per epoch; saved about once a minute.
+        val phaseSats = e.obs.filter { it.phase != null }.map { it.sat }.toSet()
+        val slipSats = e.obs.filter { it.phase != null && it.lli and 1 != 0 }.map { it.sat }.toSet()
+        learner.add(phaseSats.size, slipSats.size)
+        if (++learnedEpochs % 60 == 0) onProfile(learner.profile())
         val (status, sol, base, msg) = synchronized(engineLock) {
             val st = RtkNative.rover(e.gpsWeek, e.towSeconds, arrays.n, arrays.sys, arrays.prn, arrays.codes, arrays.p, arrays.l, arrays.d,
                 arrays.snr, arrays.lli, solOut)
             RtkNative.base(baseOut)
-            Quad(st, RtkSolution.from(solOut), RtkBase.from(baseOut), RtkNative.message())
+            // Untrusted fixes are reported as float (with the float position), see FixGate.
+            val gated = FixGate.apply(RtkSolution.from(solOut), options)
+            Quad(gated.status.code.takeIf { st != 0 } ?: 0, gated, RtkBase.from(baseOut), RtkNative.message())
         }
         val withPhase = e.obs.count { it.phase != null }
         _state.value = PhoneRtkState(if (status != 0) sol else _state.value.solution, base, _state.value.epochs + 1, e.obs.size, withPhase,
@@ -199,6 +216,7 @@ class PhoneRtkLink private constructor(private val context: Context, private val
     override fun close() {
         if (closed) return
         closed = true
+        if (learnedEpochs > 0) onProfile(learner.profile())
         try { lm.unregisterGnssMeasurementsCallback(measurementCallback) } catch (_: Exception) {}
         try { lm.unregisterGnssStatusCallback(statusCallback) } catch (_: Exception) {}
         try { lm.removeUpdates(listener) } catch (_: Exception) {}
@@ -238,10 +256,10 @@ class PhoneRtkLink private constructor(private val context: Context, private val
         val engineAvailable: Boolean get() = RtkNative.available
 
         @Throws(IOException::class)
-        fun open(context: Context, options: RtkOptions): PhoneRtkLink {
+        fun open(context: Context, options: RtkOptions, profile: PhoneProfile, onProfile: (PhoneProfile) -> Unit): PhoneRtkLink {
             if (!RtkNative.available) throw IOException("Phone RTK engine not available on this phone")
             current?.close()
-            return PhoneRtkLink(context.applicationContext, options).also { it.start(); current = it }
+            return PhoneRtkLink(context.applicationContext, options, profile, onProfile).also { it.start(); current = it }
         }
     }
 }

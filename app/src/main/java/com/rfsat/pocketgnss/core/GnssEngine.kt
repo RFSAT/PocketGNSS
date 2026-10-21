@@ -234,6 +234,10 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
      * measurements go through the RTK engine and the NTRIP relay feeds it; if the engine cannot run on this phone,
      * Android's location is used instead.
      */
+    /** The learned profile of this phone model, if any (a profile of another model is ignored). */
+    fun currentPhoneProfile(): com.rfsat.pocketgnss.rtk.PhoneProfile? =
+        com.rfsat.pocketgnss.rtk.PhoneProfile.decode(store.value.phoneProfile)?.takeIf { it.model == android.os.Build.MODEL }
+
     fun connectPhone() {
         if (!phoneHasGnss) { disconnect(context.getString(R.string.no_gnss_short)); return }
         val s = store.value
@@ -242,8 +246,13 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         open(context.getString(if (rtk) R.string.conn_opening_phone_rtk else R.string.conn_opening_phone)) {
             if (rtk) {
                 try {
-                    com.rfsat.pocketgnss.link.PhoneRtkLink.open(context, com.rfsat.pocketgnss.rtk.RtkOptions(
-                        mode = if (s.phoneRtkStatic) com.rfsat.pocketgnss.rtk.RtkMode.STATIC else com.rfsat.pocketgnss.rtk.RtkMode.KINEMATIC))
+                    val base = com.rfsat.pocketgnss.rtk.RtkOptions(
+                        mode = if (s.phoneRtkStatic) com.rfsat.pocketgnss.rtk.RtkMode.STATIC else com.rfsat.pocketgnss.rtk.RtkMode.KINEMATIC)
+                    val profile = currentPhoneProfile()
+                    val options = if (s.phoneRtkAuto) com.rfsat.pocketgnss.rtk.PhoneTuning.tune(base, profile) else base
+                    com.rfsat.pocketgnss.link.PhoneRtkLink.open(context, options, profile ?: com.rfsat.pocketgnss.rtk.PhoneProfile(android.os.Build.MODEL)) { p ->
+                        store.update { it.copy(phoneProfile = p.encode()) }
+                    }
                 } catch (e: IOException) {
                     if (e.message?.startsWith("Location") == true) throw e
                     com.rfsat.pocketgnss.link.PhoneGnssLink.open(context)
@@ -286,6 +295,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         link = l
         model = GnssModel(); rates.clear(); splitter = newSplitter(); bytes = 0; lastDataMs = 0
         _receiver.value = ReceiverInfo(); _fix.value = null; _sats.value = emptyList()
+        alertLogic.reset(); _alerts.value = AlertState()
         _connection.value = Connection.Ready(l.info)
         readerJob = scope.launch(Dispatchers.IO) { readLoop(l) }
         scope.launch {
@@ -359,7 +369,36 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
             engineMessage = rtk?.message))
     }
 
+    // ---------------------------------------------------------------- alerts
+
+    private val alertLogic = FixAlertLogic()
+    private val alerter by lazy { Alerter(context) }
+    private val _alerts = MutableStateFlow(AlertState())
+    /** Current alert state (fix lost / corrections stale), for the Live banner. */
+    val alerts: StateFlow<AlertState> = _alerts.asStateFlow()
+
+    /** Evaluated once a second and on every fix; the simulator and a disconnected source never alert. */
+    private fun checkAlerts(now: Long) = synchronized(alertLogic) {
+        val s = store.value
+        if (!s.alertEnabled || simulator != null || connection.value !is Connection.Ready) {
+            if (_alerts.value != AlertState()) { alertLogic.reset(); _alerts.value = AlertState() }
+            return
+        }
+        alertLogic.threshold = if (s.alertFloat) FixQuality.RTK_FLOAT else FixQuality.RTK_FIXED
+        alertLogic.staleSec = s.alertStaleSec.toDouble()
+        val f = _fix.value
+        val events = alertLogic.update(now, f?.quality ?: FixQuality.NONE, f?.diffAgeSec)
+        for (e in events) {
+            val detail = f?.let { context.getString(R.string.alert_detail, context.getString(com.rfsat.pocketgnss.ui.fixLabel(it.quality)),
+                it.diffAgeSec?.let { a -> "%.0f s".format(java.util.Locale.US, a) } ?: "—") } ?: context.getString(R.string.top_no_fix)
+            alerter.signal(e, s.alertSound, s.alertVibrate, detail)
+        }
+        val st = AlertState(alertLogic.fixLost, alertLogic.correctionsStale)
+        if (st != _alerts.value) _alerts.value = st
+    }
+
     private fun onFix(f: GnssFix, now: Long) {
+        checkAlerts(now)
         val st = store.value
         recorder?.let { r ->
             if (f.quality.rank >= st.logMinQuality.rank && (st.logIntervalSec <= 0 || now - lastLoggedMs >= st.logIntervalSec * 1000 - 20)) {
@@ -415,6 +454,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
             if (r.datum != model.datum || r.lastText != model.lastText) _receiver.value = r.copy(datum = model.datum, lastText = model.lastText)
             // Older than 5 s: the fix is stale (receiver stopped sending).
             _fix.value?.let { if (now - it.receivedAtMs > 5000) _fix.value = null }
+            checkAlerts(now)
         }
         _track.value = synchronized(trackBuf) { trackBuf.toList() }
         recorder?.let { _recording.value = _recording.value.copy(fixes = it.fixes, lines = it.lines) }

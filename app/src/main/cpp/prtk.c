@@ -33,6 +33,7 @@ void prtk_default_opt(prtk_opt_t *o)
     o->eratio = 300.0;   /* phone code noise is much larger than geodetic receivers' */
     o->thresar = 3.0;
     o->maxage = 30.0;
+    o->minfixsats = 5;
 }
 
 static void free_nav(void)
@@ -100,8 +101,9 @@ int prtk_init(const prtk_opt_t *o)
     opt.maxtdiff = o->maxage;
     opt.maxout = 5;
     opt.minlock = 0;
-    opt.minfixsats = 4;
-    opt.minholdsats = 5;
+    opt.minfixsats = o->minfixsats > 0 ? o->minfixsats : 5;
+    opt.minholdsats = opt.minfixsats + 1;
+    opt.arfilter = 1;
     maxage = o->maxage;
 
     if (!alloc_nav()) { strcpy(message, "out of memory"); return 0; }
@@ -283,6 +285,19 @@ int prtk_rover(int week, double tow, int n, const char *sys, const int *prn, con
         ecef2enu(pos, rtk.sol.rr + 3, v);
         for (i = 0; i < 3; i++) sol->vel_enu[i] = v[i];
     }
+    /* float states (positions 0-2 of the filter), so a fix that is not trusted can be reported as float */
+    if (rtk.nx >= 3 && norm(rtk.x, 3) > 0.0) {
+        double fp[3], P3[9], Qe[9];
+        int nx = rtk.nx;
+        ecef2pos(rtk.x, fp);
+        sol->float_llh[0] = fp[0] * R2D; sol->float_llh[1] = fp[1] * R2D; sol->float_llh[2] = fp[2];
+        for (i = 0; i < 3; i++) for (k = 0; k < 3; k++) P3[i + k * 3] = rtk.P[i + k * nx];
+        covenu(fp, P3, Qe);
+        sol->float_std[0] = sqrt(Qe[0] > 0 ? Qe[0] : 0);
+        sol->float_std[1] = sqrt(Qe[4] > 0 ? Qe[4] : 0);
+        sol->float_std[2] = sqrt(Qe[8] > 0 ? Qe[8] : 0);
+    }
+    sol->nfix = rtk.nfix;
     sol->geoid = geoidh(pos);
     sol->ns = rtk.sol.ns;
     sol->ratio = rtk.sol.ratio;

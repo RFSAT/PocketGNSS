@@ -95,9 +95,12 @@ class ScreenshotTest {
     @Test fun history() { simulatorAtFix(); Thread.sleep(4000); shot("09d_tool_history", Tab.TOOLS, ToolId.HISTORY, scrollTo = "Reported accuracy against actual scatter") }
     @Test fun setup_bt_share() { simulatorAtFix(); shot("14d_setup_bt_share", Tab.SETUP, scrollTo = "Share the position over Bluetooth") }
     @Test fun home_bt_card() { simulatorAtFix(); shot("01c_home_bt_card", Tab.HOME, scrollTo = "Phone as GNSS receiver (Bluetooth)") }
+    @Test fun setup_alerts() { simulatorAtFix(); shot("14e_setup_alerts", Tab.SETUP, scrollTo = "Signal") }
     @Test fun ttff() { simulatorAtFix(); shot("11_tool_ttff", Tab.TOOLS, ToolId.TTFF) }
     @Test fun stream() { simulatorAtFix(); shot("12_tool_stream", Tab.TOOLS, ToolId.STREAM) }
     @Test fun log() { simulatorAtFix(); engine.markPoint("P1"); shot("13_log", Tab.LOG) }
+    @Test fun live_grid() { simulatorAtFix(); engine.store.update { it.copy(gridSystem = com.rfsat.pocketgnss.protocol.GridSystem.UTM) }; shot("02c_live_grid", Tab.LIVE) }
+    @Test fun setup_grid() { simulatorAtFix(); engine.store.update { it.copy(gridSystem = com.rfsat.pocketgnss.protocol.GridSystem.UTM) }; shot("14f_setup_grid", Tab.SETUP, scrollTo = "Keep the screen on while connected") }
     @Test fun live_disconnect_row() { simulatorAtFix(); shot("02b_live_top", Tab.LIVE) }
     @Test fun setup() { simulatorAtFix(); shot("14_setup", Tab.SETUP) }
     @Test fun setup_relay() { simulatorAtFix(); engine.store.update { it.copy(ntrip = com.rfsat.pocketgnss.data.CasterProfiles.presets[0].config, activeProfile = com.rfsat.pocketgnss.data.CasterProfiles.presets[0].name) }; shot("14b_setup_relay", Tab.SETUP, scrollTo = "NTRIP relay through the phone") }

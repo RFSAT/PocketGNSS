@@ -47,6 +47,7 @@ typedef struct {
     double eratio;      /* code / phase error ratio (phones: 300) */
     double thresar;     /* AR validation ratio */
     double maxage;      /* maximum age of base observations, s */
+    int minfixsats;     /* minimum satellites with carrier phase to fix ambiguities */
 } prtk_opt_t;
 
 typedef struct {
@@ -62,6 +63,9 @@ typedef struct {
     double age;         /* age of differential (s) */
     double baseline;    /* distance to the base (m), 0 without a base */
     double geoid;       /* geoid separation (m, RTKLIB's embedded EGM96): height above sea level = h - geoid */
+    double float_llh[3];   /* float solution (before ambiguity fixing): lat, lon (deg), h (m) */
+    double float_std[3];   /* its standard deviations east, north, up (m) */
+    int nfix;              /* consecutive epochs with fixed ambiguities */
 } prtk_sol_t;
 
 typedef struct {

@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.7.0 (build 10700)
+Phone RTK reports a fix only once it has held for several seconds, and learns over a few sessions how well this phone tracks carrier phase to tune itself. New fix-loss alert: sound, vibration and a notification when the fix drops or corrections stop. Grid coordinates on Live, Survey and in the points CSV: UTM across Europe and worldwide, ETRS89-LAEA and the national grids of many EU Member States.
+
 ## 1.6.0 (build 10600)
 The phone can now act as a Bluetooth GNSS receiver for other devices: laptops, tablets and field controllers pair with it and receive the position as NMEA, including the RTK fix type and accuracy, from the RFSAT receiver, any external receiver or phone RTK. Set it up once in Setup; afterwards a button on the Home screen switches it on and off. It keeps running with the screen off.
 

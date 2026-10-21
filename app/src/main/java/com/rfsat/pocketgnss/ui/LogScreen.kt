@@ -91,7 +91,7 @@ fun LogScreen(engine: GnssEngine) {
             else {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ActionButton(onClick = { share(context, export(context, "points.kml", Exporters.pointsKml(points)), "application/vnd.google-earth.kml+xml") }, compact = true) { Text("KML") }
-                    ActionButton(onClick = { share(context, export(context, "points.csv", Exporters.pointsCsv(points)), "text/csv") }, compact = true) { Text("CSV") }
+                    ActionButton(onClick = { share(context, export(context, "points.csv", Exporters.pointsCsv(points, s.gridSystem, s.utmZone)), "text/csv") }, compact = true) { Text("CSV") }
                     ActionButton(onClick = { share(context, export(context, "points.geojson", Exporters.pointsGeoJson(points)), "application/geo+json") }, compact = true) { Text("GeoJSON") }
                 }
                 for (p in points.reversed()) {

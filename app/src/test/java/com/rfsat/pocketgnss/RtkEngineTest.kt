@@ -30,7 +30,7 @@ class RtkEngineTest {
     @Test fun twoStationSession() {
         assumeTrue("host build of the RTK engine not available", RtkNative.available)
         val o = RtkOptions(glonass = false, galileo = false, beidou = false, qzss = false)
-        assertTrue(RtkNative.init(o.mode.code, o.navsys, o.elevationMaskDeg, o.snrMaskDbHz, o.arMode, 0, o.errorRatio, o.arRatio, o.maxBaseAgeSec))
+        assertTrue(RtkNative.init(o.mode.code, o.navsys, o.elevationMaskDeg, o.snrMaskDbHz, o.arMode, 0, o.errorRatio, o.arRatio, o.maxBaseAgeSec, o.minFixSats))
         val lines = javaClass.getResourceAsStream("/rtk/two_station_3km.txt")!!.bufferedReader().readLines()
         val arrays = RoverArrays()
         val out = DoubleArray(RtkSolution.SIZE)
@@ -57,8 +57,11 @@ class RtkEngineTest {
                 val st = RtkNative.rover(week.toInt(), tow.toDouble(), arrays.n, arrays.sys, arrays.prn, arrays.codes, arrays.p, arrays.l,
                     arrays.d, arrays.snr, arrays.lli, out)
                 epochs++
-                val s = RtkSolution.from(out)
-                assertEquals(st, s.status.code)
+                val raw = RtkSolution.from(out)
+                assertEquals(st, raw.status.code)
+                // What the app reports: fixes only once confirmed (FixGate).
+                val s = com.rfsat.pocketgnss.rtk.FixGate.apply(raw, o)
+                if (raw.status == RtkStatus.FIX) assertTrue("float alongside fix", raw.hasFloat)
                 if (s.status == RtkStatus.FIX) { fixes++; if (firstFix < 0) firstFix = epochs }
                 if (s.status == RtkStatus.FLOAT) floats++
                 if (s.status != RtkStatus.NONE) last = s
@@ -138,5 +141,47 @@ class RtkEngineTest {
         assertEquals(101, csv.count { it.isNotBlank() })
         val east = csv[60].split(',')[12].toDouble()
         assertEquals(1.0, east, 1e-3)
+    }
+
+    @Test fun fixGate() {
+        val o = RtkOptions()
+        val fix = RtkSolution(RtkStatus.FIX, 2440, 100.0, 38.0, 23.7, 100.0, 0.005, 0.006, 0.01, 0.0, 0.0, 0.0, 8, 12.0, 1.0, 5000.0, 35.0,
+            38.00001, 23.70001, 100.2, 0.25, 0.3, 0.5, consecutiveFixes = 1)
+        // A first-epoch fix is not trusted: float, with the float position and its standard deviations.
+        val g = com.rfsat.pocketgnss.rtk.FixGate.apply(fix, o)
+        assertEquals(RtkStatus.FLOAT, g.status); assertEquals(38.00001, g.latitude, 1e-12); assertEquals(0.3, g.stdNorth, 1e-12)
+        // Held for three epochs with a good ratio and enough satellites: fixed.
+        assertEquals(RtkStatus.FIX, com.rfsat.pocketgnss.rtk.FixGate.apply(fix.copy(consecutiveFixes = 3), o).status)
+        // Low ratio or too few satellites: float.
+        assertEquals(RtkStatus.FLOAT, com.rfsat.pocketgnss.rtk.FixGate.apply(fix.copy(consecutiveFixes = 5, ratio = 2.0), o).status)
+        assertEquals(RtkStatus.FLOAT, com.rfsat.pocketgnss.rtk.FixGate.apply(fix.copy(consecutiveFixes = 5, satellites = 4), o).status)
+        // Other states pass unchanged.
+        assertEquals(RtkStatus.SINGLE, com.rfsat.pocketgnss.rtk.FixGate.apply(fix.copy(status = RtkStatus.SINGLE), o).status)
+    }
+
+    @Test fun phoneLearning() {
+        val o = RtkOptions()
+        // A phone with 3 satellites with phase (never enough to fix): after 10 minutes, no ambiguity fixing.
+        val weak = com.rfsat.pocketgnss.rtk.ProfileLearner(com.rfsat.pocketgnss.rtk.PhoneProfile("SM-S921B"), o.minFixSats)
+        repeat(700) { weak.add(3, 0) }
+        val pw = weak.profile()
+        assertEquals(700L, pw.epochs); assertEquals(3.0, pw.meanPhaseSats, 1e-9); assertEquals(0.0, pw.fixableShare, 1e-9)
+        assertEquals(com.rfsat.pocketgnss.rtk.PhoneTuning.Verdict.NO_AR, com.rfsat.pocketgnss.rtk.PhoneTuning.verdict(pw))
+        assertEquals(0, com.rfsat.pocketgnss.rtk.PhoneTuning.tune(o, pw).arMode)
+        // A good dual-frequency phone: 9 satellites with phase, rare slips: standard settings.
+        val good = com.rfsat.pocketgnss.rtk.ProfileLearner(com.rfsat.pocketgnss.rtk.PhoneProfile("Pixel"), o.minFixSats)
+        repeat(700) { i -> good.add(9, if (i % 120 == 0) 1 else 0) }
+        assertEquals(com.rfsat.pocketgnss.rtk.PhoneTuning.Verdict.NORMAL, com.rfsat.pocketgnss.rtk.PhoneTuning.verdict(good.profile()))
+        // Patchy: enough phase half of the time: fixes must hold longer.
+        val patchy = com.rfsat.pocketgnss.rtk.ProfileLearner(com.rfsat.pocketgnss.rtk.PhoneProfile("X"), o.minFixSats)
+        repeat(700) { i -> patchy.add(if (i % 2 == 0) 6 else 3, 0) }
+        val t = com.rfsat.pocketgnss.rtk.PhoneTuning.tune(o, patchy.profile())
+        assertEquals(10, t.confirmEpochs); assertEquals(4.0, t.arRatio, 1e-9)
+        // Not enough data yet: defaults; and the profile survives storage.
+        assertEquals(com.rfsat.pocketgnss.rtk.PhoneTuning.Verdict.LEARNING, com.rfsat.pocketgnss.rtk.PhoneTuning.verdict(com.rfsat.pocketgnss.rtk.PhoneProfile("Y", epochs = 100)))
+        assertEquals(pw, com.rfsat.pocketgnss.rtk.PhoneProfile.decode(pw.encode()))
+        // A later session merges with the stored profile (weighted by epochs).
+        val again = com.rfsat.pocketgnss.rtk.ProfileLearner(pw, o.minFixSats); repeat(700) { again.add(7, 0) }
+        assertEquals(5.0, again.profile().meanPhaseSats, 1e-9); assertEquals(0.5, again.profile().fixableShare, 1e-9)
     }
 }

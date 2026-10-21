@@ -176,6 +176,7 @@ private fun SurveyTool(engine: GnssEngine) = NeedsReceiver(engine) {
             else {
                 KeyValue(stringResource(R.string.live_lat), formatLat(st.meanLatitude, s.coordFormat), live = true)
                 KeyValue(stringResource(R.string.live_lon), formatLon(st.meanLongitude, s.coordFormat), live = true)
+                GridRows(s, st.meanLatitude, st.meanLongitude, st.meanHeight)
                 KeyValue(stringResource(R.string.survey_h), stringResource(R.string.survey_h_value, formatHeight(st.meanHeight), formatHeight(sv.meanMsl)), live = true)
                 KeyValue(stringResource(R.string.survey_sd), "σE %s · σN %s · σU %s".format(formatDistance(st.sdEast), formatDistance(st.sdNorth), formatDistance(st.sdUp)), live = true)
                 KeyValue(stringResource(R.string.survey_cep), "CEP50 %s · CEP95 %s · 2DRMS %s".format(formatDistance(st.cep50), formatDistance(st.cep95), formatDistance(st.drms2)), live = true)

@@ -6,12 +6,12 @@
 #define FN(name) Java_com_rfsat_pocketgnss_rtk_RtkNative_##name
 
 JNIEXPORT jboolean JNICALL FN(init)(JNIEnv *env, jobject thiz, jint mode, jint navsys, jdouble elmask, jdouble snrmask,
-                                    jint armode, jint gloAr, jdouble eratio, jdouble thresar, jdouble maxage)
+                                    jint armode, jint gloAr, jdouble eratio, jdouble thresar, jdouble maxage, jint minfixsats)
 {
     prtk_opt_t o;
     prtk_default_opt(&o);
     o.mode = mode; o.navsys = navsys; o.elmask_deg = elmask; o.snrmask = snrmask;
-    o.armode = armode; o.glo_ar = gloAr; o.eratio = eratio; o.thresar = thresar; o.maxage = maxage;
+    o.armode = armode; o.glo_ar = gloAr; o.eratio = eratio; o.thresar = thresar; o.maxage = maxage; o.minfixsats = minfixsats;
     return prtk_init(&o) ? JNI_TRUE : JNI_FALSE;
 }
 
@@ -35,7 +35,8 @@ JNIEXPORT jint JNICALL FN(inputRtcmNav)(JNIEnv *env, jobject thiz, jbyteArray da
     return r;
 }
 
-/* out: stat, week, tow, lat, lon, h, x, y, z, sdE, sdN, sdU, vE, vN, vU, ns, ratio, age, baseline, geoid (20) */
+/* out: stat, week, tow, lat, lon, h, x, y, z, sdE, sdN, sdU, vE, vN, vU, ns, ratio, age, baseline, geoid,
+ *      floatLat, floatLon, floatH, floatSdE, floatSdN, floatSdU, nfix (27) */
 JNIEXPORT jint JNICALL FN(rover)(JNIEnv *env, jobject thiz, jint week, jdouble tow, jint n, jbyteArray sys, jintArray prn,
                                  jbyteArray codes, jdoubleArray P, jdoubleArray L, jfloatArray D, jfloatArray snr,
                                  jintArray lli, jdoubleArray out)
@@ -59,12 +60,13 @@ JNIEXPORT jint JNICALL FN(rover)(JNIEnv *env, jobject thiz, jint week, jdouble t
     (*env)->ReleaseFloatArrayElements(env, snr, fs, JNI_ABORT);
     (*env)->ReleaseIntArrayElements(env, lli, il, JNI_ABORT);
     {
-        jdouble v[20] = {
+        jdouble v[27] = {
             s.stat, s.week, s.tow, s.llh[0], s.llh[1], s.llh[2], s.xyz[0], s.xyz[1], s.xyz[2],
             s.enu_std[0], s.enu_std[1], s.enu_std[2], s.vel_enu[0], s.vel_enu[1], s.vel_enu[2],
-            s.ns, s.ratio, s.age, s.baseline, s.geoid
+            s.ns, s.ratio, s.age, s.baseline, s.geoid,
+            s.float_llh[0], s.float_llh[1], s.float_llh[2], s.float_std[0], s.float_std[1], s.float_std[2], s.nfix
         };
-        (*env)->SetDoubleArrayRegion(env, out, 0, 20, v);
+        (*env)->SetDoubleArrayRegion(env, out, 0, 27, v);
     }
     return st;
 }

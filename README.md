@@ -20,7 +20,7 @@ Two hardware versions exist and the app supports both (Setup > Receiver version)
 In both, the receiver applies the corrections itself; the app reads the corrected position. How to set up each route,
 with the D3.5 timings and availability, is in **[docs/rtk-connectivity.md](docs/rtk-connectivity.md)**.
 
-RFSAT Limited. Version 1.6.0 (build 10600).
+RFSAT Limited. Version 1.7.0 (build 10700).
 
 ## Background: the AgriBIT project
 
@@ -60,11 +60,11 @@ agricultural GNSS enabled services*) are listed on the same CORDIS Results page.
 | Tab | Purpose |
 |---|---|
 | Home | Connection card with quick actions, receiver version (asked once if not set), receiver module (from UBX MON-VER), description, RFSAT / AgriBIT credits, Claude AI acknowledgement |
-| Live | Source name with a Disconnect button, fix banner coloured by fix type with accuracy (GST-measured or estimated), position, height MSL / ellipsoid, satellites, DOP, speed, correction age and station, receiver version with what to check when no corrections arrive, per-constellation RTK mode (GNS), phone NTRIP status and base distance, NTRIP / Recording / Mark point buttons, sky plot and C/N0 bars |
+| Live | Source name with a Disconnect button, fix banner coloured by fix type with accuracy (GST-measured or estimated), fix-loss alert strip, position (with grid easting / northing when a grid is chosen), height MSL / ellipsoid, satellites, DOP, speed, correction age and station, receiver version with what to check when no corrections arrive, per-constellation RTK mode (GNS), phone NTRIP status and base distance, NTRIP / Recording / Mark point buttons, sky plot and C/N0 bars |
 | Map | MapLibre with Street / Satellite / Terrain (same raster sources as DBM and PocketSpectro): position coloured by fix, track coloured by fix type, saved points with names, NTRIP base station, follow / recenter / fit / mark / clear |
 | Tools | Survey point · Stake out · Corrections (NTRIP) · Position history · Phone raw GNSS (RTK test) · NMEA output (UBX) · Receiver settings (web) · Time to fix · Data stream |
 | Log | Recording (raw NMEA + fixes CSV, minimum fix and interval), live NMEA viewer (filter by sentence type, pause, show more, copy, share the shown lines as .nmea; last 2000 sentences, nothing saved unless shared), saved points (KML / CSV / GeoJSON), sessions (NMEA / CSV / GPX / KML; phone raw sessions as RINEX / GnssLog / RTCM / ZIP; delete) |
-| Setup | Connection source and its options (Phone: Phone RTK on/off, moving or still), phone NTRIP caster, outputs (mock location, NMEA TCP server), receiver ID and device number, display units, simulator |
+| Setup | Connection source and its options (Phone: Phone RTK on/off, moving or still), phone NTRIP caster, outputs (mock location, NMEA TCP server, phone as Bluetooth GNSS receiver), fix-loss alert, receiver ID and device number, display units and grid, simulator |
 | Exit | Confirms, stops recording, closes the link and outputs |
 
 ### Tools
@@ -135,6 +135,32 @@ own sender queue. Home has a card: before the first set-up it opens Setup > Phon
 button switches it on and off. Runs with the screen off (foreground service). Permissions: BLUETOOTH_CONNECT, and
 BLUETOOTH_ADVERTISE only for "Make visible for pairing".
 
+### Fix-loss alert
+
+On a tractor nobody watches the screen. Setup > Fix-loss alert warns with an alarm tone, vibration and a
+high-priority notification (also with the screen off) when the fix falls below a chosen level (RTK fixed, or RTK
+float / DGNSS) for 3 s, or when corrections are older than a chosen age; a short tone when it is back. It arms only
+once the chosen level has held for 5 s, so a cold start does not alarm. Live shows a red strip while it lasts.
+Logic in `core/Alerts.kt` (`FixAlertLogic`, unit-tested).
+
+### Grid coordinates
+
+Setup > Display > Grid coordinates adds easting / northing to Live and Survey and three columns (grid, easting_m,
+northing_m) to the points CSV (`protocol/Grid.kt`). European Union first, the world second:
+
+| Grid | Where |
+|---|---|
+| UTM, automatic or fixed zone | ETRS89 / UTM (EPSG:25828–25838) across Europe, the national grid in e.g. Germany, Spain, Italy, Denmark, Austria, Czechia, Norway; WGS 84 / UTM (EPSG:326xx / 327xx) elsewhere, 80°S–84°N |
+| ETRS89-LAEA Europe (EPSG:3035) | EU statistics and INSPIRE grids |
+| National grids on ETRS89 | Belgium Lambert 2008 (3812), Estonia L-EST97 (3301), Finland TM35FIN (3067), France Lambert-93 (2154), Greece TM07 (HTRS07), Croatia HTRS96/TM (3765), Ireland ITM (2157), Lithuania LKS94 (3346), Latvia LKS-92 (3059), Poland PL-1992 (2180), Portugal PT-TM06 (3763), Sweden SWEREF 99 TM (3006), Slovenia D96/TM (3794) |
+| Greece EGSA87 (EPSG:2100) | Older datum, 3-parameter shift: about 1 m, flagged in the app |
+
+All are exact projections (Transverse Mercator by the Krüger series to n⁶, Lambert conformal conic, Lambert
+azimuthal equal area), checked against PROJ to 2 mm in `GridTest`. They use the position as delivered: ETRS89 with
+corrections from a European RTK network, WGS 84 / ITRF without (about 0.9 m apart in Europe in 2026), so with RTK the
+grid coordinates are as good as the fix. Grids needing a datum grid file (Netherlands RD, Czech / Slovak S-JTSK,
+Hungary EOV, Romania Stereo 70, UK OSGB36) are not included. A position outside the grid's area gets a warning.
+
 ### Outputs to other apps
 
 * **Mock location**: the receiver's position (ellipsoid height, accuracy, speed, bearing) becomes the phone's GPS
@@ -149,13 +175,14 @@ With a real receiver, recording, NTRIP, mock location and the NMEA server keep r
 ## Code layout
 
 ```
-protocol/   Nmea (NMEA 4.10/4.11 incl. signal IDs), Ubx (CFG-VALSET/VALGET/RST, MON-VER, F9 keys), Rtcm (CRC-24Q,
+protocol/   Grid (UTM, LAEA, national grids), Nmea (NMEA 4.10/4.11 incl. signal IDs), Ubx (CFG-VALSET/VALGET/RST, MON-VER, F9 keys), Rtcm (CRC-24Q,
             1005/1006, WGS-84 geodesy), Ntrip (requests, replies, sourcetable, dechunker), StreamSplitter (NMEA/UBX/RTCM)
 core/       GnssModel (epoch assembly, satellites), Statistics (CEP, 2DRMS, TTFF, rates), GnssEngine (link, parsing,
-            UBX requests, recording, survey, TTFF), NtripClient, Outputs (MockLocation, NmeaServer), LinkService
+            UBX requests, recording, survey, TTFF), NtripClient, Outputs (MockLocation, NmeaServer), LinkService,
+            History (position history), BtServer (Bluetooth NMEA server), Alerts (fix-loss alert)
 link/       GnssLink, UsbSerialLink (usb-serial-for-android), BluetoothSppLink, TcpLink, SimulatedLink
 sim/        SimReceiver
-rtk/        RtkNative (JNI), PhoneRtk (options, solution, rover arrays); native engine in src/main/cpp (prtk.c over RTKLIB)
+rtk/        RtkNative (JNI), PhoneRtk (options, solution, rover arrays, FixGate, phone profile and tuning); native engine in src/main/cpp (prtk.c over RTKLIB)
 raw/        RawConvert (GnssClock/GnssMeasurement -> pseudorange, phase, Doppler, RINEX codes), Rinex (3.04 obs writer),
             GnssLog (GnssLogger "Raw," format), RawAnalyzer (phone RTK capability verdict), PhoneRawLogger (Android side)
 data/       AppSettings (SharedPreferences StateFlow), Records (points CSV, session recorder, KML/GPX/GeoJSON/CSV)

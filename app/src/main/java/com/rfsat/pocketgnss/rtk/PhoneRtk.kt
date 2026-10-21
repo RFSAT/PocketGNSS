@@ -22,6 +22,10 @@ data class RtkOptions(
     val arRatio: Double = 3.0,
     /** Base observations older than this are not used (s). */
     val maxBaseAgeSec: Double = 30.0,
+    /** Minimum satellites with carrier phase before ambiguities are fixed. */
+    val minFixSats: Int = 5,
+    /** A fix is reported only after this many consecutive fixed epochs (else the float solution is shown). */
+    val confirmEpochs: Int = 3,
 ) {
     val navsys: Int get() = (if (gps) 0x01 else 0) or (if (glonass) 0x04 else 0) or (if (galileo) 0x08 else 0) or
         (if (qzss) 0x10 else 0) or (if (beidou) 0x20 else 0)
@@ -61,14 +65,25 @@ data class RtkSolution(
     val baseline: Double,
     /** Geoid separation (EGM96), m: height above sea level = [height] - [geoid]. */
     val geoid: Double,
+    /** Float solution (before ambiguity fixing) and its standard deviations; NaN when not available. */
+    val floatLatitude: Double = Double.NaN,
+    val floatLongitude: Double = Double.NaN,
+    val floatHeight: Double = Double.NaN,
+    val floatStdEast: Double = Double.NaN,
+    val floatStdNorth: Double = Double.NaN,
+    val floatStdUp: Double = Double.NaN,
+    /** Consecutive epochs with fixed ambiguities (RTKLIB). */
+    val consecutiveFixes: Int = 0,
 ) {
+    val hasFloat: Boolean get() = !floatLatitude.isNaN() && !(floatLatitude == 0.0 && floatLongitude == 0.0)
     val speed: Double get() = kotlin.math.hypot(velEast, velNorth)
     val courseDeg: Double? get() = if (speed > 0.2) (Math.toDegrees(kotlin.math.atan2(velEast, velNorth)) + 360) % 360 else null
 
     companion object {
-        const val SIZE = 20
+        const val SIZE = 27
         fun from(v: DoubleArray): RtkSolution = RtkSolution(RtkStatus.of(v[0].toInt()), v[1].toInt(), v[2], v[3], v[4], v[5],
-            v[9], v[10], v[11], v[12], v[13], v[14], v[15].toInt(), v[16], v[17], v[18], v[19])
+            v[9], v[10], v[11], v[12], v[13], v[14], v[15].toInt(), v[16], v[17], v[18], v[19],
+            v[20], v[21], v[22], v[23], v[24], v[25], v[26].toInt())
     }
 }
 
@@ -126,5 +141,92 @@ class RoverArrays(capacity: Int = 256) {
             n++
         }
         return this
+    }
+}
+
+/**
+ * Trust in an RTK fix. RTKLIB reports a fix as soon as one epoch passes its ratio test; with a phone's few, noisy
+ * carrier-phase signals such single-epoch fixes are often wrong (the "fixed" flashes seen in tests). A fix is passed
+ * on only when it has held for [RtkOptions.confirmEpochs] consecutive epochs with an ambiguity ratio of at least
+ * [RtkOptions.arRatio] and [RtkOptions.minFixSats] satellites; otherwise the solution is reported as float, with the
+ * float position and its (larger, honest) standard deviations.
+ */
+object FixGate {
+    fun apply(s: RtkSolution, o: RtkOptions): RtkSolution {
+        if (s.status != RtkStatus.FIX) return s
+        val trusted = s.consecutiveFixes >= o.confirmEpochs && s.ratio >= o.arRatio && s.satellites >= o.minFixSats
+        if (trusted || !s.hasFloat) return if (trusted) s else s.copy(status = RtkStatus.FLOAT)
+        return s.copy(status = RtkStatus.FLOAT, latitude = s.floatLatitude, longitude = s.floatLongitude, height = s.floatHeight,
+            stdEast = s.floatStdEast, stdNorth = s.floatStdNorth, stdUp = s.floatStdUp)
+    }
+}
+
+/**
+ * What PocketGNSS has learned about this phone's raw measurements over past phone RTK sessions: how often enough
+ * satellites carried carrier phase to fix ambiguities, and how often the phase slipped. Stored per phone model.
+ */
+data class PhoneProfile(
+    val model: String,
+    val epochs: Long = 0,
+    /** Mean number of satellites with carrier phase per epoch. */
+    val meanPhaseSats: Double = 0.0,
+    /** Share of epochs with at least [RtkOptions.minFixSats] satellites with carrier phase. */
+    val fixableShare: Double = 0.0,
+    /** Cycle slips / resets per satellite-minute of carrier phase. */
+    val slipsPerSatMin: Double = 0.0,
+) {
+    /** Enough data to judge (about 10 minutes at 1 Hz). */
+    val learned: Boolean get() = epochs >= 600
+
+    fun encode(): String = listOf(model.replace('\t', ' '), epochs, meanPhaseSats, fixableShare, slipsPerSatMin).joinToString("\t")
+
+    companion object {
+        fun decode(s: String?): PhoneProfile? = s?.split('\t')?.takeIf { it.size >= 5 }?.let { f ->
+            PhoneProfile(f[0], f[1].toLongOrNull() ?: 0, f[2].toDoubleOrNull() ?: 0.0, f[3].toDoubleOrNull() ?: 0.0, f[4].toDoubleOrNull() ?: 0.0)
+        }
+    }
+}
+
+/** Accumulates a session's statistics into a [PhoneProfile] (running means weighted by epochs). */
+class ProfileLearner(private var p: PhoneProfile, private val minFixSats: Int) {
+    private var phaseSum = 0.0; private var fixable = 0L; private var slips = 0L; private var phaseSatEpochs = 0L; private var n = 0L
+
+    /** One epoch: satellites with carrier phase, and how many of them flagged a slip. */
+    fun add(phaseSats: Int, slipSats: Int) {
+        n++; phaseSum += phaseSats; phaseSatEpochs += phaseSats; slips += slipSats
+        if (phaseSats >= minFixSats) fixable++
+    }
+
+    /** The profile merged with this session ([epochSec] = epoch interval). */
+    fun profile(epochSec: Double = 1.0): PhoneProfile {
+        if (n == 0L) return p
+        val total = p.epochs + n
+        fun mix(old: Double, new: Double) = (old * p.epochs + new * n) / total
+        val satMin = phaseSatEpochs * epochSec / 60.0
+        val slipRate = if (satMin > 0) slips / satMin else 0.0
+        return p.copy(epochs = total, meanPhaseSats = mix(p.meanPhaseSats, phaseSum / n), fixableShare = mix(p.fixableShare, fixable.toDouble() / n),
+            slipsPerSatMin = mix(p.slipsPerSatMin, slipRate))
+    }
+}
+
+/**
+ * Engine settings derived from a phone's profile. Phones that rarely have enough carrier phase get no ambiguity
+ * fixing at all (honest float / code solutions instead of false fixes); phones whose phase slips often need a fix to
+ * hold longer before it is reported. Until a phone is [PhoneProfile.learned], the defaults apply.
+ */
+object PhoneTuning {
+    enum class Verdict { LEARNING, NO_AR, CAUTIOUS, NORMAL }
+
+    fun verdict(p: PhoneProfile?): Verdict = when {
+        p == null || !p.learned -> Verdict.LEARNING
+        p.fixableShare < 0.2 -> Verdict.NO_AR
+        p.slipsPerSatMin > 0.5 || p.fixableShare < 0.6 -> Verdict.CAUTIOUS
+        else -> Verdict.NORMAL
+    }
+
+    fun tune(base: RtkOptions, p: PhoneProfile?): RtkOptions = when (verdict(p)) {
+        Verdict.NO_AR -> base.copy(arMode = 0)
+        Verdict.CAUTIOUS -> base.copy(confirmEpochs = maxOf(base.confirmEpochs, 10), arRatio = maxOf(base.arRatio, 4.0))
+        else -> base
     }
 }

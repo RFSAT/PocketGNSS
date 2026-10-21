@@ -66,6 +66,11 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
     val rtkState by com.rfsat.pocketgnss.link.PhoneRtkLink.state.collectAsState()
 
     Column(Modifier.verticalScroll(rememberScrollState()).padding(vertical = 6.dp)) {
+        val alert by engine.alerts.collectAsState()
+        if (alert.fixLost || alert.correctionsStale) Text(
+            stringResource(if (alert.fixLost) R.string.alert_fix_lost else R.string.alert_stale),
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp).background(AlarmRed, RoundedCornerShape(10.dp)).padding(10.dp),
+            color = Color.White, fontWeight = FontWeight.Bold)
         // Fix banner: the colour and the expected accuracy class, readable at arm's length on a tractor.
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).background(fixColor(q), RoundedCornerShape(14.dp)).padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -96,6 +101,7 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
             else {
                 KeyValue(stringResource(R.string.live_lat), formatLat(f.latitude, s.coordFormat), live = true)
                 KeyValue(stringResource(R.string.live_lon), formatLon(f.longitude, s.coordFormat), live = true)
+                GridRows(s, f.latitude, f.longitude, f.ellipsoidHeight)
                 KeyValue(stringResource(if (s.heightRef == HeightRef.MSL) R.string.live_height_msl else R.string.live_height_ell),
                     formatHeight(heightOf(f, s.heightRef)), live = true)
                 KeyValue(stringResource(R.string.live_accuracy), stringResource(R.string.live_accuracy_value, formatAccuracy(f.horizontalAccuracy),

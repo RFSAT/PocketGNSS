@@ -29,6 +29,10 @@ data class AppSettings(
     val phoneRtk: Boolean = true,
     /** Phone RTK: phone held still on a point (static) instead of moving (kinematic). */
     val phoneRtkStatic: Boolean = false,
+    /** Adapt the RTK engine to what this phone has shown in past sessions (PhoneTuning). */
+    val phoneRtkAuto: Boolean = true,
+    /** Learned profile of this phone (PhoneProfile.encode), "" = none yet. */
+    val phoneProfile: String = "",
     // Corrections from the phone
     val ntripEnabled: Boolean = false,
     val ntrip: NtripConfig = NtripConfig(),
@@ -40,6 +44,13 @@ data class AppSettings(
     val nmeaServer: Boolean = false,
     /** The phone as a Bluetooth GNSS receiver (SPP server streaming NMEA). */
     val btServer: Boolean = false,
+    /** Sound / vibrate / notify when the fix drops below [alertFloat]-or-fixed or corrections go stale. */
+    val alertEnabled: Boolean = true,
+    /** Alert threshold: RTK float (true) or RTK fixed (false). */
+    val alertFloat: Boolean = false,
+    val alertStaleSec: Int = 10,
+    val alertSound: Boolean = true,
+    val alertVibrate: Boolean = true,
     /** Set once the user has gone through the Bluetooth sharing set-up (Home then switches it on directly). */
     val btServerConfigured: Boolean = false,
     /** Send only the position sentences (GGA, RMC, GST, GSA, VTG, GNS, ZDA, GLL), not satellites in view. */
@@ -48,6 +59,10 @@ data class AppSettings(
     val nmeaServerLocalOnly: Boolean = true,
     // Display
     val coordFormat: CoordFormat = CoordFormat.DECIMAL,
+    /** Grid (plane) coordinates shown beside latitude / longitude and added to point exports. */
+    val gridSystem: com.rfsat.pocketgnss.protocol.GridSystem = com.rfsat.pocketgnss.protocol.GridSystem.NONE,
+    /** UTM zone: 0 = the zone of the position, else a fixed zone (1..60). */
+    val utmZone: Int = 0,
     val heightRef: HeightRef = HeightRef.MSL,
     val keepScreenOn: Boolean = true,
     val mapLayer: MapLayer = MapLayer.SATELLITE,
@@ -95,6 +110,8 @@ class SettingsStore(context: Context, private val cipher: SecretCipher = Keystor
             autoReconnect = prefs.getBoolean("autoReconnect", d.autoReconnect),
             phoneRtk = prefs.getBoolean("phoneRtk", d.phoneRtk),
             phoneRtkStatic = prefs.getBoolean("phoneRtkStatic", d.phoneRtkStatic),
+            phoneRtkAuto = prefs.getBoolean("phoneRtkAuto", d.phoneRtkAuto),
+            phoneProfile = prefs.getString("phoneProfile", d.phoneProfile) ?: "",
             ntripEnabled = prefs.getBoolean("ntripOn", d.ntripEnabled),
             profiles = CasterProfiles.decode(prefs.getString("casterProfiles", null), cipher),
             activeProfile = prefs.getString("casterActive", "") ?: "",
@@ -111,11 +128,18 @@ class SettingsStore(context: Context, private val cipher: SecretCipher = Keystor
             mockLocation = prefs.getBoolean("mock", d.mockLocation),
             nmeaServer = prefs.getBoolean("server", d.nmeaServer),
             btServer = prefs.getBoolean("btServer", d.btServer),
+            alertEnabled = prefs.getBoolean("alertOn", d.alertEnabled),
+            alertFloat = prefs.getBoolean("alertFloat", d.alertFloat),
+            alertStaleSec = prefs.getInt("alertStale", d.alertStaleSec),
+            alertSound = prefs.getBoolean("alertSound", d.alertSound),
+            alertVibrate = prefs.getBoolean("alertVibrate", d.alertVibrate),
             btServerConfigured = prefs.getBoolean("btServerConfigured", d.btServerConfigured),
             btServerPositionOnly = prefs.getBoolean("btServerPosOnly", d.btServerPositionOnly),
             nmeaServerPort = prefs.getInt("serverPort", d.nmeaServerPort),
             nmeaServerLocalOnly = prefs.getBoolean("serverLocal", d.nmeaServerLocalOnly),
             coordFormat = enumOr(prefs.getString("coordFormat", null), d.coordFormat),
+            gridSystem = enumOr(prefs.getString("gridSystem", null), d.gridSystem),
+            utmZone = prefs.getInt("utmZone", d.utmZone).coerceIn(0, 60),
             heightRef = enumOr(prefs.getString("heightRef", null), d.heightRef),
             keepScreenOn = prefs.getBoolean("screenOn", d.keepScreenOn),
             mapLayer = enumOr(prefs.getString("mapLayer", null), d.mapLayer),
@@ -137,6 +161,7 @@ class SettingsStore(context: Context, private val cipher: SecretCipher = Keystor
             .putString("tcpHost", s.tcpHost).putInt("tcpPort", s.tcpPort)
             .putBoolean("autoReconnect", s.autoReconnect)
             .putBoolean("phoneRtk", s.phoneRtk).putBoolean("phoneRtkStatic", s.phoneRtkStatic)
+            .putBoolean("phoneRtkAuto", s.phoneRtkAuto).putString("phoneProfile", s.phoneProfile)
             .putBoolean("ntripOn", s.ntripEnabled)
             .putString("ntripHost", s.ntrip.host).putInt("ntripPort", s.ntrip.port)
             .putString("ntripMount", s.ntrip.mountpoint).putString("ntripUser", s.ntrip.user)
@@ -145,10 +170,12 @@ class SettingsStore(context: Context, private val cipher: SecretCipher = Keystor
             .putString("casterProfiles", CasterProfiles.encode(s.profiles, cipher)).putString("casterActive", s.activeProfile)
             .putBoolean("ntripV2", s.ntrip.version2).putBoolean("ntripTls", s.ntrip.tls).putInt("ntripGga", s.ntrip.ggaIntervalSec)
             .putBoolean("mock", s.mockLocation)
+            .putBoolean("alertOn", s.alertEnabled).putBoolean("alertFloat", s.alertFloat).putInt("alertStale", s.alertStaleSec)
+            .putBoolean("alertSound", s.alertSound).putBoolean("alertVibrate", s.alertVibrate)
             .putBoolean("btServer", s.btServer).putBoolean("btServerConfigured", s.btServerConfigured)
             .putBoolean("btServerPosOnly", s.btServerPositionOnly)
             .putBoolean("server", s.nmeaServer).putInt("serverPort", s.nmeaServerPort).putBoolean("serverLocal", s.nmeaServerLocalOnly)
-            .putString("coordFormat", s.coordFormat.name).putString("heightRef", s.heightRef.name)
+            .putString("coordFormat", s.coordFormat.name).putString("gridSystem", s.gridSystem.name).putInt("utmZone", s.utmZone).putString("heightRef", s.heightRef.name)
             .putBoolean("screenOn", s.keepScreenOn).putString("mapLayer", s.mapLayer.name)
             .putString("logMinQ", s.logMinQuality.name).putFloat("logInterval", s.logIntervalSec.toFloat())
             .putString("receiverId", s.receiverId).putString("deviceNumber", s.deviceNumber)

@@ -39,6 +39,30 @@ measurements the engine needs.
 * **Corrections**: the stream must contain broadcast ephemerides (RTCM 1019 / 1020 / 1042 / 1045 / 1046; Live warns
   when none arrive) and the base must be close (network / VRS streams, or a single station within about 20 km).
 
+## Trusting a fix
+
+RTKLIB declares a fix as soon as one epoch passes the ambiguity ratio test. With a phone's few, noisy carrier-phase
+signals such single-epoch fixes are often wrong: they show as brief "RTK fixed" flashes. PocketGNSS therefore
+reports a fix only when it has held for 3 consecutive epochs with a ratio of at least 3 and at least 5 satellites
+(RTKLIB is also set to need 5 satellites before fixing and 6 before holding, and to drop new satellites into the
+fix gradually). Otherwise the epoch is shown as RTK float, with the float position and its larger, honest
+standard deviations (`FixGate` in `rtk/PhoneRtk.kt`, unit-tested).
+
+## Learning the phone
+
+Each phone RTK session adds to a profile of this phone model: satellites with carrier phase per epoch, the share of
+epochs with enough of them to fix, and cycle slips per satellite-minute (saved every minute and at the end). After
+about 10 minutes in total the profile is "learned" and, with *Adapt to this phone* on (Setup > Phone), the engine
+is tuned:
+
+| Profile | Setting |
+|---|---|
+| Enough phase in fewer than 20 % of epochs | No ambiguity fixing: honest float / code solutions instead of false fixes |
+| Enough phase in fewer than 60 % of epochs, or more than 0.5 slips per satellite-minute | Cautious: a fix must hold 10 epochs with ratio 4 |
+| Otherwise | The defaults above |
+
+Setup shows the profile and the verdict, and can reset it.
+
 ## How it works
 
 ```
@@ -53,7 +77,7 @@ NTRIP relay ──RTCM 3──> PhoneRtkLink.write ──> input_rtcm3 ─> base
 * `rtk/RtkNative.kt`, `rtk/PhoneRtk.kt` (options, solution, arrays), `link/PhoneRtkLink.kt` (Android side; the link
   accepts RTCM like a receiver, so the existing NTRIP relay feeds it and sends its GGA).
 * Phone settings: kinematic or static, GPS + Galileo + GLONASS + BeiDou + QZSS, 15° mask, code/phase error ratio 300
-  (phone code is noisy), continuous ambiguity resolution with ratio 3, no GLONASS ambiguity fixing
+  (phone code is noisy), continuous ambiguity resolution with ratio 3 (confirmed over 3 epochs, see above), no GLONASS ambiguity fixing
   (inter-channel biases), broadcast ionosphere, Saastamoinen troposphere, base data up to 30 s old.
 * If the native engine is not available for a phone's processor, the app falls back to Android's location.
 
