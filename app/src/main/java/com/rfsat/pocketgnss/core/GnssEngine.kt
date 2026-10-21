@@ -129,6 +129,12 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     val mock = MockLocation(context)
     val server = NmeaServer()
 
+    /**
+     * True when the phone has a GNSS receiver of its own. Without one, PocketGNSS is only useful with an external
+     * receiver (USB, Bluetooth, network); the screens say so and the phone source and raw tools are not offered.
+     */
+    val phoneHasGnss: Boolean get() = context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LOCATION_GPS)
+
     val sessionsRoot: File = File(context.getExternalFilesDir(null) ?: context.filesDir, "sessions").apply { mkdirs() }
     private val pointStore = PointStore(File(File(context.getExternalFilesDir(null) ?: context.filesDir, "points"), "points.csv"))
 
@@ -215,9 +221,27 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     }
 
     /** The phone's own GNSS chip (needs ACCESS_FINE_LOCATION, asked by the activity). */
+    /**
+     * The phone's own GNSS (needs ACCESS_FINE_LOCATION, asked by the activity). With phone RTK on (default) the raw
+     * measurements go through the RTK engine and the NTRIP relay feeds it; if the engine cannot run on this phone,
+     * Android's location is used instead.
+     */
     fun connectPhone() {
-        if (ntripClient.running && !rtcmCapture) ntripClient.stop()
-        open(context.getString(R.string.conn_opening_phone)) { com.rfsat.pocketgnss.link.PhoneGnssLink.open(context) }
+        if (!phoneHasGnss) { disconnect(context.getString(R.string.no_gnss_short)); return }
+        val s = store.value
+        val rtk = s.phoneRtk && com.rfsat.pocketgnss.link.PhoneRtkLink.engineAvailable
+        if (!rtk && ntripClient.running && !rtcmCapture) ntripClient.stop()
+        open(context.getString(if (rtk) R.string.conn_opening_phone_rtk else R.string.conn_opening_phone)) {
+            if (rtk) {
+                try {
+                    com.rfsat.pocketgnss.link.PhoneRtkLink.open(context, com.rfsat.pocketgnss.rtk.RtkOptions(
+                        mode = if (s.phoneRtkStatic) com.rfsat.pocketgnss.rtk.RtkMode.STATIC else com.rfsat.pocketgnss.rtk.RtkMode.KINEMATIC))
+                } catch (e: IOException) {
+                    if (e.message?.startsWith("Location") == true) throw e
+                    com.rfsat.pocketgnss.link.PhoneGnssLink.open(context)
+                }
+            } else com.rfsat.pocketgnss.link.PhoneGnssLink.open(context)
+        }
     }
 
     fun connectSimulator() {

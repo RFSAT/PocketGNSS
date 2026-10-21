@@ -2,8 +2,6 @@ package com.rfsat.pocketgnss.raw
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.location.GnssClock
-import android.location.GnssMeasurement
 import android.location.GnssMeasurementRequest
 import android.location.GnssMeasurementsEvent
 import android.location.Location
@@ -198,8 +196,8 @@ class PhoneRawLogger(
 
     private fun handle(event: GnssMeasurementsEvent) {
         gotEvents = true
-        val c = toClock(event.clock)
-        val ms = event.measurements.map { toMeasurement(it) }
+        val c = AndroidRaw.clock(event.clock)
+        val ms = event.measurements.map { AndroidRaw.measurement(it) }
         analyzer.add(c, ms)
         log?.let { w -> for (m in ms) { w.write(GnssLog.raw(c, m)); w.write("\n"); rawLines++ } }
         rinex?.let { w -> RawConvert.epoch(c, ms, lastDisc)?.let { w.add(it) } }
@@ -223,46 +221,6 @@ class PhoneRawLogger(
             } catch (_: Exception) {}
         }
     }
-
-    private fun toClock(k: GnssClock) = RawClock(
-        timeNanos = k.timeNanos,
-        fullBiasNanos = if (k.hasFullBiasNanos()) k.fullBiasNanos else null,
-        biasNanos = if (k.hasBiasNanos()) k.biasNanos else 0.0,
-        biasUncertaintyNanos = if (k.hasBiasUncertaintyNanos()) k.biasUncertaintyNanos else null,
-        driftNanosPerSecond = if (k.hasDriftNanosPerSecond()) k.driftNanosPerSecond else null,
-        driftUncertaintyNanosPerSecond = if (k.hasDriftUncertaintyNanosPerSecond()) k.driftUncertaintyNanosPerSecond else null,
-        timeUncertaintyNanos = if (k.hasTimeUncertaintyNanos()) k.timeUncertaintyNanos else null,
-        leapSecond = if (k.hasLeapSecond()) k.leapSecond else null,
-        hardwareClockDiscontinuityCount = k.hardwareClockDiscontinuityCount,
-        utcTimeMillis = System.currentTimeMillis(),
-        elapsedRealtimeNanos = if (Build.VERSION.SDK_INT >= 29 && k.hasElapsedRealtimeNanos()) k.elapsedRealtimeNanos else null,
-    )
-
-    @Suppress("DEPRECATION")
-    private fun toMeasurement(m: GnssMeasurement) = RawMeasurement(
-        constellation = m.constellationType,
-        svid = m.svid,
-        carrierHz = if (m.hasCarrierFrequencyHz()) m.carrierFrequencyHz.toDouble() else null,
-        codeType = if (Build.VERSION.SDK_INT >= 29 && m.hasCodeType()) m.codeType else null,
-        timeOffsetNanos = m.timeOffsetNanos,
-        state = m.state,
-        receivedSvTimeNanos = m.receivedSvTimeNanos,
-        receivedSvTimeUncertaintyNanos = m.receivedSvTimeUncertaintyNanos,
-        cn0DbHz = m.cn0DbHz,
-        pseudorangeRateMps = m.pseudorangeRateMetersPerSecond,
-        pseudorangeRateUncertaintyMps = m.pseudorangeRateUncertaintyMetersPerSecond,
-        adrState = m.accumulatedDeltaRangeState,
-        adrMeters = m.accumulatedDeltaRangeMeters,
-        adrUncertaintyMeters = m.accumulatedDeltaRangeUncertaintyMeters,
-        multipath = m.multipathIndicator,
-        snrDb = if (m.hasSnrInDb()) m.snrInDb else null,
-        agcDb = if (m.hasAutomaticGainControlLevelDb()) m.automaticGainControlLevelDb else null,
-        basebandCn0DbHz = if (Build.VERSION.SDK_INT >= 30 && m.hasBasebandCn0DbHz()) m.basebandCn0DbHz else null,
-        fullIsbNanos = if (Build.VERSION.SDK_INT >= 30 && m.hasFullInterSignalBiasNanos()) m.fullInterSignalBiasNanos else null,
-        fullIsbUncertaintyNanos = if (Build.VERSION.SDK_INT >= 30 && m.hasFullInterSignalBiasUncertaintyNanos()) m.fullInterSignalBiasUncertaintyNanos else null,
-        satelliteIsbNanos = if (Build.VERSION.SDK_INT >= 30 && m.hasSatelliteInterSignalBiasNanos()) m.satelliteInterSignalBiasNanos else null,
-        satelliteIsbUncertaintyNanos = if (Build.VERSION.SDK_INT >= 30 && m.hasSatelliteInterSignalBiasUncertaintyNanos()) m.satelliteInterSignalBiasUncertaintyNanos else null,
-    )
 
     /** True when measurement events arrived (false after a test = the phone delivers no raw measurements). */
     val receivedAny: Boolean get() = gotEvents

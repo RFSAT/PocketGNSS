@@ -36,6 +36,12 @@ class ScreenshotTest {
     @get:Rule val compose = createComposeRule()
     private val engine: GnssEngine get() = (RuntimeEnvironment.getApplication() as GnssApp).engine
 
+    /** A phone with a GNSS chip, as nearly all are (Robolectric reports none by default). */
+    @org.junit.Before fun phoneWithGnss() = gnss(true)
+
+    private fun gnss(present: Boolean) = org.robolectric.Shadows.shadowOf(RuntimeEnvironment.getApplication().packageManager)
+        .setSystemFeature(android.content.pm.PackageManager.FEATURE_LOCATION_GPS, present)
+
     private fun simulatorAtFix(fixed: Boolean = true, survey: Boolean = false, variant: com.rfsat.pocketgnss.link.ReceiverVariant = com.rfsat.pocketgnss.link.ReceiverVariant.LTE) {
         engine.store.update { it.copy(source = LinkKind.SIMULATOR, receiverVariant = variant) }
         engine.connectSimulator()
@@ -65,6 +71,8 @@ class ScreenshotTest {
         }
     }
 
+    @Test fun home_phone_without_gnss() { gnss(false); engine.store.update { it.copy(source = LinkKind.USB) }; engine.disconnect(); shot("00b_home_phone_without_gnss", Tab.HOME) }
+    @Test fun setup_phone_rtk() { simulatorAtFix(); engine.store.update { it.copy(source = LinkKind.PHONE) }; shot("14c_setup_phone_rtk", Tab.SETUP) }
     @Test fun home_no_receiver() { engine.store.update { it.copy(source = LinkKind.USB) }; engine.disconnect(); shot("00_home_no_receiver", Tab.HOME) }
     @Test fun home() { simulatorAtFix(); shot("01_home", Tab.HOME) }
     @Test fun live_fixed() { simulatorAtFix(); shot("02_live_rtk_fixed", Tab.LIVE) }

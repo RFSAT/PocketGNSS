@@ -4,12 +4,20 @@ plugins {
 }
 
 // The one place to change the app version.
-val appVersion = "1.3.0"
+val appVersion = "1.4.0"
 val appVersionCode = appVersion.split(".").map { it.toInt() }.let { (a, b, c) -> a * 10000 + b * 100 + c }
 
 android {
     namespace = "com.rfsat.pocketgnss"
     compileSdk = 36
+    // Phone RTK engine (RTKLIB demo5, C): pinned NDK and CMake so local and CI builds match.
+    ndkVersion = "29.0.14206865"
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
 
     defaultConfig {
         // Permanent once published on Google Play.
@@ -25,14 +33,6 @@ android {
     }
 
     signingConfigs {
-        // Fixed debug key kept in the repository, so every CI debug APK installs over the previous one
-        // (the runner would otherwise sign each build with a new random debug key). Not used for Play.
-        getByName("debug") {
-            storeFile = file("debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-        }
         create("release") {
             // Same secret names as the other RFSAT apps (DBM, BAS, TinyRAD, PocketSpectro); absent locally,
             // in which case the release build stays unsigned.
@@ -48,14 +48,13 @@ android {
 
     buildTypes {
         debug {
-            // Side-by-side with the Play version: com.PocketGNSS.debug, labelled "PocketGNSS debug" in the launcher.
-            applicationIdSuffix = ".debug"
-            manifestPlaceholders["appLabel"] = "PocketGNSS debug"
-            versionNameSuffix = "-debug"
-            signingConfig = signingConfigs.getByName("debug")
+            // Only compiled for the unit tests and screenshots (CI builds no debug APK).
             isPseudoLocalesEnabled = true
         }
         release {
+            // Symbol tables of our native code (RTKLIB engine) go inside the AAB, where Play reads them for
+            // crash reports: nothing to upload by hand.
+            ndk { debugSymbolLevel = "SYMBOL_TABLE" }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -117,4 +116,29 @@ dependencies {
     testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.76.0")
     testImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+}
+
+// Host (Linux) build of the phone RTK engine, so the JVM unit tests run the same C code through the same JNI
+// bridge (RtkEngineTest, a real two-station RTK session). Skipped on other systems or without a C compiler;
+// the test then skips itself.
+val hostRtkDir = layout.buildDirectory.dir("hostlib")
+val buildHostRtk by tasks.registering(Exec::class) {
+    val cpp = file("src/main/cpp")
+    val outDir = hostRtkDir.get().asFile
+    val javaHome = File(System.getProperty("java.home"))
+    val sources = listOf("prtk.c", "prtk_jni.c").map { File(cpp, it).path } +
+        listOf("rtkcmn", "rtkpos", "lambda", "ephemeris", "preceph", "sbas", "ionex", "pntpos", "ppp", "ppp_ar", "rtcm", "rtcm2",
+            "rtcm3", "rtcm3e", "tides", "geoid", "trace").map { File(cpp, "rtklib/$it.c").path }
+    inputs.dir(cpp)
+    outputs.dir(outDir)
+    onlyIf { System.getProperty("os.name").startsWith("Linux") && File(javaHome, "include/jni.h").exists() }
+    doFirst { outDir.mkdirs() }
+    isIgnoreExitValue = true
+    commandLine(listOf("cc", "-shared", "-fPIC", "-O2", "-std=gnu99", "-w", "-DENAGLO", "-DENAGAL", "-DENAQZS", "-DENACMP",
+        "-DENAIRN", "-DNFREQ=3", "-DNEXOBS=0", "-I${javaHome}/include", "-I${javaHome}/include/linux", "-I${cpp}/rtklib", "-I$cpp",
+        "-o", File(outDir, "libprtk.so").path) + sources + listOf("-lm"))
+}
+tasks.withType<Test>().configureEach {
+    dependsOn(buildHostRtk)
+    systemProperty("java.library.path", hostRtkDir.get().asFile.path)
 }

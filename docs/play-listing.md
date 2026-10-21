@@ -24,6 +24,8 @@ its position to the centimetre.
 • Open the receiver's own web settings over its Wi-Fi hotspot
 • Time-to-fix and data-rate tests
 • Provide the RTK position to other apps (mock location) or over a local NMEA TCP server
+• Phone RTK: use the phone's own GNSS chip with your NTRIP corrections (accuracy depends on the phone; best with
+  dual-frequency phones)
 • Phone raw GNSS test: does this phone's GNSS chip deliver carrier phase for RTK? Record RINEX and the caster's
   RTCM stream for post-processing (RTKLIB, MATLAB)
 • Built-in simulator: try every screen and tool without a receiver

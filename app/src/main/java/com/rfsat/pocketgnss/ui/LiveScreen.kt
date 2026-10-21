@@ -59,7 +59,11 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val f = fix
     val q = f?.quality ?: FixQuality.NONE
-    val phoneChip = (conn as? Connection.Ready)?.info?.kind == com.rfsat.pocketgnss.link.LinkKind.PHONE
+    val linkInfo = (conn as? Connection.Ready)?.info
+    // The phone's GNSS: with the RTK engine it takes corrections like a receiver; without, it cannot use them.
+    val phoneChip = linkInfo?.kind == com.rfsat.pocketgnss.link.LinkKind.PHONE
+    val phoneRtk = linkInfo?.phoneRtk == true
+    val rtkState by com.rfsat.pocketgnss.link.PhoneRtkLink.state.collectAsState()
 
     Column(Modifier.verticalScroll(rememberScrollState()).padding(vertical = 6.dp)) {
         // Fix banner: the colour and the expected accuracy class, readable at arm's length on a tractor.
@@ -133,7 +137,7 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ToggleButton(on = s.ntripEnabled, label = stringResource(if (s.ntripEnabled) R.string.live_ntrip_on else R.string.live_ntrip_off),
                     onClick = { if (!s.ntripEnabled && s.ntrip.mountpoint.isBlank()) choose = true else engine.setNtrip(!s.ntripEnabled) },
-                    enabled = phoneChip.not() && (s.ntrip.host.isNotBlank() || s.ntripEnabled),
+                    enabled = (!phoneChip || phoneRtk) && (s.ntrip.host.isNotBlank() || s.ntripEnabled),
                     modifier = Modifier.weight(1f), narrow = true)
                 ToggleButton(on = rec.active, label = stringResource(if (rec.active) R.string.live_rec_on else R.string.live_rec_off),
                     onClick = { if (rec.active) engine.stopRecording() else engine.startRecording() }, modifier = Modifier.weight(1f), narrow = true)
@@ -142,7 +146,16 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
                     Text(stringResource(R.string.live_mark_short), maxLines = 1, softWrap = false)
                 }
             }
-            if (phoneChip) Text(stringResource(R.string.live_phone_no_rtk), style = MaterialTheme.typography.bodySmall, color = muted)
+            if (phoneRtk) {
+                val b = rtkState.base
+                KeyValue(stringResource(R.string.live_rtk_engine), stringResource(R.string.live_rtk_engine_value, rtkState.signals, rtkState.withPhase,
+                    rtkState.solution?.ratio ?: 0.0), live = true, valueColor = if (rtkState.noPhase && rtkState.epochs > 5) WarnAmber else Color.Unspecified)
+                if (b != null && b.frames > 0) KeyValue(stringResource(R.string.live_rtk_base), stringResource(R.string.live_rtk_base_value, b.stationId, b.satellites,
+                    b.ephemerides + b.glonassEphemerides) + if (!b.hasPosition) " · " + stringResource(R.string.live_rtk_no_basepos) else "", live = true)
+                if (rtkState.noPhase && rtkState.epochs > 5) Text(stringResource(R.string.live_rtk_nophase), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+                else if (!s.ntripEnabled) Text(stringResource(R.string.live_rtk_hint), style = MaterialTheme.typography.bodySmall, color = muted)
+                else if (b != null && b.frames > 0 && b.ephemerides == 0) Text(stringResource(R.string.live_rtk_noeph), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+            } else if (phoneChip) Text(stringResource(R.string.live_phone_no_rtk), style = MaterialTheme.typography.bodySmall, color = muted)
             else if (s.ntrip.host.isBlank() && !s.ntripEnabled) Text(stringResource(R.string.live_ntrip_setup), style = MaterialTheme.typography.bodySmall, color = muted)
         }
 

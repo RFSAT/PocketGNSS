@@ -32,13 +32,25 @@ data class PhoneFix(
     val verticalAccuracy: Float?,
     val speed: Float?,
     val bearing: Float?,
+    /** GGA fix quality: 1 autonomous, 2 differential, 4 RTK fixed, 5 RTK float (phone RTK engine). */
+    val quality: Int = 1,
+    /** Age of the corrections, s, and the base station ID (GGA fields 13-14). */
+    val diffAgeSec: Double? = null,
+    val stationId: Int? = null,
+    /** Standard deviations east / north / up from the RTK filter, m (GST); null = from [accuracy]. */
+    val stdEast: Double? = null,
+    val stdNorth: Double? = null,
+    val stdUp: Double? = null,
+    /** Satellites in the solution, when the engine says (else those Android marks "used in fix"). */
+    val satellitesUsed: Int? = null,
 )
 
 /**
  * Turns the phone's own GNSS (Android Location + GnssStatus) into the same NMEA a receiver sends: GGA, RMC, VTG,
  * GSA per constellation, GSV per constellation and signal, and GST carrying Android's accuracy estimate. Then
- * every screen and tool works with the phone as the source. Phones give single-frequency or L1/L5 autonomous fixes
- * (no RTK), so the fix quality is 1 (autonomous). Pure Kotlin, unit-tested.
+ * every screen and tool works with the phone as the source. From Android's location the fix quality is 1
+ * (autonomous); with the phone RTK engine the GGA carries its status (4 fixed, 5 float), correction age and base
+ * station, and GST its east / north / up standard deviations. Pure Kotlin, unit-tested.
  */
 object PhoneNmea {
     const val GPS = 1; const val SBAS = 2; const val GLONASS = 3; const val QZSS = 4; const val BEIDOU = 5; const val GALILEO = 6; const val IRNSS = 7
@@ -82,11 +94,20 @@ object PhoneNmea {
             val sep = if (fix.altitudeMsl != null && fix.altitude != null) fix.altitude - fix.altitudeMsl else 0.0
             // HDOP is not given by Android: a nominal value derived from the accuracy keeps estimators sensible.
             val hdop = ((fix.accuracy ?: 5f) / 2.5f).coerceIn(0.5f, 20f)
-            add("GNRMC,$tm,A,$la,$ns,$lo,$ew,%.3f,$course,$date,,,A,V".format(Locale.US, kn))
-            add("GNVTG,$course,T,,M,%.3f,N,%.3f,K,A".format(Locale.US, kn, kn * 1.852f))
-            add("GNGGA,$tm,$la,$ns,$lo,$ew,1,%02d,%.2f,%s,M,%.1f,M,,".format(Locale.US, used.size.coerceAtMost(99), hdop,
+            // NMEA 4.1 mode letter: A autonomous, D differential, R RTK fixed, F RTK float.
+            val mode = when (fix.quality) { 4 -> "R"; 5 -> "F"; 2 -> "D"; else -> "A" }
+            val nUsed = fix.satellitesUsed ?: used.size
+            add("GNRMC,$tm,A,$la,$ns,$lo,$ew,%.3f,$course,$date,,,$mode,V".format(Locale.US, kn))
+            add("GNVTG,$course,T,,M,%.3f,N,%.3f,K,$mode".format(Locale.US, kn, kn * 1.852f))
+            val age = if (fix.quality != 1 && fix.diffAgeSec != null) "%.1f".format(Locale.US, fix.diffAgeSec) else ""
+            val station = if (age.isNotEmpty() && fix.stationId != null && fix.stationId > 0) "%04d".format(Locale.US, fix.stationId % 10000) else ""
+            add("GNGGA,$tm,$la,$ns,$lo,$ew,${fix.quality},%02d,%.2f,%s,M,%.3f,M,$age,$station".format(Locale.US, nUsed.coerceAtMost(99), hdop,
                 msl?.let { "%.3f".format(Locale.US, it) } ?: "", sep))
-            fix.accuracy?.let { a ->
+            if (fix.stdEast != null && fix.stdNorth != null) {
+                val rms = sqrt(fix.stdEast * fix.stdEast + fix.stdNorth * fix.stdNorth)
+                add("GNGST,$tm,%.3f,%.3f,%.3f,0.0,%.3f,%.3f,%s".format(Locale.US, rms, maxOf(fix.stdEast, fix.stdNorth), minOf(fix.stdEast, fix.stdNorth),
+                    fix.stdNorth, fix.stdEast, fix.stdUp?.let { "%.3f".format(Locale.US, it) } ?: ""))
+            } else fix.accuracy?.let { a ->
                 val sd = a / sqrt(2.0)
                 add("GNGST,$tm,,%.3f,%.3f,0.0,%.3f,%.3f,%s".format(Locale.US, sd, sd, sd, sd,
                     fix.verticalAccuracy?.let { "%.3f".format(Locale.US, it) } ?: ""))

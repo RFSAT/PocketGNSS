@@ -37,20 +37,6 @@ jobs:
       - name: Unit tests (NMEA, UBX, RTCM, NTRIP, statistics, simulator)
         run: ./gradlew --no-daemon :app:testDebugUnitTest
 
-      - name: Build debug APK (for installing by hand when testing)
-        # Always built, with or without the signing secrets. Signed with the fixed debug key in app/debug.keystore,
-        # so a newer one installs over an older one; package com.PocketGNSS.debug, shown as "PocketGNSS debug".
-        run: |
-          mkdir -p dist
-          ./gradlew --no-daemon :app:assembleDebug
-          cp app/build/outputs/apk/debug/app-debug.apk "dist/PocketGNSS_v${APP_VERSION}_build${APP_BUILD}-debug.apk"
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: PocketGNSS-v${{ env.APP_VERSION }}-debug-apk
-          path: dist/*-debug.apk
-          if-no-files-found: error
-
       - name: Check signing secrets
         # Reports which secrets this run can see (never their values).
         env:
@@ -67,7 +53,7 @@ jobs:
             echo "HAS_KEYSTORE=true" >> "$GITHUB_ENV"
           else
             echo "HAS_KEYSTORE=false" >> "$GITHUB_ENV"
-            echo "::warning::Not visible to this run (repo ${{ github.repository }}, event ${{ github.event_name }}):${missing}. They must be Repository secrets (Settings > Secrets and variables > Actions > Secrets tab) of this repository. The signed Google Play bundle (AAB) was not built."
+            echo "::warning::Not visible to this run (repo ${{ github.repository }}, event ${{ github.event_name }}):${missing}. They must be Repository secrets (Settings > Secrets and variables > Actions > Secrets tab) of this repository. No release APK or Google Play bundle (AAB) was built."
           fi
 
       - name: Decode release keystore
@@ -92,13 +78,7 @@ jobs:
           grep -q "jar verified" /tmp/verify.txt
           cp "$AAB" "dist/PocketGNSS_v${APP_VERSION}_build${APP_BUILD}.aab"
           cp app/build/outputs/apk/release/app-release.apk "dist/PocketGNSS_v${APP_VERSION}_build${APP_BUILD}-release.apk"
-          # R8 mapping (also inside the bundle, where Play reads it); kept for decoding stack traces later.
-          cp app/build/outputs/mapping/release/mapping.txt "dist/PocketGNSS_v${APP_VERSION}_build${APP_BUILD}-mapping.txt"
-          # Native libraries (MapLibre) as Play's "native debug symbols" file; upload this zip by hand in
-          # Play Console (App bundle explorer > this version > Downloads > Native debug symbols).
-          rm -rf "$RUNNER_TEMP/syms" && mkdir -p "$RUNNER_TEMP/syms"
-          unzip -q "$AAB" 'base/lib/*' -d "$RUNNER_TEMP/syms"
-          (cd "$RUNNER_TEMP/syms/base/lib" && zip -qr "$GITHUB_WORKSPACE/dist/PocketGNSS_v${APP_VERSION}_build${APP_BUILD}-native-debug-symbols.zip" .)
+          # The R8 mapping travels inside the bundle (BUNDLE-METADATA), where Play reads it: no separate file.
           # "What's new" text for Play: this version's section of CHANGELOG.md.
           awk -v v="## ${APP_VERSION} " 'index($0, v) == 1 {on = 1; next} /^## / {on = 0} on' CHANGELOG.md \
             | sed '/^$/d' > "dist/PocketGNSS_v${APP_VERSION}_whats-new.txt"
@@ -110,7 +90,7 @@ jobs:
         run: rm -f "$RUNNER_TEMP/release.jks"
 
       - uses: actions/upload-artifact@v7
-        # Signed release APK (the debug APK is uploaded separately above).
+        # Signed release APK, for installing by hand (the same signature as the Play version, so updates install over it).
         if: env.HAS_KEYSTORE == 'true'
         with:
           name: PocketGNSS-v${{ env.APP_VERSION }}-apk
@@ -123,8 +103,6 @@ jobs:
           name: PocketGNSS-v${{ env.APP_VERSION }}-play-bundle
           path: |
             dist/*.aab
-            dist/*-mapping.txt
-            dist/*-native-debug-symbols.zip
             dist/*_whats-new.txt
           if-no-files-found: error
 

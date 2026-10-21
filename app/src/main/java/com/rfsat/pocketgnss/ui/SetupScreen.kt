@@ -95,7 +95,17 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
                     TextSetting(stringResource(R.string.setup_tcp_host), s.tcpHost, { v -> upd { it.copy(tcpHost = v) } }, keyboard = KeyboardType.Uri)
                     NumberField(stringResource(R.string.setup_tcp_port), s.tcpPort.toDouble(), { v -> upd { it.copy(tcpPort = v.toInt()) } }, Modifier.fillMaxWidth(), min = 1.0, max = 65535.0)
                 }
-                LinkKind.PHONE -> {}
+                LinkKind.PHONE -> {
+                    if (!engine.phoneHasGnss) NoGnssWarning()
+                    else {
+                        SwitchRow(stringResource(R.string.setup_phone_rtk), s.phoneRtk, { v -> upd { it.copy(phoneRtk = v) } },
+                            stringResource(if (com.rfsat.pocketgnss.link.PhoneRtkLink.engineAvailable) R.string.setup_phone_rtk_help else R.string.setup_phone_rtk_missing),
+                            enabled = com.rfsat.pocketgnss.link.PhoneRtkLink.engineAvailable)
+                        if (s.phoneRtk) ChoiceRow(stringResource(R.string.setup_phone_rtk_mode), listOf(false to stringResource(R.string.setup_phone_rtk_moving),
+                            true to stringResource(R.string.setup_phone_rtk_static)), s.phoneRtkStatic) { v -> upd { it.copy(phoneRtkStatic = v) } }
+                        Text(stringResource(R.string.setup_phone_rtk_apply), style = MaterialTheme.typography.bodySmall, color = muted)
+                    }
+                }
                 LinkKind.SIMULATOR -> {
                     ChoiceRow(stringResource(R.string.sim_motion), listOf(SimMotion.STATIC to stringResource(R.string.sim_static),
                         SimMotion.SWATHS to stringResource(R.string.sim_swaths)), s.simMotion) { v -> upd { it.copy(simMotion = v) } }

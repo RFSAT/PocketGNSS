@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.4.0 (build 10400)
+Phone RTK: the phone's own GNSS chip can now be used as an RTK rover. Its raw measurements are combined on the phone with corrections from your NTRIP caster (RTKLIB engine), and Live shows the fix type, accuracy and how many signals carry the carrier phase that RTK needs. Accuracy depends on the phone. Phones without a GNSS receiver now get a notice that an external receiver is needed.
+
 ## 1.3.0 (build 10300)
 New Phone raw GNSS tool: tests whether this phone's GNSS chip delivers the carrier phase needed for RTK, per system and band, and records static sessions for post-processing (RINEX, GnssLogger format and the caster's RTCM stream at the same time). Ready-made caster profiles for Metrica SmartNet Greece and EUREF-IP; the mountpoint list puts network streams first and sets the position reporting the caster needs.
 

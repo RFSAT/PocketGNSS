@@ -2,7 +2,10 @@ package com.rfsat.pocketgnss.link
 
 import java.io.IOException
 
-/** Where the position comes from. [PHONE] is the phone's own GNSS chip (no RTK), read through Android's location API. */
+/**
+ * Where the position comes from. [PHONE] is the phone's own GNSS chip: Android's location, or with the phone RTK engine
+ * its raw measurements processed together with a caster's corrections (PhoneRtkLink).
+ */
 enum class LinkKind { USB, BLUETOOTH, TCP, PHONE, SIMULATOR }
 
 /**
@@ -48,6 +51,8 @@ data class LinkInfo(
     val detail: String,
     val chip: UsbChip? = null,
     val baud: Int? = null,
+    /** The phone's own GNSS with the RTK engine: takes RTCM from the NTRIP relay like a receiver. */
+    val phoneRtk: Boolean = false,
 ) {
     /**
      * True when UBX commands certainly reach the GNSS chip (its own USB port, or the simulator).
@@ -55,8 +60,8 @@ data class LinkInfo(
      */
     val ubxDirect: Boolean get() = chip == UsbChip.UBLOX || kind == LinkKind.SIMULATOR
 
-    /** True when corrections (RTCM) and u-blox commands can be written to the receiver. */
-    val writable: Boolean get() = kind != LinkKind.PHONE
+    /** True when corrections (RTCM) can be written to the receiver (u-blox commands only to real receivers). */
+    val writable: Boolean get() = kind != LinkKind.PHONE || phoneRtk
 }
 
 /**

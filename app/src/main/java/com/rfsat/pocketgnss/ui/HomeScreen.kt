@@ -57,6 +57,7 @@ fun HomeScreen(engine: GnssEngine, onOpenTab: (Tab) -> Unit, onReconnect: () -> 
             Text(stringResource(R.string.home_tagline), fontSize = 13.sp)
         }
 
+        if (!engine.phoneHasGnss) NoGnssWarning()
         val ready = conn as? Connection.Ready
         Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(14.dp)).padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -101,7 +102,7 @@ fun HomeScreen(engine: GnssEngine, onOpenTab: (Tab) -> Unit, onReconnect: () -> 
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ActionButton(onClick = onReconnect, emphasis = true) { Text(stringResource(R.string.action_connect)) }
                     ActionButton(onClick = { onOpenTab(Tab.SETUP) }) { Text(stringResource(R.string.tab_setup)) }
-                    if (s.source != LinkKind.PHONE) ActionButton(onClick = {
+                    if (s.source != LinkKind.PHONE && engine.phoneHasGnss) ActionButton(onClick = {
                         engine.store.update { it.copy(source = LinkKind.PHONE) }; onReconnect()
                     }) { Text(stringResource(R.string.home_try_phone)) }
                     if (!s.useSimulator) ActionButton(onClick = {
@@ -152,3 +153,10 @@ private fun LinkRow(label: String, value: String, url: String, onOpen: () -> Uni
 
 /** Test hook: store-listing screenshots leave out the version so they stay valid across releases. */
 object StoreShots { @Volatile var hideVersion = false }
+
+/** Shown when the phone has no GNSS receiver of its own. */
+@Composable
+fun NoGnssWarning() {
+    Text(stringResource(R.string.no_gnss_warning), Modifier.fillMaxWidth().background(WarnAmber.copy(alpha = 0.18f), RoundedCornerShape(10.dp))
+        .padding(10.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface)
+}

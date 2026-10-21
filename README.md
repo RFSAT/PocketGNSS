@@ -20,7 +20,7 @@ Two hardware versions exist and the app supports both (Setup > Receiver version)
 In both, the receiver applies the corrections itself; the app reads the corrected position. How to set up each route,
 with the D3.5 timings and availability, is in **[docs/rtk-connectivity.md](docs/rtk-connectivity.md)**.
 
-RFSAT Limited. Version 1.3.0 (build 10300).
+RFSAT Limited. Version 1.4.0 (build 10400).
 
 ## Background: the AgriBIT project
 
@@ -64,7 +64,7 @@ agricultural GNSS enabled services*) are listed on the same CORDIS Results page.
 | Map | MapLibre with Street / Satellite / Terrain (same raster sources as DBM and PocketSpectro): position coloured by fix, track coloured by fix type, saved points with names, NTRIP base station, follow / recenter / fit / mark / clear |
 | Tools | Survey point · Stake out · Corrections (NTRIP) · Phone raw GNSS (RTK test) · NMEA output (UBX) · Receiver settings (web) · Time to fix · Data stream |
 | Log | Recording (raw NMEA + fixes CSV, minimum fix and interval), live NMEA viewer (filter by sentence type, pause, show more, copy, share the shown lines as .nmea; last 2000 sentences, nothing saved unless shared), saved points (KML / CSV / GeoJSON), sessions (NMEA / CSV / GPX / KML; phone raw sessions as RINEX / GnssLog / RTCM / ZIP; delete) |
-| Setup | Connection source and its options, phone NTRIP caster, outputs (mock location, NMEA TCP server), receiver ID and device number, display units, simulator |
+| Setup | Connection source and its options (Phone: Phone RTK on/off, moving or still), phone NTRIP caster, outputs (mock location, NMEA TCP server), receiver ID and device number, display units, simulator |
 | Exit | Confirms, stops recording, closes the link and outputs |
 
 ### Tools
@@ -87,6 +87,12 @@ agricultural GNSS enabled services*) are listed on the same CORDIS Results page.
   §4.2); browses the caster's sourcetable (network / nearest-base streams first, then single stations by distance; picking
   one sets the GGA option from the sourcetable; non-RTCM 3 streams such as CMR are marked unusable); reconnects with a 5–30 s back-off. The Live tab shows
   the correction age and station from the receiver's GGA. See `docs/rtk-connectivity.md`.
+* **Phone RTK** (Setup > Phone, on by default): the phone's own GNSS chip as an RTK rover. Its raw measurements are
+  processed every epoch by **RTKLIB demo5** in native code (`app/src/main/cpp`, NDK) with the caster's RTCM 3, which
+  the NTRIP relay writes to the phone link as it would to a receiver; the solution comes back as NMEA (GGA 4 / 5,
+  GST from the filter), so every screen works unchanged. Any phone with a GNSS receiver is a potential client; the
+  Live tab shows what this phone achieves (signals with carrier phase, AR ratio, base data). Phones without a GNSS
+  receiver get a notice that only an external receiver is useful. See `docs/phone-rtk.md`.
 * **Phone raw GNSS (RTK test)**: stage A of phone RTK (`docs/phone-rtk.md`). Reads Android's raw measurements
   (GnssMeasurement API, full tracking on Android 12+ so duty cycling does not break the carrier phase) and reports,
   per system and band, satellites, share of usable code and carrier phase (ADR), C/N0, cycle slips, epoch gaps and
@@ -133,6 +139,7 @@ core/       GnssModel (epoch assembly, satellites), Statistics (CEP, 2DRMS, TTFF
             UBX requests, recording, survey, TTFF), NtripClient, Outputs (MockLocation, NmeaServer), LinkService
 link/       GnssLink, UsbSerialLink (usb-serial-for-android), BluetoothSppLink, TcpLink, SimulatedLink
 sim/        SimReceiver
+rtk/        RtkNative (JNI), PhoneRtk (options, solution, rover arrays); native engine in src/main/cpp (prtk.c over RTKLIB)
 raw/        RawConvert (GnssClock/GnssMeasurement -> pseudorange, phase, Doppler, RINEX codes), Rinex (3.04 obs writer),
             GnssLog (GnssLogger "Raw," format), RawAnalyzer (phone RTK capability verdict), PhoneRawLogger (Android side)
 data/       AppSettings (SharedPreferences StateFlow), Records (points CSV, session recorder, KML/GPX/GeoJSON/CSV)
@@ -143,15 +150,19 @@ All text is in `res/values/strings.xml` (debug builds have pseudo-locales to che
 
 ## Build
 
-GitHub Actions (`.github/workflows/android-ci.yml`), as for PocketSpectro: unit tests, a **debug APK** on every run
-(artifact `PocketGNSS-v<version>-debug-apk`; package `com.PocketGNSS.debug`, launcher label "PocketGNSS debug", signed with the
-fixed key `app/debug.keystore` so it updates in place and installs next to the Play version), then the signed Play bundle
-(AAB) and release APK when the repository secrets `KEYSTORE_BASE64`, `STORE_PASSWORD`, `KEY_ALIAS`,
-`KEY_PASSWORD` are set (same names as the other RFSAT apps). A second job renders all screens with the simulator
+GitHub Actions (`.github/workflows/android-ci.yml`), as for PocketSpectro: unit tests, then the signed **release APK**
+(artifact `PocketGNSS-v<version>-apk`, for installing by hand; same signature as the Play version, so either updates
+the other) and the **Google Play bundle** (AAB, artifact `PocketGNSS-v<version>-play-bundle`, with the "What's new"
+text for the release notes; the R8 mapping travels inside the AAB, where Play reads it). Both need the repository
+secrets `KEYSTORE_BASE64`, `STORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` (same names as the other RFSAT apps);
+without them the run only tests and warns. The debug build type is compiled only for the tests. A second job renders all screens with the simulator
 (Robolectric + Roborazzi), including the Play set at 1080 × 1920 (24-bit). The Map tab is not rendered there
 (MapLibre's native library does not load under Robolectric).
 
-AGP 9.0.0, Gradle 9.7.0, Kotlin 2.3 (built into AGP), JDK 17, compileSdk / targetSdk 36, minSdk 26. Dependencies:
+AGP 9.0.0, Gradle 9.7.0, Kotlin 2.3 (built into AGP), JDK 17, compileSdk / targetSdk 36, minSdk 26, NDK 29.0.14206865
+and CMake 3.22.1 for the phone RTK engine (`libprtk.so`, arm64-v8a / armeabi-v7a / x86 / x86_64, 16 KB pages; its
+symbol table is included in the AAB for Play's crash reports). The unit tests also build the engine for the host
+(Linux, `cc`) and run a real RTK session through the JNI bridge (`RtkEngineTest`). Dependencies:
 Compose BOM 2026.06.01, MapLibre 13.0.0, usb-serial-for-android 3.9.0 (JitPack, restricted to `com.github.mik3y`).
 
 Versioning 1.MINOR.PATCH; only `appVersion` in `app/build.gradle.kts` is edited, the version code follows

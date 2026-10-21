@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -86,6 +87,7 @@ fun RawTool(engine: GnssEngine) {
     }
 
     Column(Modifier.verticalScroll(rememberScrollState())) {
+        if (!engine.phoneHasGnss) Column(Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) { NoGnssWarning() }
         Section(stringResource(R.string.raw_phone)) {
             Text(stringResource(R.string.raw_intro), style = MaterialTheme.typography.bodySmall, color = muted)
             KeyValue(stringResource(R.string.raw_chip), listOfNotNull(caps.hardware, caps.year?.toString()).joinToString(" · ").ifBlank { txtUnknown })
@@ -99,7 +101,7 @@ fun RawTool(engine: GnssEngine) {
         Section(stringResource(R.string.raw_test)) {
             Text(stringResource(R.string.raw_test_help), style = MaterialTheme.typography.bodySmall, color = muted)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ActionButton(onClick = { if (st.running) engine.raw.stop() else request(false) }, enabled = !st.recording, emphasis = !st.running) {
+                ActionButton(onClick = { if (st.running) engine.raw.stop() else request(false) }, enabled = !st.recording && engine.phoneHasGnss, emphasis = !st.running) {
                     Text(stringResource(if (st.running && !st.recording) R.string.raw_stop else R.string.raw_start_test))
                 }
             }
@@ -115,7 +117,7 @@ fun RawTool(engine: GnssEngine) {
                 if (s.ntrip.usable) "${s.ntrip.host}:${s.ntrip.port}/${s.ntrip.mountpoint}" else stringResource(R.string.raw_rtcm_setup),
                 enabled = s.ntrip.usable && !st.running)
             ToggleButton(on = st.recording, label = stringResource(if (st.recording) R.string.raw_rec_stop else R.string.raw_rec_start),
-                onClick = { if (st.recording) engine.raw.stop() else request(true) }, enabled = st.recording || !st.running)
+                onClick = { if (st.recording) engine.raw.stop() else request(true) }, enabled = st.recording || (!st.running && engine.phoneHasGnss))
             if (st.recording || st.dir != null) {
                 val elapsed = ((if (st.running) now else System.currentTimeMillis()) - st.startedMs) / 1000
                 if (st.recording) KeyValue(stringResource(R.string.raw_elapsed), "%d:%02d".format(Locale.US, elapsed / 60, elapsed % 60), live = true,

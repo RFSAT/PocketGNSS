@@ -25,6 +25,10 @@ data class AppSettings(
     val tcpHost: String = "192.168.4.1",
     val tcpPort: Int = 3967,
     val autoReconnect: Boolean = true,
+    /** Phone source: RTK engine on the phone's raw measurements (with the NTRIP relay), else Android's location. */
+    val phoneRtk: Boolean = true,
+    /** Phone RTK: phone held still on a point (static) instead of moving (kinematic). */
+    val phoneRtkStatic: Boolean = false,
     // Corrections from the phone
     val ntripEnabled: Boolean = false,
     val ntrip: NtripConfig = NtripConfig(),
@@ -83,6 +87,8 @@ class SettingsStore(context: Context, private val cipher: SecretCipher = Keystor
             tcpHost = prefs.getString("tcpHost", d.tcpHost) ?: d.tcpHost,
             tcpPort = prefs.getInt("tcpPort", d.tcpPort),
             autoReconnect = prefs.getBoolean("autoReconnect", d.autoReconnect),
+            phoneRtk = prefs.getBoolean("phoneRtk", d.phoneRtk),
+            phoneRtkStatic = prefs.getBoolean("phoneRtkStatic", d.phoneRtkStatic),
             ntripEnabled = prefs.getBoolean("ntripOn", d.ntripEnabled),
             profiles = CasterProfiles.decode(prefs.getString("casterProfiles", null), cipher),
             activeProfile = prefs.getString("casterActive", "") ?: "",
@@ -121,6 +127,7 @@ class SettingsStore(context: Context, private val cipher: SecretCipher = Keystor
             .putString("btAddress", s.btAddress).putString("btName", s.btName)
             .putString("tcpHost", s.tcpHost).putInt("tcpPort", s.tcpPort)
             .putBoolean("autoReconnect", s.autoReconnect)
+            .putBoolean("phoneRtk", s.phoneRtk).putBoolean("phoneRtkStatic", s.phoneRtkStatic)
             .putBoolean("ntripOn", s.ntripEnabled)
             .putString("ntripHost", s.ntrip.host).putInt("ntripPort", s.ntrip.port)
             .putString("ntripMount", s.ntrip.mountpoint).putString("ntripUser", s.ntrip.user)
