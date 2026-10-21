@@ -120,7 +120,12 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 8)
     val messages: SharedFlow<String> = _messages.asSharedFlow()
 
-    val ntripClient = NtripClient(scope, forward = { writeRaw(it) }, gga = { ggaForCaster() })
+    val ntripClient = NtripClient(scope, forward = { writeRaw(it); raw.onRtcm(it) }, gga = { ggaForCaster() })
+    /** The phone's raw GNSS measurements: capability test and RINEX / RTCM recording (Tools > Phone raw GNSS). */
+    val raw: com.rfsat.pocketgnss.raw.PhoneRawLogger by lazy {
+        com.rfsat.pocketgnss.raw.PhoneRawLogger(context, sessionsRoot) { on -> setRtcmCapture(on) }
+    }
+    @Volatile private var rtcmCapture = false
     val mock = MockLocation(context)
     val server = NmeaServer()
 
@@ -211,7 +216,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
 
     /** The phone's own GNSS chip (needs ACCESS_FINE_LOCATION, asked by the activity). */
     fun connectPhone() {
-        if (ntripClient.running) ntripClient.stop()
+        if (ntripClient.running && !rtcmCapture) ntripClient.stop()
         open(context.getString(R.string.conn_opening_phone)) { com.rfsat.pocketgnss.link.PhoneGnssLink.open(context) }
     }
 
@@ -376,9 +381,23 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
 
     private fun ggaForCaster(): String? {
         lastGgaLine?.let { return it }
-        val f = _fix.value ?: return null
-        val sod = f.time?.secondsOfDay ?: ((System.currentTimeMillis() / 1000.0) % 86400)
-        return Ntrip.gga(sod, f.latitude, f.longitude, f.altitudeMsl ?: 0.0)
+        val sodNow = (System.currentTimeMillis() / 1000.0) % 86400
+        val f = _fix.value
+        if (f != null) return Ntrip.gga(f.time?.secondsOfDay ?: sodNow, f.latitude, f.longitude, f.altitudeMsl ?: 0.0)
+        // No receiver: the phone's own position from a raw GNSS session (enough for a VRS / nearest-base caster).
+        val l = if (rtcmCapture) raw.location else null
+        return l?.let { Ntrip.gga(sodNow, it.latitude, it.longitude, if (it.hasAltitude()) it.altitude else 0.0) }
+    }
+
+    /**
+     * RTCM recording for a phone raw session: runs the NTRIP client even without a writable receiver link. It
+     * stops again afterwards unless the user had the relay on.
+     */
+    private fun setRtcmCapture(on: Boolean) {
+        rtcmCapture = on
+        val cfg = store.value.ntrip
+        if (on) { if (!ntripClient.running && cfg.usable) ntripClient.start(cfg) }
+        else if (!(store.value.ntripEnabled && linkInfo?.writable == true)) ntripClient.stop()
     }
 
     // ---------------------------------------------------------------- writing / UBX
@@ -518,7 +537,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
 
     fun setNtrip(on: Boolean) {
         store.update { it.copy(ntripEnabled = on) }
-        if (on && linkInfo?.writable != false) ntripClient.start(store.value.ntrip) else ntripClient.stop()
+        if (on && linkInfo?.writable != false) ntripClient.start(store.value.ntrip) else if (!rtcmCapture) ntripClient.stop()
     }
 
     fun toast(msg: String) { _messages.tryEmit(msg) }
@@ -526,18 +545,21 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     /** True while something should keep running with the screen off (real receiver only). */
     fun needsBackground(): Boolean {
         val s = store.value
+        if (raw.state.value.recording) return true
         return connection.value is Connection.Ready && simulator == null &&
             (recording.value.active || ntripClient.running || s.mockLocation || s.nmeaServer)
     }
 
     /** Stops background activity (notification "Stop" action). */
     fun stopBackground() {
+        if (raw.state.value.running) raw.stop()
         stopRecording()
         if (ntripClient.running) setNtrip(false)
         store.update { it.copy(mockLocation = false, nmeaServer = false) }
     }
 
     fun shutdown() {
+        if (raw.state.value.running) raw.stop()
         stopRecording(); ntripClient.stop(); mock.stop(); server.stop()
         disconnect()
     }

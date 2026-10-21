@@ -71,9 +71,12 @@ class LinkService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) { engine.stopBackground(); stopSelf(); return START_NOT_STICKY }
-        var type = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
-            type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+        // connectedDevice while a receiver link is open; location for mock location and the phone raw GNSS recording.
+        // A raw recording without a receiver uses the location type alone (Android 14 checks connectedDevice use).
+        val hasLocation = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val linkOpen = engine.connection.value is Connection.Ready
+        var type = if (linkOpen || !hasLocation) ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE else 0
+        if (hasLocation) type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
         try { ServiceCompat.startForeground(this, NOTIFICATION_ID, notification(), type) } catch (_: Exception) { stopSelf(); return START_NOT_STICKY }
         if (wake == null) wake = (getSystemService(POWER_SERVICE) as PowerManager)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "PocketGNSS:link").apply { setReferenceCounted(false) }
@@ -92,6 +95,7 @@ class LinkService : Service() {
         val f = engine.fix.value
         val parts = ArrayList<String>()
         if (engine.recording.value.active) parts.add(getString(R.string.notif_logging, engine.recording.value.fixes))
+        engine.raw.state.value.takeIf { it.recording }?.let { parts.add(getString(R.string.notif_raw, it.rinexEpochs)) }
         if (engine.ntripClient.running) parts.add(getString(R.string.notif_ntrip, engine.ntripClient.ntrip.value.status.name.lowercase()))
         if (engine.store.value.mockLocation) parts.add(getString(R.string.notif_mock))
         if (engine.store.value.nmeaServer) parts.add(getString(R.string.notif_server, engine.server.clientCount.value))

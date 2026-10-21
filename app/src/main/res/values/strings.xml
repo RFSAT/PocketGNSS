@@ -41,10 +41,12 @@
     <string name="corr_data_value">%1$.1f kB · %2$.0f B/s · %3$d frames · %4$d bad</string>
     <string name="corr_fetch">Get mountpoints</string>
     <string name="corr_gga">Last GGA sent</string>
-    <string name="corr_intro">Three routes bring corrections to the receiver: its own NTRIP client over the mobile network (LTE version) or over Wi-Fi (both versions), set in Tools &gt; Receiver settings (sections 4 and 7); or this relay: the phone fetches RTCM over its mobile data and forwards it to the receiver over Bluetooth or USB, sending the receiver\'s GGA to the caster.</string>
+    <string name="corr_intro">Three routes bring corrections to the receiver: its own NTRIP client over the mobile network (LTE version) or over Wi-Fi (both versions), set in Tools &gt; Receiver settings (sections 4 and 7); or this relay: the phone fetches RTCM over its mobile data and forwards it to the receiver over Bluetooth or USB, sending the receiver\'s GGA to the caster. The relay also serves other RTCM 3 receivers connected over USB or Bluetooth.</string>
     <string name="corr_last">Last data</string>
     <string name="corr_messages">RTCM messages received</string>
-    <string name="corr_mount_help">Downloads the caster\'s sourcetable (caster and port from Setup). Tap a mountpoint to select it; the nearest are listed first. GGA = the caster needs your position (network RTK).</string>
+    <string name="corr_mount_help">Downloads the caster\'s sourcetable (caster and port from Setup). Network streams are listed first, then single stations nearest first. Tap one to select it; the GGA setting follows the sourcetable. GGA = the caster needs your position (VRS, MAX, nearest base).</string>
+    <string name="corr_mount_network">network</string>
+    <string name="corr_mount_not_rtcm3">not RTCM 3: unusable</string>
     <string name="corr_mountpoints">Mountpoints</string>
     <string name="corr_state">State</string>
     <string name="corr_status">NTRIP relay through the phone</string>
@@ -126,7 +128,7 @@
     <string name="live_ntrip_off">NTRIP OFF</string>
     <string name="live_ntrip_on">NTRIP ON</string>
     <string name="live_ntrip_receiver">off (the receiver uses its own NTRIP client)</string>
-    <string name="live_ntrip_setup">Without Wi-Fi or a SIM at the receiver, the phone can relay the corrections: choose a caster profile in Setup &gt; NTRIP relay, then switch NTRIP on.</string>
+    <string name="live_ntrip_setup">Without Wi-Fi or a SIM at the receiver, the phone can relay the corrections: choose a caster profile in Setup &gt; NTRIP relay, then switch NTRIP on (it lists the mountpoints first if none is chosen).</string>
     <string name="live_ntrip_value">%1$s · %2$s · %3$.0f B/s</string>
     <string name="live_phone_no_rtk">Phone GNSS: corrections cannot be applied to the phone\'s chip, so the position stays autonomous (no RTK).</string>
     <string name="live_position">Position</string>
@@ -149,6 +151,8 @@
     <string name="log_no_points">No points yet: use Mark point, or average one with Tools &gt; Survey point.</string>
     <string name="log_no_sessions">No recorded sessions.</string>
     <string name="log_points">Points (%1$d)</string>
+    <string name="log_raw_sizes">RINEX %1$.1f kB · GnssLog %2$.1f kB · RTCM %3$.1f kB</string>
+    <string name="log_raw_title">Phone raw GNSS %1$s</string>
     <string name="log_recording">Recording</string>
     <string name="log_recording_off">Recording OFF</string>
     <string name="log_recording_on">Recording ON</string>
@@ -163,6 +167,11 @@
     <string name="map_tap_point">Tap a point for its distance and bearing.</string>
     <string name="map_terrain">Terrain</string>
     <string name="map_to_point">%1$s at %2$.1f°</string>
+    <string name="mount_dialog_empty">The caster returned no mountpoints.</string>
+    <string name="mount_dialog_error">Could not get the sourcetable: %1$s</string>
+    <string name="mount_dialog_help">%1$d mountpoints. Network streams (VRS, MAX, nearest base) first, then single stations nearest first. Tap one to use it; the position reporting (GGA) is set from the caster\'s list.</string>
+    <string name="mount_dialog_loading">Asking the caster for its sourcetable…</string>
+    <string name="mount_dialog_title">Mountpoints at %1$s:%2$d</string>
     <string name="nc_awaiting">Waiting for you to allow USB access.</string>
     <string name="nc_failed">Connection problem: %1$s</string>
     <string name="nc_help">Connect the receiver over USB (data port, OTG cable) or Bluetooth, or choose NMEA over TCP, in Setup. To try the app without hardware, choose the simulator.</string>
@@ -183,10 +192,12 @@
     <string name="notif_logging">Recording %1$d fixes</string>
     <string name="notif_mock">Mock location</string>
     <string name="notif_ntrip">NTRIP %1$s</string>
+    <string name="notif_raw">Raw GNSS %1$d epochs</string>
     <string name="notif_server">NMEA server (%1$d)</string>
     <string name="notif_stop">Stop</string>
     <string name="notif_title_fix">%1$s %2$s</string>
     <string name="notif_title_nofix">No fix</string>
+    <string name="ntrip_choose">Choose</string>
     <string name="ntrip_gga">Send GGA every (0 = never)</string>
     <string name="ntrip_host">Caster host</string>
     <string name="ntrip_kind">Mountpoint</string>
@@ -218,6 +229,53 @@
     <string name="out_server_local">This phone only</string>
     <string name="out_server_local_help">Off: PCs on the same network can connect too</string>
     <string name="out_server_port">Server port</string>
+    <string name="raw_android">Android</string>
+    <string name="raw_api_adr">Carrier phase</string>
+    <string name="raw_api_meas">Raw data</string>
+    <string name="raw_api_nav">Nav messages</string>
+    <string name="raw_api_status">Android reports raw measurements as: %1$s</string>
+    <string name="raw_chip">GNSS chip</string>
+    <string name="raw_clock">Receiver clock</string>
+    <string name="raw_clock_missing">no full bias: measurements unusable</string>
+    <string name="raw_clock_ok">full bias reported · %1$d discontinuities</string>
+    <string name="raw_col_cn0">C/N0</string>
+    <string name="raw_col_code">Code</string>
+    <string name="raw_col_phase">Phase</string>
+    <string name="raw_col_sats">Sats</string>
+    <string name="raw_col_signal">Signal</string>
+    <string name="raw_duty">Phase resets or gaps were seen: power saving (duty cycling) may still be on, or the sky view is poor.</string>
+    <string name="raw_elapsed">Elapsed</string>
+    <string name="raw_epochs">Epochs</string>
+    <string name="raw_folder">Folder</string>
+    <string name="raw_full_auto">switched off by the app (full tracking)</string>
+    <string name="raw_full_dev">turn on Developer options &gt; Force full GNSS measurements</string>
+    <string name="raw_full_tracking">Duty cycling</string>
+    <string name="raw_interval">Interval</string>
+    <string name="raw_intro">Phone RTK needs raw measurements with carrier phase, ideally on two bands (L1 + L5/E5a). Phones differ widely, so test each model outdoors under open sky.</string>
+    <string name="raw_marker">Marker name</string>
+    <string name="raw_no">no</string>
+    <string name="raw_phone">This phone</string>
+    <string name="raw_post">Post-processing</string>
+    <string name="raw_post_help">RTKLIB (demo5): convert base.rtcm3 to RINEX with RTKCONV (it also gives the broadcast ephemeris), then RTKPOST with raw.obs as rover, the converted file as base, kinematic or static, combined, \"Time interpolation of base station data\" on and the base position from the RTCM 1005/1006 (or the surveyed coordinates). MATLAB: ProcessGnssMeasScript from Google\'s GNSS Measurement Tools reads the GnssLog file directly.</string>
+    <string name="raw_rec_start">Start recording</string>
+    <string name="raw_rec_stop">Stop recording</string>
+    <string name="raw_record">Record for post-processing</string>
+    <string name="raw_record_help">Static session of 20–30 minutes on a surveyed point, phone flat and still. Writes RINEX 3.04 observations, the same data in GnssLogger format (for Google\'s MATLAB GNSS Measurement Tools) and, from the caster set in Setup &gt; NTRIP relay, the RTCM base stream at the same time. The caster gets the phone\'s position (GGA) when it needs one.</string>
+    <string name="raw_rtcm">RTCM</string>
+    <string name="raw_rtcm_setup">Set a caster and mountpoint in Setup &gt; NTRIP relay first</string>
+    <string name="raw_saved">Saved: share the files from Log &gt; Sessions (RINEX, GnssLog, RTCM or all as ZIP).</string>
+    <string name="raw_start_test">Start test</string>
+    <string name="raw_stop">Stop</string>
+    <string name="raw_test">Capability test</string>
+    <string name="raw_test_help">Start outdoors with a clear sky view and the phone still for one to two minutes. Code = share of signals with a usable pseudorange; Phase = share with valid carrier phase.</string>
+    <string name="raw_unknown">not reported</string>
+    <string name="raw_v_code">Code only (no usable carrier phase): sub-metre at best with corrections (DGNSS), not RTK.</string>
+    <string name="raw_v_dual">Carrier phase on L1 and L5/E5a: the best case for phone RTK.</string>
+    <string name="raw_v_l1">Carrier phase on L1/E1: RTK float is possible; a fixed solution needs a short baseline and a long static session.</string>
+    <string name="raw_v_none">No raw measurements: this phone gives positions only. Phone RTK is not possible; use an external receiver.</string>
+    <string name="raw_v_waiting">Collecting… (keep the phone still under open sky)</string>
+    <string name="raw_with_rtcm">Also record the caster\'s RTCM</string>
+    <string name="raw_yes">yes</string>
     <string name="route_lte">Three boards: ESP32, LTE modem with nano-SIM (and SD card slot), u-blox F9x. The receiver\'s own NTRIP client gets corrections over the mobile network (data-only SIM, 4G/LTE recommended) or, if set, over Wi-Fi. Power on the middle micro-USB. D3.5: ~60 s from power-up to RTK data, re-connects in 16–25 s.</string>
     <string name="route_unset">Choose the receiver version in Setup to see how it gets RTK corrections.</string>
     <string name="route_wifi" formatted="false">Two boards: ESP32 and u-blox F9x, no modem or SD slot. The receiver\'s own NTRIP client gets corrections only through a Wi-Fi access point (a field router, a mobile-broadband router or this phone\'s hotspot); anywhere with mobile coverage, the phone can also relay them over Bluetooth or USB (NTRIP relay). D3.5: fastest re-connection and ~99 % RTK availability over a fibre-fed router.</string>
@@ -233,7 +291,7 @@
     <string name="setup_device_number">Device number (on the case)</string>
     <string name="setup_display">Display</string>
     <string name="setup_ntrip">NTRIP relay through the phone</string>
-    <string name="setup_ntrip_help">The phone fetches the corrections over its mobile data, sends the receiver\'s GGA to the caster (needed by VRS / network services such as Metrica) and forwards the RTCM stream to the receiver over Bluetooth or USB. This gives the compact receiver (no SIM board) RTK anywhere with mobile coverage. Not needed when the receiver reaches the service itself over Wi-Fi or its own SIM. Switch it on from Live or Tools &gt; Corrections.</string>
+    <string name="setup_ntrip_help">The phone fetches the corrections over its mobile data, sends the receiver\'s GGA to the caster (needed by VRS / network services such as Metrica) and forwards the RTCM stream to the receiver over Bluetooth or USB. This gives the compact AgriBIT receiver (no SIM board) RTK anywhere with mobile coverage, and works the same with any other RTK receiver that accepts RTCM 3 on its USB or Bluetooth link (u-blox F9P/F9R boards, survey receivers). Not needed when the receiver reaches the service itself over Wi-Fi or its own SIM. Switch it on from Live or Tools &gt; Corrections.</string>
     <string name="setup_outputs">Outputs to other apps</string>
     <string name="setup_receiver">Receiver web settings</string>
     <string name="setup_receiver_help">Used to find the receiver\'s hotspot (ESPrtk : &lt;ID&gt;, ID shown on its LCD) and to show its login (RTKrover + device number).</string>
@@ -324,6 +382,8 @@
     <string name="tool_corrections_sum">NTRIP relay through the phone, RTCM messages, base distance, mountpoints</string>
     <string name="tool_nmea">NMEA output</string>
     <string name="tool_nmea_sum">Choose messages, ports and rate (1–20 Hz) on the u-blox chip, like u-center</string>
+    <string name="tool_raw">Phone raw GNSS (RTK test)</string>
+    <string name="tool_raw_sum">What this phone\'s chip delivers for RTK; record RINEX + RTCM for post-processing</string>
     <string name="tool_stakeout">Stake out</string>
     <string name="tool_stakeout_sum">Guide to a saved point to the centimetre</string>
     <string name="tool_stream">Data stream</string>

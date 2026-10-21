@@ -83,6 +83,7 @@ class ScreenshotTest {
     @Test fun web_wifi() { simulatorAtFix(variant = com.rfsat.pocketgnss.link.ReceiverVariant.WIFI); shot("10b_tool_receiver_web_wifi", Tab.TOOLS, ToolId.RECEIVER_WEB) }
     @Test fun home_unset() { simulatorAtFix(variant = com.rfsat.pocketgnss.link.ReceiverVariant.UNSET); shot("01b_home_version_not_set", Tab.HOME) }
     @Test fun corrections_wifi() { simulatorAtFix(variant = com.rfsat.pocketgnss.link.ReceiverVariant.WIFI); shot("09b_tool_corrections_wifi", Tab.TOOLS, ToolId.CORRECTIONS) }
+    @Test fun raw() { simulatorAtFix(); shot("09c_tool_phone_raw", Tab.TOOLS, ToolId.RAW) }
     @Test fun ttff() { simulatorAtFix(); shot("11_tool_ttff", Tab.TOOLS, ToolId.TTFF) }
     @Test fun stream() { simulatorAtFix(); shot("12_tool_stream", Tab.TOOLS, ToolId.STREAM) }
     @Test fun log() { simulatorAtFix(); engine.markPoint("P1"); shot("13_log", Tab.LOG) }

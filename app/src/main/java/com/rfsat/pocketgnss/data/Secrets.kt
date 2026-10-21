@@ -3,6 +3,8 @@ package com.rfsat.pocketgnss.data
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import com.rfsat.pocketgnss.protocol.Geo
+import com.rfsat.pocketgnss.protocol.Mountpoint
 import com.rfsat.pocketgnss.protocol.NtripConfig
 import java.security.KeyStore
 import javax.crypto.Cipher
@@ -78,12 +80,43 @@ object CasterProfiles {
     }.toList()
 
     /**
-     * Starting points with public hosts. Metrica (HxGN SmartNet Greece, VRS) and our own EOS Arrow Gold base are added
-     * by the user with the details from the service contract / base set-up.
+     * Starting points with public hosts and ports, checked against the casters' sourcetables (October 2026). The user
+     * adds the account (user, password) and can pick another mountpoint with Tools > Corrections > Get mountpoints.
+     *
+     * Metrica / HxGN SmartNet Greece (Leica Spider, NTRIP v2, login required): network streams VRS_Rtcm3 and MAX
+     * (GPS+GLO), MSM_VRS and MSM_iMAX (GPS+GLO+GAL+BDS, formerly "MSM_i-MAX"), nearest single base NEAR and MSM_NEAR.
+     * All of them need the rover's GGA. EUREF / IGS single stations need no GGA but must be within about 20-30 km for
+     * RTK (in Greece: DYNG00GRC0 Dionysos near Athens; nothing close to Pella).
      */
     val presets = listOf(
+        CasterProfile("Metrica SmartNet GR (VRS)", NtripConfig(host = "gr.nrtk.eu", port = 7801, mountpoint = "MSM_VRS", ggaIntervalSec = 10)),
+        CasterProfile("Metrica SmartNet GR (nearest base)", NtripConfig(host = "gr.nrtk.eu", port = 7801, mountpoint = "MSM_NEAR", ggaIntervalSec = 10)),
         CasterProfile("EUREF-IP (BKG)", NtripConfig(host = "euref-ip.net", port = 2101, ggaIntervalSec = 0)),
+        CasterProfile("EUREF-IP (ROB, Belgium)", NtripConfig(host = "www.euref-ip.be", port = 2101, ggaIntervalSec = 0)),
         CasterProfile("IGS-IP (BKG)", NtripConfig(host = "igs-ip.net", port = 2101, ggaIntervalSec = 0)),
         CasterProfile("RTK2go (community)", NtripConfig(host = "rtk2go.com", port = 2101, ggaIntervalSec = 10)),
     )
+
+    /** Plain-language notes for well-known mountpoints, shown next to the sourcetable entry. */
+    fun mountNote(name: String): String? = when (name) {
+        "MSM_VRS", "VRS_GNSS" -> "Virtual reference station · GPS+GLO+GAL+BDS"
+        "VRS_Rtcm3" -> "Virtual reference station · GPS+GLO"
+        "MSM_iMAX", "MSM_i-MAX", "i-MAXGNSS" -> "Master-auxiliary (i-MAX) · GPS+GLO+GAL+BDS"
+        "MAX" -> "Master-auxiliary (MAX) · GPS+GLO"
+        "MSM_NEAR", "NEAR_GNSS" -> "Nearest single base · GPS+GLO+GAL+BDS"
+        "NEAR" -> "Nearest single base · GPS+GLO"
+        else -> null
+    }
+
+    /**
+     * Order for the mountpoint list: usable RTCM 3 streams first; within them network / nearest-base streams (they
+     * follow the rover, so their nominal coordinates are meaningless) and then single stations nearest first.
+     */
+    fun sortMountpoints(list: List<Mountpoint>, lat: Double?, lon: Double?): List<Mountpoint> = list.sortedWith(
+        compareBy<Mountpoint>({ !isRtcm3(it.format) }, { !it.needsGga }, { m ->
+            if (lat != null && lon != null && m.latitude != null && m.longitude != null) Geo.distance(lat, lon, m.latitude, m.longitude) else 1e12
+        }, { it.name }))
+
+    /** True when the stream is RTCM 3 (the only correction format u-blox F9 and RTKLIB phone RTK accept here). */
+    fun isRtcm3(format: String) = format.trim().uppercase().replace(" ", "").startsWith("RTCM3")
 }

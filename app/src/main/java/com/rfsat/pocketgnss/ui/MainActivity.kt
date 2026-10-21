@@ -123,7 +123,7 @@ class MainActivity : ComponentActivity() {
         // Background service whenever a real receiver feeds a recording, NTRIP, mock location or the NMEA server.
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                combine(engine.connection, engine.recording, engine.ntripClient.ntrip, engine.store.settings) { _, _, _, _ -> engine.needsBackground() }
+                combine(engine.connection, engine.recording, engine.ntripClient.ntrip, engine.store.settings, engine.raw.state) { _, _, _, _, _ -> engine.needsBackground() }
                     .collect { need -> if (need) { askNotifications(); LinkService.start(this@MainActivity, engine) } }
             }
         }

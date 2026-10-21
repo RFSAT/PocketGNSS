@@ -24,6 +24,8 @@ its position to the centimetre.
 • Open the receiver's own web settings over its Wi-Fi hotspot
 • Time-to-fix and data-rate tests
 • Provide the RTK position to other apps (mock location) or over a local NMEA TCP server
+• Phone raw GNSS test: does this phone's GNSS chip deliver carrier phase for RTK? Record RINEX and the caster's
+  RTCM stream for post-processing (RTKLIB, MATLAB)
 • Built-in simulator: try every screen and tool without a receiver
 
 Made by RFSAT Limited, a non-profit R&D company in Dublin and Athens. Developed with support from Claude AI (Anthropic).
@@ -39,11 +41,13 @@ Made by RFSAT Limited, a non-profit R&D company in Dublin and Athens. Developed 
 * `connectedDevice`: keeps the USB / Bluetooth link to the user's GNSS receiver open while recording, forwarding
   NTRIP corrections or serving NMEA with the screen off. User-initiated; ongoing notification with Stop.
 * `location`: keeps providing the receiver's position as mock location to other apps (e.g. agricultural guidance
-  and field mapping) with the screen off. User-initiated; ongoing notification with Stop.
+  and field mapping) with the screen off, and keeps a user-started phone raw GNSS recording (20–30 min static
+  session) running with the screen off. User-initiated; ongoing notification with Stop.
   Video of the feature may be requested: Setup > Outputs > Publish as phone location, then lock the screen.
 
-**Permissions:** `ACCESS_FINE_LOCATION` (needed for the location foreground service type; the app does not read
-the phone's own GPS), `ACCESS_MOCK_LOCATION` (provider for the mock location feature, active only when the user
+**Permissions:** `ACCESS_FINE_LOCATION` (the location foreground service type, and the phone's own GNSS when the
+user chooses it as a source or runs the phone raw GNSS test / recording; positions and measurements stay on the
+phone unless the user shares a file), `ACCESS_MOCK_LOCATION` (provider for the mock location feature, active only when the user
 selects the app in Developer options), `BLUETOOTH_CONNECT` (paired receiver), `POST_NOTIFICATIONS`.
 No background location access is requested.
 

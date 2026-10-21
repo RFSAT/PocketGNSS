@@ -61,7 +61,9 @@ PocketGNSS can itself be the NTRIP client for the receiver: it connects to the c
 data**, sends the receiver's GGA position to the caster every 10 s (required by VRS / network services such as
 Metrica / HxGN SmartNet, which compute corrections for that position), and forwards the RTCM stream to the receiver
 over **Bluetooth or USB**. This gives the compact (Wi-Fi) version RTK anywhere with mobile coverage, without a
-router or hotspot, and serves the LTE version where its own SIM has no coverage.
+router or hotspot, and serves the LTE version where its own SIM has no coverage. It is not tied to the AgriBIT
+receiver: any receiver that accepts RTCM 3 on its USB or Bluetooth link (u-blox F9P/F9R boards, many survey
+receivers) is served the same way.
 
 Set-up in the app:
 
@@ -69,7 +71,9 @@ Set-up in the app:
    password; set **Mountpoint: VRS / network** (sends GGA) or **Single base** (EUREF-IP / BKG stations, our own EOS
    Arrow Gold base). **Save profile** under a name; profiles cover Metrica VRS, EUREF-IP, IGS-IP, the EOS base, etc.
    Passwords are encrypted with a key in the phone's Android Keystore and never stored in plain text.
-2. Tools > Corrections > **Get mountpoints** lists the caster's sourcetable, nearest first; tap one to select it.
+2. Tools > Corrections > **Get mountpoints** lists the caster's sourcetable: network / nearest-base streams first,
+   then single stations nearest first. Tapping one selects it and sets the GGA option from the sourcetable;
+   streams that are not RTCM 3 (CMR, RTCM 2) are marked unusable.
 3. Switch **NTRIP ON** (Live or Tools > Corrections). Live shows the relay state, data rate and seconds since the
    last RTCM; the receiver's own GGA then reports the correction age and station, and the fix goes float, then fixed.
    The relay reconnects by itself (5–30 s back-off) after a lost mobile connection.
@@ -78,6 +82,24 @@ On the receiver side this relies on ESPrtk accepting RTCM on the link: the u-blo
 Bluetooth, D3.3 §4.7.14 configures "RTK Radio Over: Bluetooth Classic – BTU", the route ESPrtk uses for corrections
 over Bluetooth. Whether the default mode "5/17 NTRIP_Rover" (section 3) takes RTCM from Bluetooth while its own
 NTRIP client has no internet is still to be confirmed on the hardware.
+
+## Correction services used in AgriBIT
+
+Checked against the casters' live sourcetables in October 2026. Only host, port and mountpoints are listed here;
+user names and passwords come from the service contract or registration and are entered in the app (stored
+encrypted), never in this repository.
+
+| Service | Host : port | Protocol | Mountpoints | GGA |
+|---|---|---|---|---|
+| Metrica / HxGN SmartNet Greece (Leica Spider), paid licence | `gr.nrtk.eu:7801` (69.64.185.50) | NTRIP v2, login | **MSM_VRS** (virtual reference station, GPS+GLO+GAL+BDS) · **MSM_iMAX** (master-auxiliary, all four; formerly "MSM_i-MAX") · **MSM_NEAR** (nearest base, all four) · VRS_Rtcm3 / MAX / NEAR (GPS+GLO) · newer VRS_GNSS / i-MAXGNSS / NEAR_GNSS. Avoid the RTCM 2 / CMR streams (not usable by the F9x) | required for all network and NEAR streams |
+| EUREF-IP at BKG (free registration at register.rtcm-ntrip.org) | `euref-ip.net:2101` (also igs-ip.net) | NTRIP v2 | single EPN stations, e.g. DYNG00GRC0 (Dionysos, 21 km from Athens), PAT000GRC0 (Patras) | no |
+| EUREF-IP at ROB, Belgium (free registration at euref-ip.be) | `www.euref-ip.be:2101` (TLS 2102) | NTRIP v2 | the same EPN stations (raw data, no RTK network) | no |
+| EOS Arrow Gold with EOS Tools Pro (AgriBIT D3.3 §4.3) | phone running EOS Tools Pro, TCP `3967` | NMEA over TCP | — (Tools Pro takes corrections from a caster and serves the corrected NMEA) | — |
+
+Single EPN stations are good for RTK only close by (roughly 20–30 km): near Athens DYNG works; at the Pella pilot
+the nearest station is about 150 km away, so there the Metrica network streams are the RTK option. The EOS Arrow
+Gold, as used in AgriBIT, is read with PocketGNSS's **TCP** source (EOS Tools Pro's NMEA on port 3967) rather than
+being a caster for the receiver.
 
 ## In the app
 

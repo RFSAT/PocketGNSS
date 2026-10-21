@@ -20,7 +20,7 @@ Two hardware versions exist and the app supports both (Setup > Receiver version)
 In both, the receiver applies the corrections itself; the app reads the corrected position. How to set up each route,
 with the D3.5 timings and availability, is in **[docs/rtk-connectivity.md](docs/rtk-connectivity.md)**.
 
-RFSAT Limited. Version 1.2.0 (build 10200).
+RFSAT Limited. Version 1.3.0 (build 10300).
 
 ## Background: the AgriBIT project
 
@@ -62,8 +62,8 @@ agricultural GNSS enabled services*) are listed on the same CORDIS Results page.
 | Home | Connection card with quick actions, receiver version (asked once if not set), receiver module (from UBX MON-VER), description, RFSAT / AgriBIT credits, Claude AI acknowledgement |
 | Live | Source name with a Disconnect button, fix banner coloured by fix type with accuracy (GST-measured or estimated), position, height MSL / ellipsoid, satellites, DOP, speed, correction age and station, receiver version with what to check when no corrections arrive, per-constellation RTK mode (GNS), phone NTRIP status and base distance, NTRIP / Recording / Mark point buttons, sky plot and C/N0 bars |
 | Map | MapLibre with Street / Satellite / Terrain (same raster sources as DBM and PocketSpectro): position coloured by fix, track coloured by fix type, saved points with names, NTRIP base station, follow / recenter / fit / mark / clear |
-| Tools | Survey point · Stake out · Corrections (NTRIP) · NMEA output (UBX) · Receiver settings (web) · Time to fix · Data stream |
-| Log | Recording (raw NMEA + fixes CSV, minimum fix and interval), live NMEA viewer (filter by sentence type, pause, show more, copy, share the shown lines as .nmea; last 2000 sentences, nothing saved unless shared), saved points (KML / CSV / GeoJSON), sessions (NMEA / CSV / GPX / KML, delete) |
+| Tools | Survey point · Stake out · Corrections (NTRIP) · Phone raw GNSS (RTK test) · NMEA output (UBX) · Receiver settings (web) · Time to fix · Data stream |
+| Log | Recording (raw NMEA + fixes CSV, minimum fix and interval), live NMEA viewer (filter by sentence type, pause, show more, copy, share the shown lines as .nmea; last 2000 sentences, nothing saved unless shared), saved points (KML / CSV / GeoJSON), sessions (NMEA / CSV / GPX / KML; phone raw sessions as RINEX / GnssLog / RTCM / ZIP; delete) |
 | Setup | Connection source and its options, phone NTRIP caster, outputs (mock location, NMEA TCP server), receiver ID and device number, display units, simulator |
 | Exit | Confirms, stops recording, closes the link and outputs |
 
@@ -77,12 +77,25 @@ agricultural GNSS enabled services*) are listed on the same CORDIS Results page.
   SIM (LTE version), configured in its web settings (sections 4 and 7). Or the **NTRIP relay through the phone**:
   PocketGNSS connects over the phone's mobile data (v1 and v2/chunked, TLS), sends the receiver's GGA to the caster
   (VRS / network services such as Metrica) and forwards the RTCM stream to the receiver over Bluetooth or USB, giving
-  the compact receiver RTK anywhere with mobile coverage. **Caster profiles** (saved accounts plus EUREF-IP, IGS-IP
-  and RTK2go starting points; VRS or single base), passwords **encrypted with an Android Keystore key**
+  the compact receiver RTK anywhere with mobile coverage. The relay is built for the AgriBIT receiver but works
+  the same with any receiver that accepts RTCM 3 on its USB or Bluetooth link. **Caster profiles** (saved accounts
+  plus starting points checked against the live sourcetables: Metrica / HxGN SmartNet Greece `gr.nrtk.eu:7801`
+  with MSM_VRS or MSM_NEAR, EUREF-IP at BKG `euref-ip.net:2101` and ROB `www.euref-ip.be:2101`, IGS-IP, RTK2go;
+  VRS or single base), passwords **encrypted with an Android Keystore key**
   (`data/Secrets.kt`, AES-256-GCM, never stored in plain text). Shows state, data rate, seconds since the last RTCM,
   frame CRC errors, RTCM message types, the base station (1005/1006) and baseline length (warning above 50 km, D3.3
-  §4.2); browses the caster's sourcetable sorted by distance; reconnects with a 5–30 s back-off. The Live tab shows
+  §4.2); browses the caster's sourcetable (network / nearest-base streams first, then single stations by distance; picking
+  one sets the GGA option from the sourcetable; non-RTCM 3 streams such as CMR are marked unusable); reconnects with a 5–30 s back-off. The Live tab shows
   the correction age and station from the receiver's GGA. See `docs/rtk-connectivity.md`.
+* **Phone raw GNSS (RTK test)**: stage A of phone RTK (`docs/phone-rtk.md`). Reads Android's raw measurements
+  (GnssMeasurement API, full tracking on Android 12+ so duty cycling does not break the carrier phase) and reports,
+  per system and band, satellites, share of usable code and carrier phase (ADR), C/N0, cycle slips, epoch gaps and
+  clock discontinuities, with a verdict: no raw data, code only (DGNSS), phase on L1, or phase on L1 + L5 (best
+  case). Records static sessions for post-processing: **RINEX 3.04 observations** (`raw.obs`, C/L/D/S per signal,
+  checked with RTKLIB's reader), the same data in **GnssLogger format** (`gnss_log.txt`, read directly by Google's
+  MATLAB GNSS Measurement Tools) and, at the same time, the caster's **RTCM base stream** (`base.rtcm3`; the caster
+  gets the phone's GGA when no receiver is connected). Code in `raw/` (pure Kotlin, unit-tested; the phone RTK engine
+  of stage B will reuse the converter).
 * **NMEA output**: replaces the u-center procedure of D3.3 §4.7.22. Choose messages (presets: AgriBIT default
   DTM/GGA/GLL/GNS/GSA/RMC, AGENSO GGA+RMC, full with GSV/GST), u-blox ports (I2C, UART1, USB, SPI as in the guide),
   navigation rate 1-20 Hz, and save to RAM + BBR + Flash; UBX CFG-VALSET with ACK per message, read-back with
@@ -120,6 +133,8 @@ core/       GnssModel (epoch assembly, satellites), Statistics (CEP, 2DRMS, TTFF
             UBX requests, recording, survey, TTFF), NtripClient, Outputs (MockLocation, NmeaServer), LinkService
 link/       GnssLink, UsbSerialLink (usb-serial-for-android), BluetoothSppLink, TcpLink, SimulatedLink
 sim/        SimReceiver
+raw/        RawConvert (GnssClock/GnssMeasurement -> pseudorange, phase, Doppler, RINEX codes), Rinex (3.04 obs writer),
+            GnssLog (GnssLogger "Raw," format), RawAnalyzer (phone RTK capability verdict), PhoneRawLogger (Android side)
 data/       AppSettings (SharedPreferences StateFlow), Records (points CSV, session recorder, KML/GPX/GeoJSON/CSV)
 ui/         Compose screens; Buttons/Controls shared with PocketSpectro (bordered buttons, green ON / red OFF)
 ```

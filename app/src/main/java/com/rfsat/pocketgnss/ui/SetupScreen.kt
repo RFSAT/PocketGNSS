@@ -135,7 +135,15 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
                 s.ntrip.ggaIntervalSec > 0) { vrs -> upd { it.copy(ntrip = it.ntrip.copy(ggaIntervalSec = if (vrs) 10 else 0)) } }
             TextSetting(stringResource(R.string.ntrip_host), s.ntrip.host, { v -> upd { it.copy(ntrip = it.ntrip.copy(host = v)) } }, keyboard = KeyboardType.Uri)
             NumberField(stringResource(R.string.ntrip_port), s.ntrip.port.toDouble(), { v -> upd { it.copy(ntrip = it.ntrip.copy(port = v.toInt())) } }, Modifier.fillMaxWidth(), min = 1.0, max = 65535.0)
-            TextSetting(stringResource(R.string.ntrip_mount), s.ntrip.mountpoint, { v -> upd { it.copy(ntrip = it.ntrip.copy(mountpoint = v)) } })
+            // Usual NTRIP flow: query the caster's sourcetable, pick an endpoint, then connect (or type a known one).
+            var choose by remember { mutableStateOf(false) }
+            if (choose) MountpointDialog(engine, onDismiss = { choose = false })
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                TextSetting(stringResource(R.string.ntrip_mount), s.ntrip.mountpoint, { v -> upd { it.copy(ntrip = it.ntrip.copy(mountpoint = v)) } }, Modifier.weight(1f))
+                ActionButton(onClick = { choose = true }, compact = true, enabled = s.ntrip.host.isNotBlank(), emphasis = s.ntrip.mountpoint.isBlank()) {
+                    Text(stringResource(R.string.ntrip_choose))
+                }
+            }
             TextSetting(stringResource(R.string.ntrip_user), s.ntrip.user, { v -> upd { it.copy(ntrip = it.ntrip.copy(user = v)) } })
             TextSetting(stringResource(R.string.ntrip_pass), s.ntrip.password, { v -> upd { it.copy(ntrip = it.ntrip.copy(password = v)) } }, password = true)
             SwitchRow(stringResource(R.string.ntrip_v2), s.ntrip.version2, { v -> upd { it.copy(ntrip = it.ntrip.copy(version2 = v)) } }, stringResource(R.string.ntrip_v2_help))

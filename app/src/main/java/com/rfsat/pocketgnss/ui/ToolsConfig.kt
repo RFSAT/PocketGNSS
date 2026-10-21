@@ -154,8 +154,11 @@ fun CorrectionsTool(engine: GnssEngine) {
                 if (d != null) KeyValue(stringResource(R.string.corr_baseline), formatDistance(d), valueColor = if (d > 50_000) AlarmRed else if (d > 20_000) WarnAmber else SafeGreen)
                 if (d != null && d > 50_000) Text(stringResource(R.string.corr_baseline_far), style = MaterialTheme.typography.bodySmall, color = AlarmRed)
             }
+            var choose by remember { mutableStateOf(false) }
             ToggleButton(on = s.ntripEnabled, label = stringResource(if (s.ntripEnabled) R.string.live_ntrip_on else R.string.live_ntrip_off),
-                onClick = { engine.setNtrip(!s.ntripEnabled) }, enabled = s.ntrip.usable || s.ntripEnabled)
+                onClick = { if (!s.ntripEnabled && s.ntrip.mountpoint.isBlank()) choose = true else engine.setNtrip(!s.ntripEnabled) },
+                enabled = s.ntrip.host.isNotBlank() || s.ntripEnabled)
+            if (choose) MountpointDialog(engine, onDismiss = { choose = false }, onPicked = { engine.setNtrip(true) })
         }
         if (n.types.isNotEmpty()) Section(stringResource(R.string.corr_messages)) {
             for ((t, c) in n.types.toSortedMap()) Row(Modifier.fillMaxWidth()) {
@@ -175,21 +178,10 @@ fun CorrectionsTool(engine: GnssEngine) {
             }, enabled = s.ntrip.host.isNotBlank() && !busy) { Text(stringResource(R.string.corr_fetch)) }
             err?.let { Text(it, color = AlarmRed, style = MaterialTheme.typography.bodySmall) }
             val here = fix
-            val sorted = if (here != null) list.sortedBy { m -> if (m.latitude != null && m.longitude != null) Geo.distance(here.latitude, here.longitude, m.latitude, m.longitude) else 1e12 }
-                else list
-            for (m in sorted.take(60)) {
-                val d = if (here != null && m.latitude != null && m.longitude != null) Geo.distance(here.latitude, here.longitude, m.latitude, m.longitude) else null
-                Column(Modifier.fillMaxWidth().clickable { engine.store.update { it.copy(ntrip = it.ntrip.copy(mountpoint = m.name)) } }.padding(vertical = 6.dp)) {
-                    Row {
-                        Text(m.name, Modifier.weight(1f), fontWeight = if (m.name == s.ntrip.mountpoint) FontWeight.Bold else FontWeight.SemiBold,
-                            color = if (m.name == s.ntrip.mountpoint) SafeGreen else MaterialTheme.colorScheme.onSurface)
-                        Text(d?.let { formatDistance(it) } ?: "", style = MaterialTheme.typography.bodySmall)
-                    }
-                    Text(listOf(m.identifier, m.format, m.navSystems, m.country, if (m.needsGga) "GGA" else "", if (m.fee) "fee" else "")
-                        .filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = muted)
-                }
-                HorizontalDivider()
-            }
+            MountpointList(list, here?.latitude, here?.longitude, s.ntrip.mountpoint, { m ->
+                // GGA follows the sourcetable: network / nearest-base streams need the rover position, single stations do not.
+                engine.store.update { it.copy(ntrip = it.ntrip.copy(mountpoint = m.name, ggaIntervalSec = if (m.needsGga) 10 else 0)) }
+            })
         }
     }
 }

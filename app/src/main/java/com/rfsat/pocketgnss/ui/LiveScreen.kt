@@ -19,6 +19,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -125,9 +128,12 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
                 KeyValue(stringResource(R.string.live_base), stringResource(R.string.live_base_value, b.stationId, dist?.let { formatDistance(it) } ?: "—"), live = true)
             }
             // One row: three equal buttons with short labels; the colour shows the state.
+            var choose by remember { mutableStateOf(false) }
+            if (choose) MountpointDialog(engine, onDismiss = { choose = false }, onPicked = { engine.setNtrip(true) })
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ToggleButton(on = s.ntripEnabled, label = stringResource(if (s.ntripEnabled) R.string.live_ntrip_on else R.string.live_ntrip_off),
-                    onClick = { engine.setNtrip(!s.ntripEnabled) }, enabled = phoneChip.not() && (s.ntrip.usable || s.ntripEnabled),
+                    onClick = { if (!s.ntripEnabled && s.ntrip.mountpoint.isBlank()) choose = true else engine.setNtrip(!s.ntripEnabled) },
+                    enabled = phoneChip.not() && (s.ntrip.host.isNotBlank() || s.ntripEnabled),
                     modifier = Modifier.weight(1f), narrow = true)
                 ToggleButton(on = rec.active, label = stringResource(if (rec.active) R.string.live_rec_on else R.string.live_rec_off),
                     onClick = { if (rec.active) engine.stopRecording() else engine.startRecording() }, modifier = Modifier.weight(1f), narrow = true)
@@ -137,7 +143,7 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
                 }
             }
             if (phoneChip) Text(stringResource(R.string.live_phone_no_rtk), style = MaterialTheme.typography.bodySmall, color = muted)
-            else if (!s.ntrip.usable && !s.ntripEnabled) Text(stringResource(R.string.live_ntrip_setup), style = MaterialTheme.typography.bodySmall, color = muted)
+            else if (s.ntrip.host.isBlank() && !s.ntripEnabled) Text(stringResource(R.string.live_ntrip_setup), style = MaterialTheme.typography.bodySmall, color = muted)
         }
 
         Section(stringResource(R.string.live_sky)) {
