@@ -83,7 +83,7 @@ fun HomeScreen(engine: GnssEngine, onOpenTab: (Tab) -> Unit, onReconnect: () -> 
                 KeyValue(stringResource(R.string.home_link), ready.info.detail)
                 rx.module?.let { KeyValue(stringResource(R.string.home_module), it + (rx.firmware?.let { f -> " · $f" } ?: "")) }
                 val f = fix
-                KeyValue(stringResource(R.string.live_fix), if (f != null) stringResource(fixLabel(f.quality)) + " · " + formatAccuracy(f.horizontalAccuracy)
+                KeyValue(stringResource(R.string.live_fix), if (f != null) stringResource(fixLabel(f)) + " · " + formatAccuracy(f.horizontalAccuracy)
                     else stringResource(R.string.top_no_fix), live = true)
                 KeyValue(stringResource(R.string.home_state), buildList {
                     if (ntrip.status != com.rfsat.pocketgnss.core.NtripStatus.OFF) add(stringResource(R.string.state_ntrip, ntrip.status.name.lowercase()))

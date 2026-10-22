@@ -92,7 +92,7 @@ private fun GuidanceActive(engine: GnssEngine) {
             KeyValue(stringResource(R.string.guide_along), "%.1f m".format(Locale.US, sol.along), live = true)
         }
         CoverageRows(engine)
-        fix?.let { KeyValue(stringResource(R.string.live_fix), stringResource(fixLabel(it.quality)) + " " + formatAccuracy(it.horizontalAccuracy), live = true, valueColor = fixColor(it.quality)) }
+        fix?.let { KeyValue(stringResource(R.string.live_fix), stringResource(fixLabel(it)) + " " + formatAccuracy(it.horizontalAccuracy), live = true, valueColor = fixColor(it.quality)) }
         KeyValue(stringResource(R.string.guide_line), lineText(line), live = true)
         if (line.shift != 0.0) KeyValue(stringResource(R.string.guide_shift), "%+.2f m".format(Locale.US, line.shift), live = true)
         Text(stringResource(R.string.guide_shift_help), style = MaterialTheme.typography.bodySmall, color = muted)

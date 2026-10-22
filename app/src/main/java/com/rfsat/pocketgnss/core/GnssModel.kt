@@ -33,6 +33,8 @@ data class GnssFix(
     val sdAltitude: Double?,
     /** GNS mode characters per constellation, e.g. "RRRRNN". */
     val modes: String?,
+    /** For a DGNSS fix (GGA quality 2), where the corrections come from when that can be told (see [DgnssSource]). */
+    val dgnss: DgnssSource? = null,
 ) {
     /** Height above the WGS-84 ellipsoid (MSL + geoid separation), metres. */
     val ellipsoidHeight: Double? get() = altitudeMsl?.let { it + (geoidSeparation ?: 0.0) }
@@ -58,6 +60,36 @@ data class GnssFix(
     }
 
     val verticalAccuracy: Double get() = sdAltitude ?: (horizontalAccuracy * 1.8)
+}
+
+/**
+ * GGA quality 2 ("differential") covers several methods that differ greatly in accuracy: code corrections from a
+ * base station (RTCM, about 0.5-1 m on a receiver), SBAS (EGNOS: about 1 m), and phone PPP.
+ */
+enum class DgnssSource {
+    SBAS, BASE, PPP;
+
+    companion object {
+        /**
+         * For an external receiver: corrections from a base when the app relays an NTRIP stream to it, else SBAS when
+         * an SBAS satellite is used in the solution (GSA), else unknown (e.g. a receiver with its own NTRIP client).
+         */
+        fun of(quality: FixQuality, sats: List<SatInfo>, relayingCorrections: Boolean): DgnssSource? = when {
+            quality != FixQuality.DGNSS -> null
+            relayingCorrections -> BASE
+            sats.any { it.constellation == Constellation.SBAS && it.used } -> SBAS
+            else -> null
+        }
+
+        /** For phone RTK: from the engine's method (PhoneRtkLink.state.source). */
+        fun ofPhoneMethod(quality: FixQuality, method: String): DgnssSource? = when {
+            quality != FixQuality.DGNSS -> null
+            method == "Code DGNSS" -> BASE
+            method.startsWith("PPP") -> PPP
+            method == "SBAS" -> SBAS
+            else -> null
+        }
+    }
 }
 
 /** One satellite with the strongest C/N0 per signal. */

@@ -134,6 +134,71 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     /** Phone RTK: a second caster stream with broadcast ephemerides only (Setup > Phone > Ephemeris stream). */
     val ephClient = NtripClient(scope, forward = { com.rfsat.pocketgnss.link.PhoneRtkLink.current?.writeNav(it); raw.onRtcmNav(it) }, gga = { null })
 
+    /**
+     * What goes into the app log (Tools > App log): changes of the connection, of the correction streams, of the fix
+     * and of the phone RTK engine's state, so a session can be followed afterwards. Repeating conditions are
+     * throttled; positions and passwords are never logged.
+     */
+    private fun logWatchers() {
+        scope.launch {
+            connection.collect { c ->
+                when (c) {
+                    is Connection.Connecting -> AppLog.i("Link", "Connecting: ${c.label}")
+                    is Connection.Ready -> AppLog.i("Link", "Connected: ${c.info.name}" + (c.info.detail.takeIf { it.isNotBlank() }?.let { " ($it)" } ?: ""))
+                    is Connection.Failed -> AppLog.w("Link", "Connection failed or lost: ${c.message}")
+                    Connection.AwaitingPermission -> AppLog.i("Link", "Waiting for permission")
+                    Connection.NoDevice -> AppLog.i("Link", "Not connected")
+                }
+            }
+        }
+        for ((client, tag) in listOf(ntripClient to "NTRIP", ephClient to "Ephemeris stream")) scope.launch {
+            var last: Pair<NtripStatus, String>? = null
+            client.ntrip.collect { st ->
+                val key = st.status to st.message
+                if (key == last) return@collect
+                last = key
+                when (st.status) {
+                    NtripStatus.CONNECTING -> AppLog.i(tag, "Connecting to ${st.message} / ${st.mountpoint}")
+                    NtripStatus.STREAMING -> AppLog.i(tag, "Streaming ${st.mountpoint}: ${st.message}")
+                    NtripStatus.ERROR -> AppLog.w(tag, "Error: ${st.message}")
+                    NtripStatus.WAITING -> AppLog.i(tag, "Reconnecting (attempt ${st.reconnects + 1})")
+                    NtripStatus.OFF -> AppLog.i(tag, "Stopped")
+                }
+            }
+        }
+        scope.launch {
+            var lastQ: FixQuality? = null
+            fix.collect { f ->
+                val q = f?.quality ?: FixQuality.NONE
+                if (q == lastQ) return@collect
+                lastQ = q
+                AppLog.throttled("fix-$q", 30_000, AppLog.Level.INFO, "Fix", "Fix type: ${q.name}" + (f?.let { " · ${it.satellitesUsed ?: "?"} satellites" } ?: ""))
+            }
+        }
+        scope.launch {
+            var resets = 0; var rejected = 0; var noPhase = false; var source = ""
+            com.rfsat.pocketgnss.link.PhoneRtkLink.state.collect { st ->
+                if (st.resets > resets) AppLog.w("Phone RTK", "Filter restarted: its solution stayed far from the phone's own position")
+                if (st.rejected > rejected && rejected == 0) AppLog.w("Phone RTK", "A solution far from the phone's own position was not used")
+                else if (st.rejected > rejected) AppLog.throttled("rtk-rej", 60_000, AppLog.Level.WARN, "Phone RTK", "${st.rejected} solutions not used so far (far from the phone's own position)")
+                resets = st.resets; rejected = st.rejected
+                if (st.noPhase != noPhase && st.epochs > 5) {
+                    noPhase = st.noPhase
+                    if (noPhase) AppLog.w("Phone RTK", "No carrier phase from the phone (${st.signals} signals)") else AppLog.i("Phone RTK", "Carrier phase back: ${st.withPhase} of ${st.signals} signals")
+                }
+                if (st.source.isNotEmpty() && st.source != source) {
+                    source = st.source
+                    AppLog.throttled("rtk-src-$source", 60_000, AppLog.Level.INFO, "Phone RTK", "Position from: $source · ${st.withPhase} of ${st.signals} signals with carrier phase" +
+                        (st.solution?.let { " · ${it.satellites} satellites" } ?: ""))
+                }
+                // The engine's own messages (outliers, slips, missing data) explain why carrier phase is not used.
+                st.message.takeIf { it.isNotBlank() }?.let { m ->
+                    AppLog.throttled("rtk-msg-" + m.substringBefore('(').take(40), 60_000, AppLog.Level.INFO, "RTK engine", m)
+                }
+            }
+        }
+    }
+
     /** Starts or stops the ephemeris stream to match the settings and the link. */
     @Volatile private var ephConfig: com.rfsat.pocketgnss.protocol.NtripConfig? = null
     fun updateEphStream() {
@@ -191,6 +256,10 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     private var lastLoggedMs = 0L
     private val trackBuf = ArrayList<TrackPoint>()
     private var lastTrackMs = 0L
+    /** The map trace survives app restarts: saved every 15 s while it grows, and on shutdown; deleted only by Clear. */
+    private val trackStore = com.rfsat.pocketgnss.data.TrackStore(File(File(context.getExternalFilesDir(null) ?: context.filesDir, "points"), "track.bin"))
+    @Volatile private var trackDirty = false
+    private var trackSavedMs = 0L
     private val surveySamples = ArrayList<DoubleArray>()
     private var surveyMslSum = 0.0
     private var surveyMslCount = 0
@@ -205,12 +274,15 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     init {
         _points.value = pointStore.load()
         _fields.value = fieldStore.load()
+        synchronized(trackBuf) { trackBuf.addAll(trackStore.load()) }
+        _track.value = synchronized(trackBuf) { trackBuf.toList() }
         scope.launch {
             while (isActive) {
                 delay(300)
                 publish()
             }
         }
+        logWatchers()
         // Outputs follow the settings.
         scope.launch {
             store.settings.collect { s ->
@@ -400,7 +472,10 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         server.send(line)
         if (!store.value.btServerPositionOnly || BtNmeaServer.typeOf(line) in BtNmeaServer.POSITION_SENTENCES) btServer.send(line)
         if (s is NmeaSentence.Gga && s.quality != FixQuality.NONE) lastGgaLine = line
-        val f = model.accept(s) ?: return
+        val f0 = model.accept(s) ?: return
+        val f = if (f0.quality != FixQuality.DGNSS) f0 else f0.copy(dgnss = if (link?.info?.phoneRtk == true)
+            DgnssSource.ofPhoneMethod(f0.quality, com.rfsat.pocketgnss.link.PhoneRtkLink.state.value.source)
+        else DgnssSource.of(f0.quality, model.satellites(), ntripClient.ntrip.value.let { it.status == NtripStatus.STREAMING && now - it.lastDataMs < 30_000 }))
         _fix.value = f
         recordHistory(f, now)
         // Mock location from the phone's own chip would only feed the phone its own position back.
@@ -443,7 +518,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         val f = _fix.value
         val events = alertLogic.update(now, f?.quality ?: FixQuality.NONE, f?.diffAgeSec)
         for (e in events) {
-            val detail = f?.let { context.getString(R.string.alert_detail, context.getString(com.rfsat.pocketgnss.ui.fixLabel(it.quality)),
+            val detail = f?.let { context.getString(R.string.alert_detail, context.getString(com.rfsat.pocketgnss.ui.fixLabel(it)),
                 it.diffAgeSec?.let { a -> "%.0f s".format(java.util.Locale.US, a) } ?: "—") } ?: context.getString(R.string.top_no_fix)
             alerter.signal(e, s.alertSound, s.alertVibrate, detail)
         }
@@ -464,6 +539,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
                 trackBuf.add(TrackPoint(now, f.latitude, f.longitude, f.ellipsoidHeight, f.quality))
                 if (trackBuf.size > 7200) trackBuf.subList(0, 1200).clear()
             }
+            trackDirty = true
             lastTrackMs = now
         }
         fieldCapture.onFix(f.latitude, f.longitude, f.ellipsoidHeight, f.quality, now)
@@ -518,6 +594,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
             checkAlerts(now)
         }
         _track.value = synchronized(trackBuf) { trackBuf.toList() }
+        if (trackDirty && now - trackSavedMs >= 15_000) saveTrack(now)
         recorder?.let { _recording.value = _recording.value.copy(fixes = it.fixes, lines = it.lines) }
         val sv = _survey.value
         val n = synchronized(surveySamples) { surveySamples.size }
@@ -616,16 +693,34 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         r.line("# PocketGNSS session ${r.dir.name} · ${linkInfo?.name ?: ""} · ${_receiver.value.module ?: ""}".trim())
         recorder = r; lastLoggedMs = 0
         _recording.value = RecordingState(true, r.dir, 0, 0, r.startedMs)
+        AppLog.i("Recording", "Started ${r.dir.name}")
     }
 
     fun stopRecording() {
+        recorder?.let { AppLog.i("Recording", "Stopped ${it.dir.name}: ${it.fixes} fixes") }
         recorder?.close(); recorder = null
         _recording.value = _recording.value.copy(active = false)
     }
 
     fun sessions(): List<File> = sessionsRoot.listFiles()?.filter { it.isDirectory }?.sortedByDescending { it.name } ?: emptyList()
     fun sessionTrack(dir: File) = FixCsv.read(File(dir, "fixes.csv"))
-    fun clearTrack() = synchronized(trackBuf) { trackBuf.clear() }
+    fun clearTrack() {
+        synchronized(trackBuf) { trackBuf.clear() }
+        trackDirty = false; trackStore.clear()
+        _track.value = emptyList()
+    }
+
+    private fun saveTrack(now: Long = System.currentTimeMillis()) {
+        trackDirty = false; trackSavedMs = now
+        val copy = synchronized(trackBuf) { trackBuf.toList() }
+        scope.launch(kotlinx.coroutines.Dispatchers.IO) { synchronized(trackStore) { trackStore.save(copy) } }
+    }
+
+    /** The app went to the background: save what is not saved yet, in the background. */
+    fun saveTrackNow() { if (trackDirty) saveTrack() }
+
+    /** Saves what is not saved yet, before stopping. */
+    fun flushTrack() { if (trackDirty) { trackDirty = false; val copy = synchronized(trackBuf) { trackBuf.toList() }; synchronized(trackStore) { trackStore.save(copy) } } }
 
     fun startSurvey(minQuality: FixQuality, reference: Reference?) {
         synchronized(surveySamples) { surveySamples.clear() }
@@ -820,6 +915,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     }
 
     fun shutdown() {
+        flushTrack()
         history.stopFile()
         if (raw.state.value.running) raw.stop()
         stopRecording(); ntripClient.stop(); ephClient.stop(); caster.stop(); jsonServer.stop(); mock.stop(); server.stop(); btServer.stop()

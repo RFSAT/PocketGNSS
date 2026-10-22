@@ -128,6 +128,7 @@ class PhoneRawLogger(
     @SuppressLint("MissingPermission")
     fun start(record: Boolean, withRtcm: Boolean, markerName: String) {
         if (_state.value.running) stop()
+        com.rfsat.pocketgnss.core.AppLog.i("Phone raw", "Started" + (if (record) " recording" + (if (withRtcm) " with the caster stream" else "") else " (test only)"))
         if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             _state.value = RawState(error = "Location is off on this phone: turn it on in quick settings"); return
         }
@@ -167,6 +168,7 @@ class PhoneRawLogger(
     }
 
     fun stop() {
+        if (_state.value.running) com.rfsat.pocketgnss.core.AppLog.i("Phone raw", "Stopped")
         try { lm.unregisterGnssMeasurementsCallback(callback) } catch (_: Exception) {}
         try { lm.removeUpdates(listener) } catch (_: Exception) {}
         val h = handler

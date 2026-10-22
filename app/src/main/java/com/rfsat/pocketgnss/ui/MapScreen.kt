@@ -102,7 +102,7 @@ fun MapScreen(engine: GnssEngine) {
                 else {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("● ", color = fixColor(f.quality))
-                        FitText(methodOrFix((conn as? com.rfsat.pocketgnss.core.Connection.Ready)?.info?.phoneRtk == true, f.quality) + "  " + formatAccuracy(f.horizontalAccuracy) + "  ·  " +
+                        FitText(methodOrFix((conn as? com.rfsat.pocketgnss.core.Connection.Ready)?.info?.phoneRtk == true, f) + "  " + formatAccuracy(f.horizontalAccuracy) + "  ·  " +
                             formatLat(f.latitude, s.coordFormat) + "  " + formatLon(f.longitude, s.coordFormat), fontWeight = FontWeight.SemiBold)
                     }
                 }

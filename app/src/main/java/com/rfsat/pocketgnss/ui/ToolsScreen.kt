@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Agriculture
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CellTower
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Language
@@ -84,6 +85,7 @@ enum class ToolId(@StringRes val title: Int, @StringRes val summary: Int, val ic
     RECEIVER_WEB(R.string.tool_web, R.string.tool_web_sum, Icons.Filled.Language),
     TTFF(R.string.tool_ttff, R.string.tool_ttff_sum, Icons.Filled.Timer),
     STREAM(R.string.tool_stream, R.string.tool_stream_sum, Icons.Filled.Terminal),
+    APP_LOG(R.string.tool_applog, R.string.tool_applog_sum, Icons.Filled.BugReport),
 }
 
 @Composable
@@ -129,6 +131,7 @@ fun ToolsTab(engine: GnssEngine, initialTool: ToolId? = null) {
             ToolId.RECEIVER_WEB -> ReceiverWebTool(engine)
             ToolId.TTFF -> TtffTool(engine)
             ToolId.STREAM -> StreamTool(engine)
+            ToolId.APP_LOG -> AppLogTool()
         }
     }
 }
@@ -173,7 +176,7 @@ private fun SurveyTool(engine: GnssEngine) = NeedsReceiver(engine) {
                     if (sv.running) engine.stopSurvey() else engine.startSurvey(minQ, parseRef(refLat, refLon, refH))
                 })
                 val f = fix
-                if (f != null) Text(stringResource(R.string.survey_now, stringResource(fixLabel(f.quality))), Modifier.align(Alignment.CenterVertically),
+                if (f != null) Text(stringResource(R.string.survey_now, stringResource(fixLabel(f))), Modifier.align(Alignment.CenterVertically),
                     color = fixColor(f.quality), fontWeight = FontWeight.SemiBold)
             }
         }
@@ -312,7 +315,7 @@ private fun StakeoutTool(engine: GnssEngine) = NeedsReceiver(engine) {
             KeyValue(stringResource(R.string.stake_north), formatOffset(enu[1]), live = true)
             KeyValue(stringResource(R.string.stake_up), up?.let { formatOffset(it) } ?: "—", live = true)
             KeyValue(stringResource(R.string.stake_bearing), "%.1f°".format(Locale.US, brg), live = true)
-            KeyValue(stringResource(R.string.live_fix), stringResource(fixLabel(f.quality)) + " " + formatAccuracy(f.horizontalAccuracy), live = true, valueColor = fixColor(f.quality))
+            KeyValue(stringResource(R.string.live_fix), stringResource(fixLabel(f)) + " " + formatAccuracy(f.horizontalAccuracy), live = true, valueColor = fixColor(f.quality))
         }
     }
 }

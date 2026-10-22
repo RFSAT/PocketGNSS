@@ -144,6 +144,11 @@ class MainActivity : ComponentActivity() {
         handleIntent(intent)
     }
 
+    override fun onStop() {
+        engine.saveTrackNow()
+        super.onStop()
+    }
+
     override fun onDestroy() {
         unregisterReceiver(usbReceiver)
         super.onDestroy()
@@ -263,7 +268,7 @@ internal fun AppRoot(
                         if (conn is Connection.Ready) Text("● ", color = fixColor(f?.quality ?: com.rfsat.pocketgnss.protocol.FixQuality.NONE), fontSize = 13.sp)
                         Text(
                             when (val c = conn) {
-                                is Connection.Ready -> c.info.name + (if (f != null) " · " + methodOrFix(c.info.phoneRtk, f.quality) + " " + formatAccuracy(f.horizontalAccuracy)
+                                is Connection.Ready -> c.info.name + (if (f != null) " · " + methodOrFix(c.info.phoneRtk, f) + " " + formatAccuracy(f.horizontalAccuracy)
                                     else " · " + stringResource(R.string.top_no_fix))
                                 is Connection.Connecting -> stringResource(R.string.conn_connecting, c.label)
                                 Connection.AwaitingPermission -> stringResource(R.string.top_allow_usb)
@@ -333,8 +338,8 @@ fun NotConnected(conn: Connection, onReconnect: () -> Unit) {
  * only call "DGNSS / SBAS"), else the fix class.
  */
 @Composable
-internal fun methodOrFix(phoneRtk: Boolean, q: com.rfsat.pocketgnss.protocol.FixQuality): String {
+internal fun methodOrFix(phoneRtk: Boolean, f: com.rfsat.pocketgnss.core.GnssFix): String {
     val st by com.rfsat.pocketgnss.link.PhoneRtkLink.state.collectAsState()
     val m = if (phoneRtk) st.source.takeIf { it.isNotEmpty() } else null
-    return m?.let { methodText(it) } ?: stringResource(fixLabel(q))
+    return m?.let { methodText(it) } ?: stringResource(fixLabel(f))
 }

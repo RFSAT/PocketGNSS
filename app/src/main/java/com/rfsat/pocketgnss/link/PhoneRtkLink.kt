@@ -153,6 +153,8 @@ class PhoneRtkLink private constructor(
         val e = RawConvert.epoch(c, ms, lastDisc)
         lastDisc = c.hardwareClockDiscontinuityCount
         if (e == null || e.obs.isEmpty()) {
+            com.rfsat.pocketgnss.core.AppLog.throttled("raw-empty", 60_000, com.rfsat.pocketgnss.core.AppLog.Level.WARN, "Phone RTK",
+                if (e == null) "The phone gives no full clock bias: no raw measurements usable" else "No usable signals in the phone's measurements")
             _state.value = _state.value.copy(message = if (e == null) "no full clock bias from the phone" else "no usable signals")
             return
         }
@@ -165,6 +167,7 @@ class PhoneRtkLink private constructor(
         // PPP on a phone without a second frequency: broadcast ionosphere instead of the ionosphere-free combination.
         if (options.ppp) iono.update(IonoChooser.dualSatellites(e))?.let { f ->
             synchronized(engineLock) { RtkNative.setIono(if (f) 1 else 0) }; convergence.reset()
+            com.rfsat.pocketgnss.core.AppLog.i("Phone RTK", if (f) "PPP: dual frequency, ionosphere-free combination" else "PPP: single frequency, broadcast ionosphere model")
         }
         val (status, sol, base, msg) = synchronized(engineLock) {
             val st = RtkNative.rover(e.gpsWeek, e.towSeconds, arrays.n, arrays.sys, arrays.prn, arrays.codes, arrays.p, arrays.l, arrays.d,
@@ -191,6 +194,10 @@ class PhoneRtkLink private constructor(
             return
         }
         lastSolutionMs = now
+        val phoneAcc = phone?.takeIf { it.hasAccuracy() }?.accuracy?.toDouble()
+        if (phone != null && PositionCheck.preferPhone(sol.status, kotlin.math.hypot(sol.stdEast, sol.stdNorth), phoneAcc)) {
+            emitLocation(phone); return
+        }
         emitSolution(sol, base, convergence.converging(sol))
     }
 

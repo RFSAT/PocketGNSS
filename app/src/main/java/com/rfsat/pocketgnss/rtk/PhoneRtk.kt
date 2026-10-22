@@ -259,6 +259,14 @@ class PositionCheck(private val resetAfterMs: Long = 10_000, private val resetIn
         /** Largest credible distance: 30 m, or more when either position says it is that uncertain. */
         fun limit(engineAcc: Double, phoneAcc: Double?): Double =
             maxOf(30.0, 4.0 * (phoneAcc ?: 10.0) + 3.0 * engineAcc.coerceIn(0.0, 50.0))
+
+        /**
+         * Code-only solutions (code DGNSS, single) from raw, unsmoothed phone code are often no better than the chip's
+         * own fix, which smooths its ranges with the carrier phase: then the one reporting the better accuracy is
+         * used, so phone RTK is never worse than the phone alone. RTK float / fixed and PPP always come from the engine.
+         */
+        fun preferPhone(status: RtkStatus, engineAcc: Double, phoneAcc: Double?): Boolean =
+            (status == RtkStatus.DGPS || status == RtkStatus.SINGLE) && phoneAcc != null && phoneAcc > 0 && phoneAcc < engineAcc
     }
 }
 

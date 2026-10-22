@@ -184,6 +184,17 @@ class RtkEngineTest {
         assertEquals(rej, c.check(t + 2000, lat + 300 * dLat, lon, 2.0, lat, lon, 5.0))
     }
 
+    @Test fun codeOnlySolutionsGiveWayToABetterPhoneFix() {
+        val P = com.rfsat.pocketgnss.rtk.PositionCheck
+        assertTrue(P.preferPhone(RtkStatus.DGPS, 1.5, 0.51))         // the case seen on the S24
+        assertTrue(!P.preferPhone(RtkStatus.DGPS, 0.4, 0.51))
+        assertTrue(P.preferPhone(RtkStatus.SINGLE, 3.0, 2.0))
+        assertTrue(!P.preferPhone(RtkStatus.FLOAT, 1.5, 0.51))       // carrier phase: always the engine
+        assertTrue(!P.preferPhone(RtkStatus.FIX, 0.9, 0.51))
+        assertTrue(!P.preferPhone(RtkStatus.PPP, 1.5, 0.51))
+        assertTrue(!P.preferPhone(RtkStatus.DGPS, 1.5, null))
+    }
+
     @Test fun phoneLearning() {
         val o = RtkOptions()
         // A phone with 3 satellites with phase (never enough to fix): after 10 minutes, no ambiguity fixing.

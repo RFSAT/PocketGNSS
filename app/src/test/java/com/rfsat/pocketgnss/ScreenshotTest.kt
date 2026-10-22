@@ -92,6 +92,16 @@ class ScreenshotTest {
     @Test fun home_unset() { simulatorAtFix(variant = com.rfsat.pocketgnss.link.ReceiverVariant.UNSET); shot("01b_home_version_not_set", Tab.HOME) }
     @Test fun corrections_wifi() { simulatorAtFix(variant = com.rfsat.pocketgnss.link.ReceiverVariant.WIFI); shot("09b_tool_corrections_wifi", Tab.TOOLS, ToolId.CORRECTIONS) }
     @Test fun raw() { simulatorAtFix(); shot("09c_tool_phone_raw", Tab.TOOLS, ToolId.RAW) }
+    @Test fun history_rows() { simulatorAtFix(); Thread.sleep(6000); shot("09e_tool_history_rows", Tab.TOOLS, ToolId.HISTORY, scrollTo = "Engine: n = satellites in the solution, φ = signals with carrier phase, r = ambiguity ratio (a fix needs about 3 or more).") }
+    @Test fun app_log() {
+        simulatorAtFix()
+        com.rfsat.pocketgnss.core.AppLog.add(com.rfsat.pocketgnss.core.AppLog.Level.ERROR, "Exit", "Last run (2026-10-22 09:41:07.112 UTC) crashed in native code (RTK engine or a library) · memory 212 MB")
+        com.rfsat.pocketgnss.core.AppLog.i("App", "Screen off"); com.rfsat.pocketgnss.core.AppLog.i("App", "Screen on")
+        com.rfsat.pocketgnss.core.AppLog.i("NTRIP", "Streaming MSM_NEAR: ICY 200 OK")
+        com.rfsat.pocketgnss.core.AppLog.w("Phone RTK", "A solution far from the phone's own position was not used")
+        com.rfsat.pocketgnss.core.AppLog.i("RTK engine", "outlier rejected (sat= 12- 25 L1 v=6.214)")
+        shot("15_tool_app_log", Tab.TOOLS, ToolId.APP_LOG)
+    }
     @Test fun history() { simulatorAtFix(); Thread.sleep(4000); shot("09d_tool_history", Tab.TOOLS, ToolId.HISTORY, scrollTo = "Reported accuracy against actual scatter") }
     @Test fun setup_bt_share() { simulatorAtFix(); shot("14d_setup_bt_share", Tab.SETUP, scrollTo = "Share the position over Bluetooth") }
     @Test fun home_bt_card() { simulatorAtFix(); shot("01c_home_bt_card", Tab.HOME, scrollTo = "Phone as GNSS receiver (Bluetooth)") }

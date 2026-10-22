@@ -23,6 +23,17 @@ import kotlin.math.abs
     FixQuality.SIMULATION -> R.string.fix_simulation
 }
 
+/**
+ * The fix type of one fix: as [fixLabel] of its quality, but a DGNSS fix names its source when known (SBAS, code
+ * DGNSS from a base station, PPP) instead of the generic "DGNSS / SBAS".
+ */
+@StringRes fun fixLabel(f: com.rfsat.pocketgnss.core.GnssFix): Int = if (f.quality != FixQuality.DGNSS) fixLabel(f.quality) else when (f.dgnss) {
+    com.rfsat.pocketgnss.core.DgnssSource.SBAS -> R.string.fix_sbas
+    com.rfsat.pocketgnss.core.DgnssSource.BASE -> R.string.method_code_dgnss
+    com.rfsat.pocketgnss.core.DgnssSource.PPP -> R.string.method_ppp
+    null -> R.string.fix_dgnss_plain
+}
+
 /** Expected accuracy class shown under the fix type (from the D3.5 validation). */
 @StringRes fun fixHint(q: FixQuality): Int = when (q) {
     FixQuality.RTK_FIXED -> R.string.fixhint_fixed

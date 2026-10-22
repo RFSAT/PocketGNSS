@@ -62,6 +62,7 @@ class LinkService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
+        AppLog.i("Service", "Background service started")
         super.onCreate()
         running = true
         val nm = getSystemService(NotificationManager::class.java)
@@ -101,7 +102,7 @@ class LinkService : Service() {
         if (engine.store.value.mockLocation) parts.add(getString(R.string.notif_mock))
         if (engine.store.value.nmeaServer) parts.add(getString(R.string.notif_server, engine.server.clientCount.value))
         if (engine.btServer.running) parts.add(engine.btServer.state.value.clients.size.let { resources.getQuantityString(R.plurals.notif_bt, it, it) })
-        val title = if (f != null) getString(R.string.notif_title_fix, getString(fixLabel(f.quality)), formatAccuracy(f.horizontalAccuracy))
+        val title = if (f != null) getString(R.string.notif_title_fix, getString(fixLabel(f)), formatAccuracy(f.horizontalAccuracy))
             else getString(R.string.notif_title_nofix)
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
@@ -120,6 +121,7 @@ class LinkService : Service() {
     }
 
     override fun onDestroy() {
+        AppLog.i("Service", "Background service stopped")
         running = false
         scope.cancel()
         try { if (wake?.isHeld == true) wake?.release() } catch (_: Exception) {}

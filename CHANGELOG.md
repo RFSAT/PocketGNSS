@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.12.2 (build 11202)
+New App log (Tools): errors, warnings and events, including crashes and why the app last ended, to share when reporting a problem. The map trace is kept between app runs until you clear it. Fixes now say SBAS when SBAS is used, instead of DGNSS / SBAS. With phone RTK on code corrections only, the phone's own position is used when it is more accurate. Position history fits each entry on one line.
+
 ## 1.12.1 (build 11201)
 Phone RTK positions no longer jump hundreds of metres: weak phone signals are left out, faulty ones are rejected, and a position far from the phone's own fix is not used (the filter restarts if that persists). Caster profiles remember their login as you type it, so the ephemeris stream connects with it. The map names the method in use, as the Live screen does. Clearer hint when a caster sends no satellite orbits.
 

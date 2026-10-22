@@ -38,7 +38,9 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import com.rfsat.pocketgnss.R
 import com.rfsat.pocketgnss.core.GnssEngine
@@ -146,20 +148,26 @@ fun HistoryTool(engine: GnssEngine) {
             }
             Section(stringResource(R.string.hist_latest)) {
                 val time = remember { SimpleDateFormat("HH:mm:ss", Locale.US) }
+                // One line per position: small monospace cells that are cut with "…" rather than wrapped.
+                val cols = listOf(0.17f, 0.23f, 0.26f, 0.16f, 0.18f)
+                val cell = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp)
+                @Composable
+                fun Cell(text: String, w: Float, color: Color = Color.Unspecified, mono: Boolean = true, head: Boolean = false) =
+                    Text(text, Modifier.weight(w).padding(end = 4.dp), style = if (head) MaterialTheme.typography.labelSmall else cell, color = if (head) muted else color,
+                        fontFamily = if (mono && !head) FontFamily.Monospace else null, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
                 Row(Modifier.fillMaxWidth()) {
-                    for ((w, t) in listOf(0.2f to R.string.hist_col_time, 0.26f to R.string.hist_col_method, 0.24f to R.string.hist_col_en,
-                        0.14f to R.string.hist_col_acc, 0.16f to R.string.hist_col_debug))
-                        Text(stringResource(t), Modifier.weight(w), style = MaterialTheme.typography.labelSmall, color = muted)
+                    for ((w, t) in cols.zip(listOf(R.string.hist_col_time, R.string.hist_col_method, R.string.hist_col_en, R.string.hist_col_acc, R.string.hist_col_debug)))
+                        Cell(stringResource(t), w, head = true)
                 }
                 for (r in list.takeLast(40).asReversed()) {
                     val o = SolutionHistory.enu(r, ref)
-                    Row(Modifier.fillMaxWidth()) {
-                        Text(time.format(Date(r.timeMs)), Modifier.weight(0.2f), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
-                        Text(methodText(r.method), Modifier.weight(0.26f), style = MaterialTheme.typography.bodySmall, color = methodColor(r), maxLines = 1)
-                        Text("%+.2f %+.2f".format(Locale.US, o[0], o[1]), Modifier.weight(0.24f), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
-                        Text(formatAccuracy(r.accH), Modifier.weight(0.14f), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
-                        Text(listOfNotNull(r.satellites?.let { "n$it" }, r.phaseSignals?.let { "φ$it" }, r.ratio?.takeIf { it > 0 }?.let { "r%.1f".format(Locale.US, it) })
-                            .joinToString(" "), Modifier.weight(0.16f), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, maxLines = 1)
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Cell(time.format(Date(r.timeMs)), cols[0])
+                        Cell(methodText(r.method), cols[1], methodColor(r), mono = false)
+                        Cell("%+.2f %+.2f".format(Locale.US, o[0], o[1]), cols[2])
+                        Cell(formatAccuracy(r.accH), cols[3])
+                        Cell(listOfNotNull(r.satellites?.let { "n$it" }, r.phaseSignals?.let { "φ$it" }, r.ratio?.takeIf { it > 0 }?.let { "r%.1f".format(Locale.US, it) })
+                            .joinToString(" "), cols[4])
                     }
                 }
                 Text(stringResource(R.string.hist_latest_help), style = MaterialTheme.typography.bodySmall, color = muted)

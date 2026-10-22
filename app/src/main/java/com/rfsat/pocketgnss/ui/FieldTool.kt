@@ -89,7 +89,7 @@ fun FieldTool(engine: GnssEngine) {
                 val f = fix
                 val start = cap.vertices.firstOrNull()
                 if (f != null && start != null) KeyValue(stringResource(R.string.field_to_start), formatDistance(Geo.distance(f.latitude, f.longitude, start.latitude, start.longitude)), live = true)
-                if (f != null) KeyValue(stringResource(R.string.live_fix), stringResource(fixLabel(f.quality)) + " " + formatAccuracy(f.horizontalAccuracy), live = true,
+                if (f != null) KeyValue(stringResource(R.string.live_fix), stringResource(fixLabel(f)) + " " + formatAccuracy(f.horizontalAccuracy), live = true,
                     valueColor = if (f.quality.rank >= cap.minQuality.rank) fixColor(f.quality) else AlarmRed)
                 if (cap.rejected > 0) Text(pluralStringResource(R.plurals.field_rejected, cap.rejected, cap.rejected, stringResource(fixLabel(cap.minQuality))),
                     style = MaterialTheme.typography.bodySmall, color = WarnAmber)

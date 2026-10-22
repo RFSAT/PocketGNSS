@@ -77,7 +77,7 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).background(fixColor(q), RoundedCornerShape(14.dp)).padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val method = if (phoneRtk) rtkState.source.takeIf { it.isNotEmpty() } else null
-                Text(method?.let { m -> phoneMethodLabel(m)?.let { stringResource(it) } ?: m } ?: stringResource(fixLabel(q)), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 26.sp, modifier = Modifier.weight(1f),
+                Text(method?.let { m -> phoneMethodLabel(m)?.let { stringResource(it) } ?: m } ?: stringResource(f?.let { fixLabel(it) } ?: fixLabel(q)), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 26.sp, modifier = Modifier.weight(1f),
                     maxLines = 1)
                 Text(if (f != null) formatAccuracy(f.horizontalAccuracy) else "—", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 26.sp)
             }
