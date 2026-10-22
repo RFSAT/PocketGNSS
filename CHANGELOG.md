@@ -7,6 +7,12 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.12.4 (build 11204)
+Fixes a crash when phone RTK restarted after a settings change (two parts of the app could release the RTK engine at the same time). The app log shows the RTK engine's messages in full.
+
+## 1.12.3 (build 11203)
+Fixes the app freezing with a blank screen after the phone locked (the map now draws in a way that cannot block the app). With the phone's own GNSS or phone RTK as the source, positions continue while the screen is off. Clearer app log: repeated engine messages are grouped and routine background closures are named as such.
+
 ## 1.12.2 (build 11202)
 New App log (Tools): errors, warnings and events, including crashes and why the app last ended, to share when reporting a problem. The map trace is kept between app runs until you clear it. Fixes now say SBAS when SBAS is used, instead of DGNSS / SBAS. With phone RTK on code corrections only, the phone's own position is used when it is more accurate. Position history fits each entry on one line.
 

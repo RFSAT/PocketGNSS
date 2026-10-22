@@ -184,6 +184,29 @@ class RtkEngineTest {
         assertEquals(rej, c.check(t + 2000, lat + 300 * dLat, lon, 2.0, lat, lon, 5.0))
     }
 
+    /** A link switch: the closing link must neither free nor use the engine its successor started (it crashed). */
+    @Test fun aClosedLinkCannotTouchItsSuccessorsEngine() {
+        assumeTrue("host build of the RTK engine not available", RtkNative.available)
+        val o = RtkOptions()
+        val old = Any(); val new = Any()
+        fun alive() = RtkNative.rover(2440, 100.0, 0, ByteArray(0), IntArray(0), ByteArray(0), DoubleArray(0), DoubleArray(0), FloatArray(0),
+            FloatArray(0), IntArray(0), DoubleArray(RtkSolution.SIZE)).let { RtkNative.message() != "engine not initialised" }
+        assertTrue(RtkNative.startFor(o, old))
+        assertTrue(RtkNative.startFor(o, new))
+        RtkNative.freeFor(old)                                      // late close of the old link
+        assertTrue(RtkNative.owner === new); assertTrue(alive())
+        RtkNative.freeFor(new)
+        assertTrue(RtkNative.owner == null); assertTrue(!alive())
+        // switching links over and over from two threads, as settings changes and the engine thread do
+        val errors = java.util.concurrent.atomic.AtomicInteger()
+        val threads = (0 until 2).map { k -> Thread {
+            try { repeat(150) { val me = Any(); RtkNative.startFor(o, me); synchronized(RtkNative.lock) { if (RtkNative.owner === me) alive() }; RtkNative.freeFor(me) } }
+            catch (_: Throwable) { errors.incrementAndGet() }
+        } }
+        threads.forEach { it.start() }; threads.forEach { it.join(60_000) }
+        assertEquals(0, errors.get())
+    }
+
     @Test fun codeOnlySolutionsGiveWayToABetterPhoneFix() {
         val P = com.rfsat.pocketgnss.rtk.PositionCheck
         assertTrue(P.preferPhone(RtkStatus.DGPS, 1.5, 0.51))         // the case seen on the S24

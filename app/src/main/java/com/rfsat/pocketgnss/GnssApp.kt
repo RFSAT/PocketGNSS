@@ -79,13 +79,15 @@ class GnssApp : Application() {
                     ApplicationExitInfo.REASON_PERMISSION_CHANGE -> AppLog.Level.INFO to "was restarted after a permission change"
                     ApplicationExitInfo.REASON_DEPENDENCY_DIED -> AppLog.Level.WARN to "was stopped because a component it uses ended"
                     ApplicationExitInfo.REASON_INITIALIZATION_FAILURE -> AppLog.Level.ERROR to "failed to start"
+                    ApplicationExitInfo.REASON_OTHER -> AppLog.Level.INFO to "was closed by Android while in the background (normal)"
                     else -> AppLog.Level.INFO to "ended (reason ${x.reason})"
                 }
                 val desc = x.description?.takeIf { it.isNotBlank() }?.let { ": $it" } ?: ""
                 val report = if (x.reason == ApplicationExitInfo.REASON_ANR || x.reason == ApplicationExitInfo.REASON_CRASH_NATIVE) try {
                     x.traceInputStream?.bufferedReader()?.use { r -> r.lineSequence().take(60).joinToString("\n") }?.let { "\n$it" } ?: ""
                 } catch (_: Exception) { "" } else ""
-                AppLog.add(level, "Exit", "Last run (${AppLog.stamp(x.timestamp)} UTC) $what$desc · memory ${x.pss / 1024} MB$report")
+                val mem = if (x.pss > 0) " · memory ${x.pss / 1024} MB" else ""
+                AppLog.add(level, "Exit", "Last run (${AppLog.stamp(x.timestamp)} UTC) $what$desc$mem$report")
             }
             exits.maxOfOrNull { it.timestamp }?.let { prefs.edit().putLong("lastExit", it).apply() }
         } catch (e: Exception) { AppLog.w("App", "Previous exit reasons not available: ${e.message}") }

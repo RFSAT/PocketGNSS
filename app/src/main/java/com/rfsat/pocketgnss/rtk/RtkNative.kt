@@ -1,12 +1,30 @@
 package com.rfsat.pocketgnss.rtk
 
 /**
- * The phone RTK engine in native code (src/main/cpp: RTKLIB demo5 + prtk.c). One engine per process; callers
- * serialise access (PhoneRtkLink holds a lock). [available] is false when the library cannot be loaded (JVM unit
- * tests, an ABI without the library): the app then falls back to the phone's ordinary location.
+ * The phone RTK engine in native code (src/main/cpp: RTKLIB demo5 + prtk.c). One engine per process, so every call
+ * holds [lock], and the engine belongs to the link that started it ([owner]): a link being closed may neither use nor
+ * free an engine that its successor has already started. (A link switch used to free the engine on the old link's
+ * thread while the new one initialised it: a double free, seen as a native crash on a Galaxy S24.) [available] is
+ * false when the library cannot be loaded (JVM unit tests, an ABI without it): the app then uses the phone's location.
  */
 object RtkNative {
     val available: Boolean = try { System.loadLibrary("prtk"); true } catch (_: Throwable) { false }
+
+    /** Held for every native call. */
+    val lock = Any()
+    /** The link the running engine belongs to, or null. Read and written under [lock]. */
+    @Volatile var owner: Any? = null
+        private set
+
+    /** Starts the engine for [who]; a previous owner's engine is replaced. */
+    fun startFor(o: RtkOptions, who: Any): Boolean = synchronized(lock) {
+        val ok = start(o)
+        owner = if (ok) who else null
+        ok
+    }
+
+    /** Frees the engine if it still belongs to [who] (a newer link's engine is left alone). */
+    fun freeFor(who: Any) = synchronized(lock) { if (owner === who) { free(); owner = null } }
 
     external fun init(mode: Int, navsys: Int, elmask: Double, snrmask: Double, armode: Int, gloAr: Int, eratio: Double,
                       thresar: Double, maxage: Double, minfixsats: Int, ionoFree: Int): Boolean

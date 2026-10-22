@@ -115,7 +115,13 @@ fun RtkMap(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val mapView = remember { MapLibre.getInstance(context); MapView(context).apply { onCreate(null) } }
+    // TextureView rendering: with the default SurfaceView the main thread waits for the map's GL thread whenever the
+    // surface changes (screen lock / unlock, rotation), and on some phones that wait never ends: the app froze with a
+    // blank screen ("not responding", seen on a Galaxy S24 after the screen locked).
+    val mapView = remember {
+        MapLibre.getInstance(context)
+        MapView(context, org.maplibre.android.maps.MapLibreMapOptions.createFromAttributes(context).textureMode(true)).apply { onCreate(null) }
+    }
     val mapHolder = remember { mutableStateOf<MapLibreMap?>(null) }
     val styleHolder = remember { mutableStateOf<Style?>(null) }
     val loadedLayer = remember { mutableStateOf<MapLayer?>(null) }
@@ -131,17 +137,24 @@ fun RtkMap(
     currentPoints.value = points; currentTap.value = onPointTap
 
     DisposableEffect(lifecycleOwner) {
+        // Each step once and in order (start, resume, pause, stop, destroy), also when the map leaves the screen.
+        var started = false; var resumed = false
         val obs = LifecycleEventObserver { _, e ->
             when (e) {
-                Lifecycle.Event.ON_START -> mapView.onStart()
-                Lifecycle.Event.ON_RESUME -> mapView.onResume()
-                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
-                Lifecycle.Event.ON_STOP -> mapView.onStop()
+                Lifecycle.Event.ON_START -> if (!started) { mapView.onStart(); started = true }
+                Lifecycle.Event.ON_RESUME -> if (!resumed) { mapView.onResume(); resumed = true }
+                Lifecycle.Event.ON_PAUSE -> if (resumed) { mapView.onPause(); resumed = false }
+                Lifecycle.Event.ON_STOP -> if (started) { mapView.onStop(); started = false }
                 else -> {}
             }
         }
         lifecycleOwner.lifecycle.addObserver(obs)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(obs); mapView.onStop(); mapView.onDestroy() }
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(obs)
+            if (resumed) mapView.onPause()
+            if (started) mapView.onStop()
+            mapView.onDestroy()
+        }
     }
 
     AndroidView(factory = { mapView }, modifier = modifier) { mv ->

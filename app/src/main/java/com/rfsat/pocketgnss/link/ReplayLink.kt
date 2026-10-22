@@ -120,7 +120,7 @@ class RawReplayLink(dir: File, private val options: RtkOptions, private val spee
 
     init {
         if (!RtkNative.available) throw IOException("Phone RTK engine not available on this phone")
-        val ok = RtkNative.start(options)
+        val ok = RtkNative.startFor(options, this)
         if (!ok) throw IOException("Phone RTK engine could not start")
         PhoneRtkLink.publish(PhoneRtkState())
         Replay.state.value = ReplayState(true, info.name, 0, total, speed)
@@ -137,28 +137,33 @@ class RawReplayLink(dir: File, private val options: RtkOptions, private val spee
         if (done % 20 == 0) Replay.state.value = Replay.state.value.copy(done = done)
         lastTow?.let { p -> val dt = e.towSeconds - p; if (speed > 0 && dt in 0.0..30.0) nextNs = System.nanoTime() + (dt / speed * 1e9).toLong() }
         lastTow = e.towSeconds
-        if (done == 1) RtkNative.setTime(e.gpsWeek, e.towSeconds)
-        // Base data up to this epoch (frames without an epoch time, e.g. ephemerides, go in stream order).
-        val towMs = (e.towSeconds * 1000).toLong()
-        // Frames without a time (station, ephemerides) belong with the observations that follow them.
-        while (fi < frames.size) {
-            var j = fi
-            while (j < frames.size && RtcmFrames.epochTowMs(frames[j], towMs) == null) j++
-            if (j < frames.size && RtcmFrames.epochTowMs(frames[j], towMs)!! > towMs + 50) break
-            while (fi <= minOf(j, frames.size - 1)) { RtkNative.inputRtcm(frames[fi], 0, frames[fi].size); fi++ }
+        val engine = synchronized(RtkNative.lock) {
+            if (RtkNative.owner !== this) throw IOException("closed")
+            if (done == 1) RtkNative.setTime(e.gpsWeek, e.towSeconds)
+            // Base data up to this epoch (frames without an epoch time, e.g. ephemerides, go in stream order).
+            val towMs = (e.towSeconds * 1000).toLong()
+            // Frames without a time (station, ephemerides) belong with the observations that follow them.
+            while (fi < frames.size) {
+                var j = fi
+                while (j < frames.size && RtcmFrames.epochTowMs(frames[j], towMs) == null) j++
+                if (j < frames.size && RtcmFrames.epochTowMs(frames[j], towMs)!! > towMs + 50) break
+                while (fi <= minOf(j, frames.size - 1)) { RtkNative.inputRtcm(frames[fi], 0, frames[fi].size); fi++ }
+            }
+            arrays.fill(e)
+            if (options.ppp) iono.update(IonoChooser.dualSatellites(e))?.let { f -> RtkNative.setIono(if (f) 1 else 0); convergence.reset() }
+            val rst = RtkNative.rover(e.gpsWeek, e.towSeconds, arrays.n, arrays.sys, arrays.prn, arrays.codes, arrays.p, arrays.l, arrays.d,
+                arrays.snr, arrays.lli, solOut)
+            RtkNative.base(baseOut)
+            Pair(rst, RtkNative.message())
         }
-        arrays.fill(e)
-        if (options.ppp) iono.update(IonoChooser.dualSatellites(e))?.let { f -> RtkNative.setIono(if (f) 1 else 0); convergence.reset() }
-        val st = RtkNative.rover(e.gpsWeek, e.towSeconds, arrays.n, arrays.sys, arrays.prn, arrays.codes, arrays.p, arrays.l, arrays.d,
-            arrays.snr, arrays.lli, solOut)
-        RtkNative.base(baseOut)
+        val st = engine.first
         val sol = FixGate.apply(RtkSolution.from(solOut), options)
         val base = RtkBase.from(baseOut)
         val withPhase = e.obs.count { it.phase != null }
         val prev = PhoneRtkLink.state.value
         val status = if (st != 0) sol.status else RtkStatus.NONE
         PhoneRtkLink.publish(PhoneRtkState(if (status != RtkStatus.NONE) sol else prev.solution, base, prev.epochs + 1, e.obs.size, withPhase,
-            RtkNative.message().trim().lineSequence().lastOrNull { it.isNotBlank() } ?: "", noPhase = withPhase == 0,
+            engine.second.trim().lineSequence().lastOrNull { it.isNotBlank() } ?: "", noPhase = withPhase == 0,
             source = if (status != RtkStatus.NONE) PhoneRtkLink.methodName(status, convergence.converging(sol)) else prev.source,
             ionoFree = iono.ionoFree))
         if (status == RtkStatus.NONE) return 0
@@ -176,7 +181,7 @@ class RawReplayLink(dir: File, private val options: RtkOptions, private val spee
         if (closed) return
         closed = true
         try { reader.close() } catch (_: Exception) {}
-        RtkNative.free()
+        RtkNative.freeFor(this)
         Replay.state.value = Replay.state.value.copy(active = false)
     }
 }

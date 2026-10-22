@@ -192,12 +192,16 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
                         (st.solution?.let { " · ${it.satellites} satellites" } ?: ""))
                 }
                 // The engine's own messages (outliers, slips, missing data) explain why carrier phase is not used.
+                // RTKLIB starts its messages with the epoch time ("20:27:32.00: ..."): grouped without it.
                 st.message.takeIf { it.isNotBlank() }?.let { m ->
-                    AppLog.throttled("rtk-msg-" + m.substringBefore('(').take(40), 60_000, AppLog.Level.INFO, "RTK engine", m)
+                    val text = m.replace(RTK_TIME_PREFIX, "")
+                    AppLog.throttled("rtk-msg-" + text.substringBefore('(').take(40), 60_000, AppLog.Level.INFO, "RTK engine", text)
                 }
             }
         }
     }
+
+    private val RTK_TIME_PREFIX = Regex("^\\d{1,2}:\\d\\d:\\d\\d(\\.\\d+)?:\\s*")
 
     /** Starts or stops the ephemeris stream to match the settings and the link. */
     @Volatile private var ephConfig: com.rfsat.pocketgnss.protocol.NtripConfig? = null
@@ -902,8 +906,9 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     fun needsBackground(): Boolean {
         val s = store.value
         if (raw.state.value.recording) return true
-        return connection.value is Connection.Ready && simulator == null &&
-            (recording.value.active || ntripClient.running || s.mockLocation || s.nmeaServer || (s.btServer && btServer.running) || s.casterOn || s.apiJson || s.apiBroadcast)
+        // The phone's own GNSS (also phone RTK) stops when the screen turns off unless a foreground service holds it.
+        return connection.value is Connection.Ready && simulator == null && (linkInfo?.kind == LinkKind.PHONE ||
+            recording.value.active || ntripClient.running || s.mockLocation || s.nmeaServer || (s.btServer && btServer.running) || s.casterOn || s.apiJson || s.apiBroadcast)
     }
 
     /** Stops background activity (notification "Stop" action). */

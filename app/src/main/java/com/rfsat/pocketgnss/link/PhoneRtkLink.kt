@@ -76,7 +76,8 @@ class PhoneRtkLink private constructor(
     private var learnedEpochs = 0
     private val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
     private val queue = LinkedBlockingQueue<ByteArray>()
-    private val engineLock = Any()
+    /** The one native engine's lock (shared with every other user of the engine). */
+    private val engineLock = RtkNative.lock
     private val arrays = RoverArrays()
     private val solOut = DoubleArray(RtkSolution.SIZE)
     private val baseOut = DoubleArray(RtkBase.SIZE)
@@ -86,6 +87,7 @@ class PhoneRtkLink private constructor(
     @Volatile private var sats: List<PhoneSat> = emptyList()
     @Volatile private var lastLocation: Location? = null
     @Volatile private var lastLocationMs = 0L
+    private var noDataSince = 0L
     private val check = PositionCheck()
     @Volatile private var lastSolutionMs = 0L
     private var lastDisc: Int? = null
@@ -125,7 +127,7 @@ class PhoneRtkLink private constructor(
     @SuppressLint("MissingPermission")
     private fun start() {
         if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) throw IOException("Location is off on this phone: turn it on in quick settings")
-        val ok = synchronized(engineLock) { RtkNative.start(options) }
+        val ok = RtkNative.startFor(options, this)
         if (!ok) throw IOException("Phone RTK engine could not start")
         shared.value = PhoneRtkState()
         val t = HandlerThread("phone-rtk").apply { start() }
@@ -153,11 +155,15 @@ class PhoneRtkLink private constructor(
         val e = RawConvert.epoch(c, ms, lastDisc)
         lastDisc = c.hardwareClockDiscontinuityCount
         if (e == null || e.obs.isEmpty()) {
-            com.rfsat.pocketgnss.core.AppLog.throttled("raw-empty", 60_000, com.rfsat.pocketgnss.core.AppLog.Level.WARN, "Phone RTK",
-                if (e == null) "The phone gives no full clock bias: no raw measurements usable" else "No usable signals in the phone's measurements")
+            // The first seconds after the GNSS starts (also after the screen comes back on) have no full clock bias yet.
+            val now = System.currentTimeMillis()
+            if (noDataSince == 0L) noDataSince = now
+            if (now - noDataSince > 20_000) com.rfsat.pocketgnss.core.AppLog.throttled("raw-empty", 60_000, com.rfsat.pocketgnss.core.AppLog.Level.WARN, "Phone RTK",
+                if (e == null) "No usable raw measurements for ${(now - noDataSince) / 1000} s: the phone gives no full clock bias" else "No usable signals in the phone's measurements")
             _state.value = _state.value.copy(message = if (e == null) "no full clock bias from the phone" else "no usable signals")
             return
         }
+        noDataSince = 0L
         arrays.fill(e)
         // Learn this phone: satellites with carrier phase, and how many slipped, per epoch; saved about once a minute.
         val phaseSats = e.obs.filter { it.phase != null }.map { it.sat }.toSet()
@@ -166,10 +172,11 @@ class PhoneRtkLink private constructor(
         if (++learnedEpochs % 60 == 0) onProfile(learner.profile())
         // PPP on a phone without a second frequency: broadcast ionosphere instead of the ionosphere-free combination.
         if (options.ppp) iono.update(IonoChooser.dualSatellites(e))?.let { f ->
-            synchronized(engineLock) { RtkNative.setIono(if (f) 1 else 0) }; convergence.reset()
+            synchronized(engineLock) { if (RtkNative.owner === this) RtkNative.setIono(if (f) 1 else 0) }; convergence.reset()
             com.rfsat.pocketgnss.core.AppLog.i("Phone RTK", if (f) "PPP: dual frequency, ionosphere-free combination" else "PPP: single frequency, broadcast ionosphere model")
         }
         val (status, sol, base, msg) = synchronized(engineLock) {
+            if (closed || RtkNative.owner !== this) return
             val st = RtkNative.rover(e.gpsWeek, e.towSeconds, arrays.n, arrays.sys, arrays.prn, arrays.codes, arrays.p, arrays.l, arrays.d,
                 arrays.snr, arrays.lli, solOut)
             RtkNative.base(baseOut)
@@ -188,7 +195,7 @@ class PhoneRtkLink private constructor(
         val verdict = check.check(now, sol.latitude, sol.longitude, kotlin.math.hypot(sol.stdEast, sol.stdNorth),
             phone?.latitude, phone?.longitude, phone?.takeIf { it.hasAccuracy() }?.accuracy?.toDouble())
         if (verdict != PositionCheck.Verdict.USE) {
-            if (verdict == PositionCheck.Verdict.REJECT_AND_RESET) { synchronized(engineLock) { RtkNative.reset() }; convergence.reset() }
+            if (verdict == PositionCheck.Verdict.REJECT_AND_RESET) { synchronized(engineLock) { if (RtkNative.owner === this) RtkNative.reset() }; convergence.reset() }
             _state.value = _state.value.copy(rejected = check.rejected, resets = check.resets)
             phone?.let { emitLocation(it) }
             return
@@ -236,13 +243,13 @@ class PhoneRtkLink private constructor(
     /** RTCM 3 from the NTRIP relay (caster). UBX commands and anything else are ignored by the decoder. */
     override fun write(data: ByteArray) {
         if (closed) return
-        synchronized(engineLock) { RtkNative.inputRtcm(data, 0, data.size) }
+        synchronized(engineLock) { if (RtkNative.owner === this) RtkNative.inputRtcm(data, 0, data.size) }
     }
 
     /** Broadcast ephemerides from a second caster stream (e.g. BKG's BCEP00BKG0): orbits only, never base data. */
     fun writeNav(data: ByteArray) {
         if (closed) return
-        synchronized(engineLock) { RtkNative.inputRtcmNav(data, 0, data.size) }
+        synchronized(engineLock) { if (RtkNative.owner === this) RtkNative.inputRtcmNav(data, 0, data.size) }
     }
 
     override fun close() {
@@ -253,8 +260,10 @@ class PhoneRtkLink private constructor(
         try { lm.unregisterGnssStatusCallback(statusCallback) } catch (_: Exception) {}
         try { lm.removeUpdates(listener) } catch (_: Exception) {}
         val h = handler
-        if (h != null) h.post { synchronized(engineLock) { RtkNative.free() }; thread?.quitSafely() }
-        else synchronized(engineLock) { RtkNative.free() }
+        // Freed here and now (not later on the engine thread, where it could hit the next link's engine); an epoch
+        // still queued on that thread finds the engine no longer its own and returns.
+        RtkNative.freeFor(this)
+        if (h != null) h.post { thread?.quitSafely() }
         current = null
     }
 

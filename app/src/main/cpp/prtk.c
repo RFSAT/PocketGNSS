@@ -20,7 +20,7 @@ static nav_t nav;            /* ephemeris used for positioning */
 static obsd_t base[MAXOBS];
 static int nbase = 0;
 static long frames = 0;
-static char message[256] = "";
+static char message[1024] = "";
 static double maxage = 30.0;
 static int ppp = 0;          /* PPP mode: no base, SSR corrections */
 extern int ppp_ssr_absbias;  /* ppp.c */
@@ -324,8 +324,9 @@ int prtk_rover(int week, double tow, int n, const char *sys, const int *prn, con
     rtk.neb = 0;
     rtkpos(&rtk, obs, nobs, &nav);
     if (rtk.neb > 0) {
+        /* the end of the buffer (the latest messages; the app shows the last line) */
         k = rtk.neb < (int)sizeof(message) - 1 ? rtk.neb : (int)sizeof(message) - 1;
-        memcpy(message, rtk.errbuf, k); message[k] = '\0';
+        memcpy(message, rtk.errbuf + rtk.neb - k, k); message[k] = '\0';
     } else message[0] = '\0';
 
     sol->stat = rtk.sol.stat;
