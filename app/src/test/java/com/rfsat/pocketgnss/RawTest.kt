@@ -61,6 +61,12 @@ class RawTest {
         val gal = Math.floorMod(tGps - transit, 100_000_000L)
         assertEquals(0.07 * c, RawConvert.pseudorange(clock,
             meas(RawConvert.GALILEO, 11, gal, RawConvert.STATE_CODE_LOCK or RawConvert.STATE_GAL_E1C_2ND_CODE_LOCK))!!, 1e-3)
+        // Galileo E1 as a Galaxy S24 reports it: its own E1B/C code lock and TOW known, without the generic CODE_LOCK
+        val galTow = Math.floorMod(tGps - transit, RawConvert.NS_WEEK)
+        val s24 = RawConvert.STATE_GAL_E1BC_CODE_LOCK or RawConvert.STATE_GAL_E1C_2ND_CODE_LOCK or RawConvert.STATE_TOW_KNOWN
+        assertEquals(0.07 * c, RawConvert.pseudorange(clock, meas(RawConvert.GALILEO, 25, galTow, s24))!!, 1e-3)
+        // ...but no code lock of any kind: no pseudorange
+        assertNull(RawConvert.pseudorange(clock, meas(RawConvert.GALILEO, 25, galTow, RawConvert.STATE_TOW_KNOWN)))
     }
 
     @Test fun signalCodes() {
@@ -91,6 +97,26 @@ class RawTest {
         assertEquals(listOf(1980, 1, 6, 0, 0, 0), Rinex.calendar(0).toList())
         assertEquals(listOf(2026, 10, 12, 3, 46, 40), Rinex.calendar(tGps).toList())
         assertEquals(listOf(2026, 10, 21, 9, 30, 15), Rinex.calendar(1_476_610_215_000_000_000L).toList())
+    }
+
+    /** Galileo's system letter "E" used to clash with the temporary file's epoch marker: every RINEX with Galileo was empty. */
+    @Test fun rinexWithGalileo() {
+        val galTow = Math.floorMod(tGps - transit, RawConvert.NS_WEEK)
+        val s24 = RawConvert.STATE_GAL_E1BC_CODE_LOCK or RawConvert.STATE_GAL_E1C_2ND_CODE_LOCK or RawConvert.STATE_TOW_KNOWN
+        val ms = listOf(meas(RawConvert.GPS, 5, Math.floorMod(tGps, RawConvert.NS_WEEK) - transit, gpsState),
+            meas(RawConvert.GALILEO, 25, galTow, s24, adrState = RawConvert.ADR_VALID, adr = 4321.0))
+        val dir = File(System.getProperty("java.io.tmpdir"), "rinex_gal_${System.nanoTime()}").apply { mkdirs() }
+        val f = File(dir, "raw.obs")
+        val w = RinexObsWriter(f, RinexHeaderInfo(markerName = "TEST", createdUtc = "20261023 090000 UTC"))
+        repeat(3) { k -> w.add(RawConvert.epoch(clock.copy(timeNanos = clock.timeNanos + k * 1_000_000_000L), ms.map {
+            it.copy(receivedSvTimeNanos = it.receivedSvTimeNanos + k * 1_000_000_000L) })!!) }
+        assertTrue(w.finish(null))
+        val lines = f.readLines()
+        assertEquals(3, lines.count { it.startsWith("> ") })
+        val e25 = lines.filter { it.startsWith("E25") }
+        assertEquals(3, e25.size)
+        assertEquals(0.07 * c, e25[0].substring(3, 17).trim().toDouble(), 2e-3)
+        dir.deleteRecursively()
     }
 
     @Test fun rinexFile() {

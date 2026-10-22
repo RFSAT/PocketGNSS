@@ -26,6 +26,8 @@
 *-----------------------------------------------------------------------------*/
 #include "rtklib.h"
 
+int pntpos_iflc=0;   /* PocketGNSS: see pntpos() */
+
 /* constants/macros ----------------------------------------------------------*/
 
 #define SQR(x)      ((x)*(x))
@@ -118,6 +120,8 @@ static double prange(const obsd_t *obs, const nav_t *nav, const prcopt_t *opt,
     sys=satsys(sat,NULL);
     P1=obs->P[0];
     f2=seliflc(opt->nf,satsys(obs->sat,NULL));
+    /* PocketGNSS: phones track L1 + L5, not L2: GPS / QZSS pair L1 with L5 when L2 is missing */
+    if (f2==1&&NFREQ>2&&obs->P[1]==0.0&&obs->P[2]!=0.0&&(sys==SYS_GPS||sys==SYS_QZS)) f2=2;
     P2=obs->P[f2];
     *var=0.0;
     
@@ -686,7 +690,9 @@ extern int pntpos(const obsd_t *obs, int n, const nav_t *nav,
     }
     
     if (opt_.mode!=PMODE_SINGLE) { /* for precise positioning */
-        opt_.ionoopt=IONOOPT_BRDC;
+        /* PocketGNSS: keep the ionosphere-free combination for the rover's starting position when asked (phones with
+           L1 + L5): the broadcast model leaves tens of metres near solar maximum, which the RTK filter then keeps */
+        opt_.ionoopt=pntpos_iflc?IONOOPT_IFLC:IONOOPT_BRDC;
         opt_.tropopt=TROPOPT_SAAS;
     }
     /* satellite positions, velocities and clocks */

@@ -181,7 +181,7 @@ class PhoneRtkLink private constructor(
                 arrays.snr, arrays.lli, solOut)
             RtkNative.base(baseOut)
             // Untrusted fixes are reported as float (with the float position), see FixGate.
-            val gated = FixGate.apply(RtkSolution.from(solOut), options)
+            val gated = com.rfsat.pocketgnss.rtk.HonestAccuracy.apply(FixGate.apply(RtkSolution.from(solOut), options))
             Quad(gated.status.code.takeIf { st != 0 } ?: 0, gated, RtkBase.from(baseOut), RtkNative.message())
         }
         val withPhase = e.obs.count { it.phase != null }

@@ -183,6 +183,9 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
                     else if (!s.ntripEnabled && !replaying) Text(stringResource(R.string.live_rtk_hint), style = small, color = muted)
                     else if (b != null && b.frames > 120 && b.ephemerides == 0) Text(stringResource(R.string.live_rtk_noeph), style = small, color = WarnAmber)
                 }
+                rtkState.solution?.takeIf { it.codeRms > com.rfsat.pocketgnss.rtk.HonestAccuracy.REFLECTED_RMS && it.codeResiduals >= 4 }?.let { sol ->
+                    Text(stringResource(R.string.live_rtk_reflected, formatDistance(sol.codeRms)), style = small, color = WarnAmber)
+                }
                 if (rtkState.rejected > 0) Text(pluralStringResource(R.plurals.live_rtk_rejected, rtkState.rejected, rtkState.rejected, rtkState.resets),
                     style = small, color = muted)
             } else if (phoneChip) Text(stringResource(R.string.live_phone_no_rtk), style = MaterialTheme.typography.bodySmall, color = muted)

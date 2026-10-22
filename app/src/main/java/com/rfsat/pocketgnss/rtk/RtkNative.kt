@@ -32,6 +32,10 @@ object RtkNative {
     external fun setIono(ionoFree: Int)
     /** Restarts the position filter, keeping ephemerides, corrections and the base station. */
     external fun reset()
+    /** Tuning knob (prtk.h PRTK_TUNE_*), applied at the next start; negative = default. */
+    external fun tune(key: Int, value: Double)
+    /** Analysis: DD code residuals (m) of the last epoch at trial position [rr] (ECEF) on slot [f]; returns the count. */
+    external fun ddCode(rr: DoubleArray, f: Int, sats: IntArray, res: DoubleArray, elev: DoubleArray): Int
     external fun free()
     external fun setTime(week: Int, tow: Double)
     /** RTCM 3 from the caster; returns 1 = base epoch, 2 = ephemeris, 4 = station position (bit mask). */

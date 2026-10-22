@@ -138,9 +138,12 @@ object Rinex {
 
     // ---- compact temporary form: one line per signal, tab-separated ----
 
+    private const val EPOCH_MARK = "#E"
+
     fun encodeEpoch(e: RawEpoch): String {
         val sb = StringBuilder()
-        sb.append("E\t").append(e.gpsWeek).append('\t').append("%.9f".format(Locale.US, e.towSeconds)).append('\t').append(if (e.clockReset) 1 else 0).append('\n')
+        // "#E" marks an epoch: a plain "E" was also Galileo's system letter, so with Galileo every RINEX came out empty
+        sb.append(EPOCH_MARK).append('\t').append(e.gpsWeek).append('\t').append("%.9f".format(Locale.US, e.towSeconds)).append('\t').append(if (e.clockReset) 1 else 0).append('\n')
         for (o in e.obs) {
             sb.append(o.system).append('\t').append(o.prn).append('\t').append(o.code).append('\t')
                 .append(o.pseudorange?.let { "%.4f".format(Locale.US, it) } ?: "").append('\t')
@@ -163,7 +166,7 @@ object Rinex {
         for (l in lines) {
             if (l.isEmpty()) continue
             val f = l.split('\t')
-            if (f[0] == "E") { flush(); head = f; continue }
+            if (f[0] == EPOCH_MARK) { flush(); head = f; continue }
             if (f.size < 10) continue
             obs.add(SignalObs(f[0][0], f[1].toInt(), f[2], f[3].toDoubleOrNull(), f[4].toDoubleOrNull(), f[5].toDoubleOrNull(),
                 f[6].toDouble(), f[7].toInt(), Band.valueOf(f[8]), f[9].toIntOrNull()))

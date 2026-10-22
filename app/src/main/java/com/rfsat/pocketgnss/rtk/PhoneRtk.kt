@@ -86,16 +86,19 @@ data class RtkSolution(
     val floatStdUp: Double = Double.NaN,
     /** Consecutive epochs with fixed ambiguities (RTKLIB). */
     val consecutiveFixes: Int = 0,
+    /** RMS of the double-differenced code residuals (m) and their number: tens of metres = signals arriving by reflection. */
+    val codeRms: Double = 0.0,
+    val codeResiduals: Int = 0,
 ) {
     val hasFloat: Boolean get() = !floatLatitude.isNaN() && !(floatLatitude == 0.0 && floatLongitude == 0.0)
     val speed: Double get() = kotlin.math.hypot(velEast, velNorth)
     val courseDeg: Double? get() = if (speed > 0.2) (Math.toDegrees(kotlin.math.atan2(velEast, velNorth)) + 360) % 360 else null
 
     companion object {
-        const val SIZE = 27
+        const val SIZE = 29
         fun from(v: DoubleArray): RtkSolution = RtkSolution(RtkStatus.of(v[0].toInt()), v[1].toInt(), v[2], v[3], v[4], v[5],
             v[9], v[10], v[11], v[12], v[13], v[14], v[15].toInt(), v[16], v[17], v[18], v[19],
-            v[20], v[21], v[22], v[23], v[24], v[25], v[26].toInt())
+            v[20], v[21], v[22], v[23], v[24], v[25], v[26].toInt(), v[27], v[28].toInt())
     }
 }
 
@@ -220,6 +223,32 @@ object FixGate {
         if (trusted || !s.hasFloat) return if (trusted) s else s.copy(status = RtkStatus.FLOAT)
         return s.copy(status = RtkStatus.FLOAT, latitude = s.floatLatitude, longitude = s.floatLongitude, height = s.floatHeight,
             stdEast = s.floatStdEast, stdNorth = s.floatStdNorth, stdUp = s.floatStdUp)
+    }
+}
+
+/**
+ * An honest accuracy for code-anchored solutions. A float solution's covariance reflects its carrier phase, which is
+ * smooth even when every signal arrives by reflection: on a Galaxy S24 by a window the float claimed ±15 cm while it
+ * sat 20-35 m away, with double-differenced code residuals of 20-45 m RMS. The code is what places a float (and a code
+ * DGNSS) solution, so its accuracy is taken as no better than [K] × code RMS / √(residuals). With a fix the
+ * ambiguities are integers and [FixGate] guards against wrong ones; PPP and single solutions are left as they are.
+ */
+object HonestAccuracy {
+    const val K = 2.0
+    /** Code residual RMS (m) above which the Live screen warns that signals arrive by reflection. */
+    const val REFLECTED_RMS = 10.0
+
+    fun floor(s: RtkSolution): Double =
+        if ((s.status == RtkStatus.FLOAT || s.status == RtkStatus.DGPS) && s.codeResiduals >= 4 && s.codeRms > 0)
+            K * s.codeRms / Math.sqrt(s.codeResiduals.toDouble()) else 0.0
+
+    fun apply(s: RtkSolution): RtkSolution {
+        val f = floor(s)
+        val h = Math.hypot(s.stdEast, s.stdNorth)
+        if (f <= 0 || h >= f) return s
+        val k = if (h > 1e-6) f / h else 0.0
+        return if (k > 0) s.copy(stdEast = s.stdEast * k, stdNorth = s.stdNorth * k, stdUp = maxOf(s.stdUp, s.stdUp * k))
+        else s.copy(stdEast = f / Math.sqrt(2.0), stdNorth = f / Math.sqrt(2.0), stdUp = maxOf(s.stdUp, 1.7 * f))
     }
 }
 

@@ -4,7 +4,7 @@ plugins {
 }
 
 // The one place to change the app version.
-val appVersion = "1.12.4"
+val appVersion = "1.12.5"
 val appVersionCode = appVersion.split(".").map { it.toInt() }.let { (a, b, c) -> a * 10000 + b * 100 + c }
 
 android {
@@ -143,4 +143,12 @@ tasks.withType<Test>().configureEach {
     systemProperty("java.library.path", hostRtkDir.get().asFile.path)
     // Optional: a folder with all PROJ-data geoid grids of HeightModels (-PgeoidDir=...), to check every model against PROJ.
     (project.findProperty("geoidDir") as String?)?.let { systemProperty("geoid.dir", it) }
+    // Optional: a phone raw session (gnss_log.txt + base.rtcm3) to replay through the engine (SessionAnalysis).
+    (project.findProperty("sessionDir") as String?)?.let { systemProperty("session.dir", it) }
+    (project.findProperty("sessionVariants") as String?)?.let { systemProperty("session.variants", it) }
+    (project.findProperty("sessionDump") as String?)?.let { systemProperty("session.dump", it) }
+    (project.findProperty("sessionTrials") as String?)?.let { systemProperty("session.trials", it) }
+    (project.findProperty("sessionSlots") as String?)?.let { systemProperty("session.slots", it) }
+    (project.findProperty("sessionRinex") as String?)?.let { systemProperty("session.rinex", it) }
+    (project.findProperty("sessionReplay") as String?)?.let { systemProperty("session.replay", it) }
 }

@@ -378,6 +378,7 @@
     <string name="live_rtk_no_basepos">ainda sem posição da estação (1005/1006)</string>
     <string name="live_rtk_noeph">Ainda não chegaram efemérides transmitidas do caster (RTCM 1019/1020/1045/1046/1042) e o telefone precisa delas para calcular as posições dos satélites. Muitos fluxos de rede (VRS, estação mais próxima) não as incluem: ative o fluxo de efemérides (Configuração &gt; Ligação ao recetor).</string>
     <string name="live_rtk_nophase">Este telefone não está a dar fase da portadora: o RTK não consegue fixar (telefone só de código ou poupança de energia ainda ativa). A posição fica ao nível do metro.</string>
+    <string name="live_rtk_reflected">Os sinais chegam ao telefone por reflexão (resíduos de código %1$s): a posição pode estar errada por metros ou mais, seja qual for a precisão indicada pelo RTK. Vá para céu aberto, longe de paredes, carros e do seu corpo.</string>
     <string name="live_rtk_station">estação %1$d</string>
     <string name="live_sats">Satélites</string>
     <string name="live_sky">Céu e sinais</string>

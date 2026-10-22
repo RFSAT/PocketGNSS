@@ -72,6 +72,8 @@ typedef struct {
     double float_llh[3];   /* float solution (before ambiguity fixing): lat, lon (deg), h (m) */
     double float_std[3];   /* its standard deviations east, north, up (m) */
     int nfix;              /* consecutive epochs with fixed ambiguities */
+    double code_rms;       /* RMS of the double-differenced code residuals after the update (m), 0 when none */
+    int ncode;             /* how many there were */
 } prtk_sol_t;
 
 typedef struct {
@@ -106,6 +108,20 @@ void prtk_set_time(int week, double tow);
 void prtk_set_iono(int iono_free);
 /* restart the position filter; ephemerides, corrections, base position and options are kept */
 void prtk_reset(void);
+
+/* Tuning (analysis of recorded sessions, and settings that prove themselves): applied at the next prtk_init. */
+#define PRTK_TUNE_MAXINNO_CODE  0   /* code innovation rejection threshold, m (RTKLIB default 30) */
+#define PRTK_TUNE_MAXINNO_PHASE 1   /* phase innovation rejection threshold, m (default 5) */
+#define PRTK_TUNE_IONO          2   /* 1 = ionosphere-free combination (single mode), 0 = broadcast model */
+#define PRTK_TUNE_START_IFLC    3   /* 1 = the RTK filter's starting position from the ionosphere-free combination */
+#define PRTK_TUNE_ERR_PHASE     4   /* phase error terms a = b, m (default 0.003) */
+#define PRTK_TUNE_ELMIN         5   /* elevation mask, degrees */
+#define PRTK_TUNE_ERATIO_L1     6   /* code / phase error ratio on L1 / E1 / B1 (slot 0) */
+#define PRTK_TUNE_ERATIO_L5     7   /* code / phase error ratio on L5 / E5a / B2a (slot 2) */
+#define PRTK_TUNE_N             8
+void prtk_tune(int key, double value);
+/* analysis: DD code residuals of the last epoch at a trial position (see prtk.c) */
+int prtk_dd_code(const double *rr, int f, int *sats, double *res, double *elev, int max);
 
 /* feed RTCM 3 bytes from the caster; returns a bit mask: 1 = base epoch complete, 2 = ephemeris,
  * 4 = station position, 8 = SSR corrections */

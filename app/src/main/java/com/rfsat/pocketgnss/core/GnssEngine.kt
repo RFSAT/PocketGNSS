@@ -186,6 +186,10 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
                     noPhase = st.noPhase
                     if (noPhase) AppLog.w("Phone RTK", "No carrier phase from the phone (${st.signals} signals)") else AppLog.i("Phone RTK", "Carrier phase back: ${st.withPhase} of ${st.signals} signals")
                 }
+                st.solution?.takeIf { it.codeRms > com.rfsat.pocketgnss.rtk.HonestAccuracy.REFLECTED_RMS && it.codeResiduals >= 4 }?.let { sol ->
+                    AppLog.throttled("rtk-reflected", 300_000, AppLog.Level.WARN, "Phone RTK",
+                        "Code residuals %.0f m RMS: signals reach the phone by reflection, the position may be off by metres or more".format(java.util.Locale.US, sol.codeRms))
+                }
                 if (st.source.isNotEmpty() && st.source != source) {
                     source = st.source
                     AppLog.throttled("rtk-src-$source", 60_000, AppLog.Level.INFO, "Phone RTK", "Position from: $source · ${st.withPhase} of ${st.signals} signals with carrier phase" +

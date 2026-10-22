@@ -93,7 +93,7 @@ object RawConvert {
 
     // GnssMeasurement state bits.
     const val STATE_CODE_LOCK = 1; const val STATE_TOW_DECODED = 8; const val STATE_GLO_TOD_DECODED = 128
-    const val STATE_GAL_E1C_2ND_CODE_LOCK = 2048; const val STATE_TOW_KNOWN = 16384; const val STATE_GLO_TOD_KNOWN = 32768
+    const val STATE_GAL_E1BC_CODE_LOCK = 1024; const val STATE_GAL_E1C_2ND_CODE_LOCK = 2048; const val STATE_TOW_KNOWN = 16384; const val STATE_GLO_TOD_KNOWN = 32768
 
     // Accumulated delta range state bits.
     const val ADR_VALID = 1; const val ADR_RESET = 2; const val ADR_CYCLE_SLIP = 4; const val ADR_HALF_RESOLVED = 8; const val ADR_HALF_REPORTED = 16
@@ -201,7 +201,10 @@ object RawConvert {
      */
     fun pseudorange(c: RawClock, m: RawMeasurement): Double? {
         val tLong = epochGpsNanosLong(c) ?: return null
-        if (m.state and STATE_CODE_LOCK == 0) return null
+        // Galileo E1 may report its own code lock instead of the generic one (a Galaxy S24 never sets CODE_LOCK on E1:
+        // all its E1 pseudoranges were dropped, leaving E1 carrier phase that RTK could not anchor).
+        val codeLock = m.state and STATE_CODE_LOCK != 0 || (m.constellation == GALILEO && m.state and STATE_GAL_E1BC_CODE_LOCK != 0)
+        if (!codeLock) return null
         if (m.receivedSvTimeUncertaintyNanos > MAX_TIME_UNCERTAINTY_NS) return null
         val frac = m.timeOffsetNanos - c.biasNanos
         val towOk = m.state and (STATE_TOW_DECODED or STATE_TOW_KNOWN) != 0

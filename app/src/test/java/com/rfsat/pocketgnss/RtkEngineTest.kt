@@ -207,6 +207,24 @@ class RtkEngineTest {
         assertEquals(0, errors.get())
     }
 
+    @Test fun honestAccuracyFollowsTheCode() {
+        val H = com.rfsat.pocketgnss.rtk.HonestAccuracy
+        val float = RtkSolution(RtkStatus.FLOAT, 2440, 100.0, 37.9, 23.7, 248.0, 0.10, 0.12, 0.2, 0.0, 0.0, 0.0, 12, 1.5, 1.0, 14215.0, 35.0,
+            codeRms = 29.0, codeResiduals = 30)
+        // the S24 by a window: float claims ±16 cm, code residuals 29 m RMS over 30 -> at least 2 x 29 / sqrt(30) = 10.6 m
+        val h = H.apply(float).let { Math.hypot(it.stdEast, it.stdNorth) }
+        assertEquals(2 * 29.0 / Math.sqrt(30.0), h, 1e-9)
+        assertTrue(H.apply(float).stdUp > 0.2)
+        // open sky: code 2 m RMS -> 0.73 m floor; a float already worse than that is left alone
+        assertEquals(2 * 2.0 / Math.sqrt(30.0), H.apply(float.copy(codeRms = 2.0)).let { Math.hypot(it.stdEast, it.stdNorth) }, 1e-9)
+        val worse = float.copy(stdEast = 1.0, stdNorth = 1.0, codeRms = 2.0)
+        assertEquals(worse, H.apply(worse))
+        // fixed and PPP solutions, or too few residuals: unchanged
+        assertEquals(float.copy(status = RtkStatus.FIX), H.apply(float.copy(status = RtkStatus.FIX)))
+        assertEquals(float.copy(status = RtkStatus.PPP), H.apply(float.copy(status = RtkStatus.PPP)))
+        assertEquals(float.copy(codeResiduals = 3), H.apply(float.copy(codeResiduals = 3)))
+    }
+
     @Test fun codeOnlySolutionsGiveWayToABetterPhoneFix() {
         val P = com.rfsat.pocketgnss.rtk.PositionCheck
         assertTrue(P.preferPhone(RtkStatus.DGPS, 1.5, 0.51))         // the case seen on the S24

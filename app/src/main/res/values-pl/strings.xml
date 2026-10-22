@@ -378,6 +378,7 @@
     <string name="live_rtk_no_basepos">brak jeszcze pozycji stacji (1005/1006)</string>
     <string name="live_rtk_noeph">Z castera nie dotarły jeszcze efemerydy rozgłoszeniowe (RTCM 1019/1020/1045/1046/1042), a telefon potrzebuje ich do obliczenia pozycji satelitów. Wiele strumieni sieciowych (VRS, najbliższa stacja) ich nie zawiera: włącz strumień efemeryd (Ustawienia &gt; Połączenie z odbiornikiem).</string>
     <string name="live_rtk_nophase">Ten telefon nie podaje teraz fazy nośnej: RTK nie może uzyskać fixed (telefon tylko z kodem lub nadal włączone oszczędzanie energii). Pozycja pozostaje na poziomie metra.</string>
+    <string name="live_rtk_reflected">Sygnały docierają do telefonu po odbiciu (residua kodu %1$s): pozycja może być błędna o metry lub więcej, niezależnie od dokładności podawanej przez RTK. Przejdź pod otwarte niebo, z dala od ścian, samochodów i własnego ciała.</string>
     <string name="live_rtk_station">stacja %1$d</string>
     <string name="live_sats">Satelity</string>
     <string name="live_sky">Niebo i sygnały</string>

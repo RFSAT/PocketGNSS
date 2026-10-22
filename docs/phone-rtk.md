@@ -39,6 +39,14 @@ measurements the engine needs.
 * **Corrections**: the stream must contain broadcast ephemerides (RTCM 1019 / 1020 / 1042 / 1045 / 1046; Live warns
   when none arrive) and the base must be close (network / VRS streams, or a single station within about 20 km).
 
+* **Direct signals**: indoors, by a window, on a balcony or near walls most signals reach the phone by reflection. A
+  reflected signal is longer by a steady few to tens of metres in both code and carrier phase, so the carrier phase
+  stays smooth and a float solution can claim centimetres while it sits tens of metres away. The engine measures how
+  well the code fits (RMS of the double-differenced code residuals, `codeRms`): about a metre or two under open sky,
+  20-45 m in a recording made beside a building with a Galaxy S24 (Metrica station 14 km away). Float and code DGNSS
+  accuracies are therefore never reported better than 2 × codeRms / √n (`HonestAccuracy` in `rtk/PhoneRtk.kt`), and
+  Live warns when the residuals pass 10 m.
+
 ## Trusting a fix
 
 RTKLIB declares a fix as soon as one epoch passes the ambiguity ratio test. With a phone's few, noisy carrier-phase
@@ -135,6 +143,21 @@ NTRIP relay ──RTCM 3──> PhoneRtkLink.write ──> input_rtcm3 ─> base
 * `RawTest`: raw measurement conversion, RINEX output (checked with RTKLIB's RINEX reader).
 * On phones: the Live tab's *Phone RTK* and *Base data* lines, and recordings (Tools > Phone raw GNSS) for
   post-processing comparisons.
+
+## Analysing a recorded session
+
+`SessionAnalysis` (app/src/test) replays a phone raw session (gnss_log.txt + base.rtcm3, as Tools > Phone raw GNSS
+records it) through the engine with several settings and writes per-epoch CSV files and a summary to
+app/build/session/:
+
+    ./gradlew :app:testDebugUnitTest --tests '*SessionAnalysis*' -PsessionDir=<raw_ folder> [-PsessionVariants=app,dgps]
+        [-PsessionTrials="phone:lat,lon,h;other:lat,lon,h" -PsessionSlots=0,2] [-PsessionDump=E25,G10]
+
+It reports the phone's own flags per signal (valid phase, resets, slips, half-cycle state), the phone's own fix,
+the base station, solutions per variant (single, code DGNSS, RTK, per constellation, weighting) against the phone's
+fix, and, for trial positions, the double-differenced code residuals per satellite. The first S24 recording showed
+with it that Galileo E1 pseudoranges were being dropped (the phone sets only Galileo's own code-lock flag) and that
+the RINEX file of sessions with Galileo came out empty; both are fixed in 1.12.5.
 
 ## Post-processing a recorded session (optional)
 

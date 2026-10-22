@@ -378,6 +378,7 @@
     <string name="live_rtk_no_basepos">noch keine Stationsposition (1005/1006)</string>
     <string name="live_rtk_noeph">Vom Caster sind noch keine Broadcast-Ephemeriden gekommen (RTCM 1019/1020/1045/1046/1042), und das Telefon braucht sie, um die Satellitenpositionen zu berechnen. Viele Netzströme (VRS, nächste Station) enthalten keine: den Ephemeridenstrom einschalten (Einrichtung &gt; Empfängerverbindung).</string>
     <string name="live_rtk_nophase">Derzeit keine Trägerphase von diesem Telefon: RTK kann nicht fixen (Telefon nur mit Code oder Energiesparen noch aktiv). Die Position bleibt im Meterbereich.</string>
+    <string name="live_rtk_reflected">Die Signale erreichen das Telefon über Reflexionen (Code-Residuen %1$s): Die Position kann um Meter oder mehr daneben liegen, egal welche Genauigkeit RTK angibt. Gehen Sie unter freien Himmel, weg von Wänden, Autos und Ihrem Körper.</string>
     <string name="live_rtk_station">Station %1$d</string>
     <string name="live_sats">Satelliten</string>
     <string name="live_sky">Himmel und Signale</string>

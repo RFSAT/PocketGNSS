@@ -101,10 +101,21 @@ class NmeaReplayLink(file: File, private val speed: Double) : GnssLink {
  * those measurements under the current engine settings, so settings can be compared on the same data.
  */
 class RawReplayLink(dir: File, private val options: RtkOptions, private val speed: Double) : GnssLink {
-    private val reader = RinexReader(File(dir, "raw.obs").bufferedReader())
+    // RINEX when it has observations, else the GnssLogger file (sessions recorded before 1.12.5 with Galileo have an
+    // empty RINEX; a GnssLogger file from Google's app works too)
+    private val rinexEpochs = File(dir, "raw.obs").takeIf { it.isFile }?.useLines { s -> s.count { it.startsWith(">") } } ?: 0
+    private val logEpochs = File(dir, "gnss_log.txt").takeIf { it.isFile }?.useLines { s ->
+        var n = 0; var last = ""
+        for (l in s) if (l.startsWith("Raw,")) { val t = l.split(',', limit = 4)[2]; if (t != last) { n++; last = t } }
+        n
+    } ?: 0
+    private val fromLog = logEpochs > rinexEpochs + rinexEpochs / 10
+    private val rinex = if (fromLog) null else RinexReader(File(dir, "raw.obs").bufferedReader())
+    private val log = if (fromLog) com.rfsat.pocketgnss.raw.GnssLogReader(File(dir, "gnss_log.txt").bufferedReader()) else null
+    private fun nextEpoch() = rinex?.next() ?: log?.next()
     private val frames = File(dir, "base.rtcm3").takeIf { it.isFile }?.readBytes()?.let { RtcmFrames.split(it) } ?: emptyList()
     private var fi = 0
-    private val total = File(dir, "raw.obs").useLines { s -> s.count { it.startsWith(">") } }
+    private val total = if (fromLog) logEpochs else rinexEpochs
     private var done = 0
     private val arrays = RoverArrays()
     private val solOut = DoubleArray(RtkSolution.SIZE)
@@ -132,7 +143,7 @@ class RawReplayLink(dir: File, private val options: RtkOptions, private val spee
         if (Replay.state.value.paused) { Thread.sleep(100); nextNs = System.nanoTime(); return 0 }
         val wait = nextNs - System.nanoTime()
         if (wait > 0) { Thread.sleep(minOf(wait / 1_000_000, 200)); if (nextNs - System.nanoTime() > 0) return 0 }
-        val e = reader.next() ?: run { Replay.state.value = Replay.state.value.copy(active = false, done = total); throw IOException(NmeaReplayLink.FINISHED) }
+        val e = nextEpoch() ?: run { Replay.state.value = Replay.state.value.copy(active = false, done = total); throw IOException(NmeaReplayLink.FINISHED) }
         done++
         if (done % 20 == 0) Replay.state.value = Replay.state.value.copy(done = done)
         lastTow?.let { p -> val dt = e.towSeconds - p; if (speed > 0 && dt in 0.0..30.0) nextNs = System.nanoTime() + (dt / speed * 1e9).toLong() }
@@ -157,7 +168,7 @@ class RawReplayLink(dir: File, private val options: RtkOptions, private val spee
             Pair(rst, RtkNative.message())
         }
         val st = engine.first
-        val sol = FixGate.apply(RtkSolution.from(solOut), options)
+        val sol = com.rfsat.pocketgnss.rtk.HonestAccuracy.apply(FixGate.apply(RtkSolution.from(solOut), options))
         val base = RtkBase.from(baseOut)
         val withPhase = e.obs.count { it.phase != null }
         val prev = PhoneRtkLink.state.value
@@ -180,7 +191,7 @@ class RawReplayLink(dir: File, private val options: RtkOptions, private val spee
     override fun close() {
         if (closed) return
         closed = true
-        try { reader.close() } catch (_: Exception) {}
+        try { rinex?.close(); log?.close() } catch (_: Exception) {}
         RtkNative.freeFor(this)
         Replay.state.value = Replay.state.value.copy(active = false)
     }

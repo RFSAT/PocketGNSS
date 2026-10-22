@@ -23,6 +23,8 @@ JNIEXPORT void JNICALL FN(setIono)(JNIEnv *env, jobject thiz, jint ionoFree) { p
 
 JNIEXPORT void JNICALL FN(reset)(JNIEnv *env, jobject thiz) { prtk_reset(); }
 
+JNIEXPORT void JNICALL FN(tune)(JNIEnv *env, jobject thiz, jint key, jdouble value) { prtk_tune(key, value); }
+
 JNIEXPORT void JNICALL FN(setTime)(JNIEnv *env, jobject thiz, jint week, jdouble tow) { prtk_set_time(week, tow); }
 
 JNIEXPORT jint JNICALL FN(inputRtcm)(JNIEnv *env, jobject thiz, jbyteArray data, jint off, jint len)
@@ -42,7 +44,7 @@ JNIEXPORT jint JNICALL FN(inputRtcmNav)(JNIEnv *env, jobject thiz, jbyteArray da
 }
 
 /* out: stat, week, tow, lat, lon, h, x, y, z, sdE, sdN, sdU, vE, vN, vU, ns, ratio, age, baseline, geoid,
- *      floatLat, floatLon, floatH, floatSdE, floatSdN, floatSdU, nfix (27) */
+ *      floatLat, floatLon, floatH, floatSdE, floatSdN, floatSdU, nfix, codeRms, ncode (29) */
 JNIEXPORT jint JNICALL FN(rover)(JNIEnv *env, jobject thiz, jint week, jdouble tow, jint n, jbyteArray sys, jintArray prn,
                                  jbyteArray codes, jdoubleArray P, jdoubleArray L, jfloatArray D, jfloatArray snr,
                                  jintArray lli, jdoubleArray out)
@@ -66,13 +68,13 @@ JNIEXPORT jint JNICALL FN(rover)(JNIEnv *env, jobject thiz, jint week, jdouble t
     (*env)->ReleaseFloatArrayElements(env, snr, fs, JNI_ABORT);
     (*env)->ReleaseIntArrayElements(env, lli, il, JNI_ABORT);
     {
-        jdouble v[27] = {
+        jdouble v[29] = {
             s.stat, s.week, s.tow, s.llh[0], s.llh[1], s.llh[2], s.xyz[0], s.xyz[1], s.xyz[2],
             s.enu_std[0], s.enu_std[1], s.enu_std[2], s.vel_enu[0], s.vel_enu[1], s.vel_enu[2],
             s.ns, s.ratio, s.age, s.baseline, s.geoid,
-            s.float_llh[0], s.float_llh[1], s.float_llh[2], s.float_std[0], s.float_std[1], s.float_std[2], s.nfix
+            s.float_llh[0], s.float_llh[1], s.float_llh[2], s.float_std[0], s.float_std[1], s.float_std[2], s.nfix, s.code_rms, s.ncode
         };
-        (*env)->SetDoubleArrayRegion(env, out, 0, 27, v);
+        (*env)->SetDoubleArrayRegion(env, out, 0, 29, v);
     }
     return st;
 }
@@ -91,3 +93,18 @@ JNIEXPORT void JNICALL FN(base)(JNIEnv *env, jobject thiz, jdoubleArray out)
 }
 
 JNIEXPORT jstring JNICALL FN(message)(JNIEnv *env, jobject thiz) { return (*env)->NewStringUTF(env, prtk_message()); }
+
+JNIEXPORT jint JNICALL FN(ddCode)(JNIEnv *env, jobject thiz, jdoubleArray rr, jint f, jintArray sats, jdoubleArray res, jdoubleArray elev)
+{
+    jdouble *r = (*env)->GetDoubleArrayElements(env, rr, NULL);
+    jint max = (*env)->GetArrayLength(env, sats);
+    jint *s = (*env)->GetIntArrayElements(env, sats, NULL);
+    jdouble *v = (*env)->GetDoubleArrayElements(env, res, NULL);
+    jdouble *e = (*env)->GetDoubleArrayElements(env, elev, NULL);
+    int n = prtk_dd_code(r, f, (int *)s, v, e, max);
+    (*env)->ReleaseDoubleArrayElements(env, rr, r, JNI_ABORT);
+    (*env)->ReleaseIntArrayElements(env, sats, s, 0);
+    (*env)->ReleaseDoubleArrayElements(env, res, v, 0);
+    (*env)->ReleaseDoubleArrayElements(env, elev, e, 0);
+    return n;
+}

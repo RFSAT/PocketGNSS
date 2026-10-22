@@ -23,7 +23,14 @@ static long frames = 0;
 static char message[1024] = "";
 static double maxage = 30.0;
 static int ppp = 0;          /* PPP mode: no base, SSR corrections */
+static obsd_t obs[MAXOBS * 2];   /* the last epoch given to rtkpos: rover then base observations */
+static int last_nobs = 0;
 extern int ppp_ssr_absbias;  /* ppp.c */
+extern int pntpos_iflc;      /* pntpos.c */
+/* Tuning knobs (prtk_tune), applied at the next prtk_init; negative = RTKLIB / app default. */
+static double tune[PRTK_TUNE_N] = { -1, -1, -1, -1, -1, -1, -1, -1 };
+
+void prtk_tune(int key, double value) { if (key >= 0 && key < PRTK_TUNE_N) tune[key] = value; }
 
 void prtk_default_opt(prtk_opt_t *o)
 {
@@ -86,6 +93,7 @@ int prtk_init(const prtk_opt_t *o)
         case PRTK_MODE_STATIC: opt.mode = PMODE_STATIC; break;
         case PRTK_MODE_PPP_KINEMATIC: opt.mode = PMODE_PPP_KINEMA; break;
         case PRTK_MODE_PPP_STATIC: opt.mode = PMODE_PPP_STATIC; break;
+        case 5:                  opt.mode = PMODE_DGPS; break;      /* code differential (analysis) */
         default:               opt.mode = PMODE_KINEMA; break;
     }
     ppp = opt.mode >= PMODE_PPP_KINEMA;
@@ -114,6 +122,14 @@ int prtk_init(const prtk_opt_t *o)
     /* RAIM fault detection and exclusion in the single-point solution that starts and re-starts the filter: one
        phone pseudorange with a gross error (multipath, a weak signal) otherwise moves it by tens to hundreds of m */
     opt.posopt[4] = 1;
+    if (tune[PRTK_TUNE_MAXINNO_CODE] >= 0) opt.maxinno[1] = tune[PRTK_TUNE_MAXINNO_CODE];
+    if (tune[PRTK_TUNE_MAXINNO_PHASE] >= 0) opt.maxinno[0] = tune[PRTK_TUNE_MAXINNO_PHASE];
+    if (tune[PRTK_TUNE_IONO] >= 0 && opt.mode == PMODE_SINGLE) opt.ionoopt = tune[PRTK_TUNE_IONO] >= 1 ? IONOOPT_IFLC : IONOOPT_BRDC;
+    pntpos_iflc = tune[PRTK_TUNE_START_IFLC] >= 1;
+    if (tune[PRTK_TUNE_ERR_PHASE] >= 0) opt.err[1] = opt.err[2] = tune[PRTK_TUNE_ERR_PHASE];
+    if (tune[PRTK_TUNE_ELMIN] >= 0) opt.elmin = tune[PRTK_TUNE_ELMIN] * D2R;
+    if (tune[PRTK_TUNE_ERATIO_L1] >= 0) opt.eratio[0] = tune[PRTK_TUNE_ERATIO_L1];
+    if (tune[PRTK_TUNE_ERATIO_L5] >= 0) opt.eratio[2] = tune[PRTK_TUNE_ERATIO_L5];
     if (ppp) {
         /* Float PPP: SSR orbits / clocks referred to the antenna phase centre (HAS, IGS SSRA streams), estimated
            troposphere, solid earth tides, phase wind-up. No phase biases in HAS yet, so no ambiguity fixing. */
@@ -275,7 +291,6 @@ int prtk_rover(int week, double tow, int n, const char *sys, const int *prn, con
                const double *P, const double *L, const float *D, const float *snr, const int *lli,
                prtk_sol_t *sol)
 {
-    static obsd_t obs[MAXOBS * 2];
     obsd_t rov[MAXOBS];
     gtime_t t = gpst2time(week, tow);
     int i, j, k, nr = 0, nobs = 0, s, sat, idx;
@@ -322,6 +337,7 @@ int prtk_rover(int week, double tow, int n, const char *sys, const int *prn, con
     }
 
     rtk.neb = 0;
+    last_nobs = nobs;
     rtkpos(&rtk, obs, nobs, &nav);
     if (rtk.neb > 0) {
         /* the end of the buffer (the latest messages; the app shows the last line) */
@@ -367,6 +383,14 @@ int prtk_rover(int week, double tow, int n, const char *sys, const int *prn, con
         sol->float_std[2] = sqrt(Qe[8] > 0 ? Qe[8] : 0);
     }
     sol->nfix = rtk.nfix;
+    /* How well the code fits the solution: a phone receiving signals by reflection (indoors, by walls) has double-
+       differenced code residuals of tens of metres although its float solution claims centimetres. */
+    {
+        double s2 = 0.0; int nc = 0, f;
+        for (i = 0; i < MAXSAT; i++) for (f = 0; f < NFREQ; f++) if (rtk.ssat[i].resp[f] != 0.0) { s2 += rtk.ssat[i].resp[f] * rtk.ssat[i].resp[f]; nc++; }
+        sol->code_rms = nc > 0 ? sqrt(s2 / nc) : 0.0;
+        sol->ncode = nc;
+    }
     sol->geoid = geoidh(pos);
     sol->ns = rtk.sol.ns;
     if (rtk.sol.stat == SOLQ_DGPS) {
@@ -429,3 +453,52 @@ void prtk_base(prtk_base_t *b)
 }
 
 const char *prtk_message(void) { return message; }
+
+/*
+ * Analysis: double-differenced code residuals of the last epoch at a trial rover position [rr] (ECEF, m), slot 0
+ * (L1 / E1 / B1I / G1) or [f]; per system the satellite of highest elevation is the reference. Troposphere and
+ * ionosphere are taken as cancelled (short baseline). Writes sat numbers, residuals (m) and elevations (deg); returns
+ * the count.
+ */
+int prtk_dd_code(const double *rr, int f, int *sats, double *res, double *elev, int max)
+{
+    double *rs, *dts, *var, rb[3], e[3], pos[3], azel[2], rho_r, rho_b, dr, db, ref_sd[8] = {0}, ref_el[8] = {0};
+    int svh[MAXOBS * 2], i, j, nr = 0, nb = 0, n = 0, ref_i[8], sys, s;
+    if (!initialised || last_nobs <= 0 || f < 0 || f >= NFREQ) return 0;
+    for (i = 0; i < last_nobs && obs[i].rcv == 1; i++) nr++;
+    for (; i < last_nobs && obs[i].rcv == 2; i++) nb++;
+    if (nr == 0 || nb == 0) return 0;
+    for (i = 0; i < 3; i++) rb[i] = rtk.rb[i];
+    rs = mat(6, last_nobs); dts = mat(2, last_nobs); var = mat(1, last_nobs);
+    satposs(obs[0].time, obs, last_nobs, &nav, EPHOPT_BRDC, rs, dts, var, svh);
+    ecef2pos(rr, pos);
+    for (s = 0; s < 8; s++) ref_i[s] = -1;
+    /* single differences rover - base, then the reference per system */
+    {
+        double sd[MAXOBS]; int si[MAXOBS], m = 0;
+        for (i = 0; i < nr; i++) {
+            for (j = nr; j < nr + nb && obs[j].sat != obs[i].sat; j++) ;
+            if (j == nr + nb || obs[i].P[f] == 0.0 || obs[j].P[f] == 0.0 || norm(rs + i * 6, 3) <= 0.0 || norm(rs + j * 6, 3) <= 0.0) continue;
+            if ((rho_r = geodist(rs + i * 6, rr, e)) <= 0.0) continue;
+            satazel(pos, e, azel);
+            if (azel[1] < rtk.opt.elmin) continue;
+            if ((rho_b = geodist(rs + j * 6, rb, e)) <= 0.0) continue;
+            dr = obs[i].P[f] - rho_r + CLIGHT * dts[i * 2];
+            db = obs[j].P[f] - rho_b + CLIGHT * dts[j * 2];
+            sd[m] = dr - db; si[m] = i;
+            sys = satsys(obs[i].sat, NULL);
+            s = sys == SYS_GPS ? 0 : sys == SYS_GLO ? 1 : sys == SYS_GAL ? 2 : sys == SYS_CMP ? 3 : sys == SYS_QZS ? 4 : 5;
+            if (azel[1] > ref_el[s]) { ref_el[s] = azel[1]; ref_sd[s] = sd[m]; ref_i[s] = i; }
+            elev[m < max ? m : max - 1] = azel[1] * R2D;
+            m++;
+        }
+        for (j = 0; j < m && n < max; j++) {
+            sys = satsys(obs[si[j]].sat, NULL);
+            s = sys == SYS_GPS ? 0 : sys == SYS_GLO ? 1 : sys == SYS_GAL ? 2 : sys == SYS_CMP ? 3 : sys == SYS_QZS ? 4 : 5;
+            if (ref_i[s] < 0 || ref_i[s] == si[j]) continue;
+            sats[n] = obs[si[j]].sat; res[n] = sd[j] - ref_sd[s]; elev[n] = elev[j]; n++;
+        }
+    }
+    free(rs); free(dts); free(var);
+    return n;
+}

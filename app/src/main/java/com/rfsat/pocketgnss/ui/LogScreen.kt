@@ -204,7 +204,7 @@ private fun RawSessionRow(d: File, live: Boolean, onDelete: () -> Unit, onReplay
                 share(context, z, "application/zip")
             }
         }, compact = true, enabled = !live) { Text("ZIP") }
-        ActionButton(onClick = onReplay, compact = true, enabled = !live && obs.length() > 0 && com.rfsat.pocketgnss.link.PhoneRtkLink.engineAvailable) {
+        ActionButton(onClick = onReplay, compact = true, enabled = !live && (obs.length() > 0 || log.length() > 0) && com.rfsat.pocketgnss.link.PhoneRtkLink.engineAvailable) {
             Text(stringResource(R.string.log_replay))
         }
         ActionButton(onClick = onDelete, compact = true, enabled = !live) { Text(stringResource(R.string.action_delete)) }

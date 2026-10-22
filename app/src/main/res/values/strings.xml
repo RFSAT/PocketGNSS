@@ -380,6 +380,7 @@
     <string name="live_rtk_no_basepos">no station position (1005/1006) yet</string>
     <string name="live_rtk_noeph">No broadcast ephemerides from the caster yet (RTCM 1019/1020/1045/1046/1042), and the phone needs them to compute satellite positions. Many network streams (VRS, nearest base) leave them out: switch on the ephemeris stream (Setup &gt; Receiver connection).</string>
     <string name="live_rtk_nophase">No carrier phase from this phone at the moment: RTK cannot fix (code-only phone, or power saving still on). The position stays at metre level.</string>
+    <string name="live_rtk_reflected">Signals reach the phone by reflection (code residuals %1$s): the position can be off by metres or more, whatever accuracy RTK claims. Move to open sky, away from walls, cars and your body.</string>
     <string name="live_rtk_station">station %1$d</string>
     <string name="live_sats">Satellites</string>
     <string name="live_sky">Sky and signals</string>
