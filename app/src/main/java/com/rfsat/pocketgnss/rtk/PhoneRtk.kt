@@ -305,10 +305,28 @@ class PositionCheck(private val resetAfterMs: Long = 10_000, private val resetIn
         /**
          * Code-only solutions (code DGNSS, single) from raw, unsmoothed phone code are often no better than the chip's
          * own fix, which smooths its ranges with the carrier phase: then the one reporting the better accuracy is
-         * used, so phone RTK is never worse than the phone alone. RTK float / fixed and PPP always come from the engine.
+         * used, so phone RTK is never worse than the phone alone.
+         *
+         * An RTK float is used unless it is further from the phone's fix ([distance], m) than both accuracies allow:
+         * more than [FLOAT_DISAGREE_MIN] m and more than [FLOAT_DISAGREE_K] × (float + phone accuracy). That happens
+         * while the float is still converging, at start-up or after an underpass (on a Galaxy S24 drive: 15-25 m away
+         * while claiming 3-7 m, then drifting onto the phone's fix within a minute), and only then.
+         * The same holds for code solutions (indoors they jumped 40-70 m). Fixed and PPP solutions always come from the engine.
          */
-        fun preferPhone(status: RtkStatus, engineAcc: Double, phoneAcc: Double?): Boolean =
-            (status == RtkStatus.DGPS || status == RtkStatus.SINGLE) && phoneAcc != null && phoneAcc > 0 && phoneAcc < engineAcc
+        fun preferPhone(status: RtkStatus, engineAcc: Double, phoneAcc: Double?, distance: Double? = null): Boolean {
+            if (phoneAcc == null || phoneAcc <= 0) return false
+            return when (status) {
+                RtkStatus.DGPS, RtkStatus.SINGLE -> phoneAcc < engineAcc || disagrees(engineAcc, phoneAcc, distance)
+                RtkStatus.FLOAT -> disagrees(engineAcc, phoneAcc, distance)
+                else -> false
+            }
+        }
+
+        const val FLOAT_DISAGREE_MIN = 5.0
+        const val FLOAT_DISAGREE_K = 2.0
+
+        fun disagrees(engineAcc: Double, phoneAcc: Double, distance: Double?): Boolean =
+            distance != null && distance > maxOf(FLOAT_DISAGREE_MIN, FLOAT_DISAGREE_K * (engineAcc + phoneAcc))
     }
 }
 

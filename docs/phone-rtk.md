@@ -52,6 +52,13 @@ measurements the engine needs.
   accuracies are therefore never reported better than 2 × codeRms / √n (`HonestAccuracy` in `rtk/PhoneRtk.kt`), and
   Live warns when the residuals pass 10 m.
 
+* **Converging float**: an RTK float starts from the code, so at start-up (most of all while standing still, where
+  multipath does not average out) and after an underpass it can sit 10-25 m away while claiming 3-7 m, then drift onto
+  the right position within a minute. A float or code solution further from the phone's own fix than 5 m and than
+  2 × (its accuracy + the phone's) is therefore not shown; the phone's fix is, until the two agree
+  (`PositionCheck.preferPhone`). On a 35-minute Galaxy S24 drive this caught 60 of 1911 float epochs, all at start-up,
+  after an underpass or at a stop. Fixed and PPP solutions are not affected.
+
 ## Trusting a fix
 
 RTKLIB declares a fix as soon as one epoch passes the ambiguity ratio test. With a phone's few, noisy carrier-phase

@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.12.7 (build 11207)
+Phone RTK no longer shows an RTK float that is still converging far from the true position, as at start-up or after an underpass (15-25 m away on a test drive while claiming 3-7 m): until it agrees with the phone's own fix, the phone's fix is shown. Indoor code solutions that jump tens of metres give way to the phone's fix the same way.
+
 ## 1.12.6 (build 11206)
 Phone RTK no longer uses GLONASS carrier phase (GLONASS code still counts): its channel-by-channel biases between a phone and a base pulled RTK float positions several metres off (9 m against 2.5 m on a test drive). The map's follow mode stays on until you switch it off and shows when it is on. The float banner says decimetres to metres, matching the accuracy shown.
 

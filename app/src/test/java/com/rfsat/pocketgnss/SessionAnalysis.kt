@@ -220,6 +220,10 @@ class SessionAnalysis {
                 { e -> e.copy(towSeconds = e.towSeconds + d) }, engineMode = 0)
         } + listOf(
 
+            Variant("no_l5_phase", RtkOptions(), { e -> e.copy(obs = e.obs.map { if (it.band == com.rfsat.pocketgnss.raw.Band.L5) it.copy(phase = null, lli = 0) else it }) }),
+            Variant("no_l5", RtkOptions(), { e -> e.copy(obs = e.obs.filter { it.band != com.rfsat.pocketgnss.raw.Band.L5 }) }),
+            Variant("no_l1_phase", RtkOptions(), { e -> e.copy(obs = e.obs.map { if (it.band == com.rfsat.pocketgnss.raw.Band.L1) it.copy(phase = null, lli = 0) else it }) }),
+            Variant("code_only_dgps", RtkOptions(), engineMode = 5),
             Variant("no_half_cycle_flag", RtkOptions(), noHalf),
             Variant("no_glonass", RtkOptions(glonass = false)),
             Variant("no_half_no_glo", RtkOptions(glonass = false), noHalf),

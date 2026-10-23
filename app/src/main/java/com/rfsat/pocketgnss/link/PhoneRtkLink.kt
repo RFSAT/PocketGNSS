@@ -203,7 +203,12 @@ class PhoneRtkLink private constructor(
         }
         lastSolutionMs = now
         val phoneAcc = phone?.takeIf { it.hasAccuracy() }?.accuracy?.toDouble()
-        if (phone != null && PositionCheck.preferPhone(sol.status, kotlin.math.hypot(sol.stdEast, sol.stdNorth), phoneAcc)) {
+        val engineAcc = kotlin.math.hypot(sol.stdEast, sol.stdNorth)
+        val dist = phone?.let { com.rfsat.pocketgnss.protocol.Geo.distance(sol.latitude, sol.longitude, it.latitude, it.longitude) }
+        if (phone != null && PositionCheck.preferPhone(sol.status, engineAcc, phoneAcc, dist)) {
+            if (sol.status == RtkStatus.FLOAT) com.rfsat.pocketgnss.core.AppLog.throttled("floatDisagrees", 60_000, com.rfsat.pocketgnss.core.AppLog.Level.INFO,
+                "Phone RTK", "RTK float %.0f m from the phone's own fix (float ±%.1f m, phone ±%.1f m): still converging, the phone's fix is shown until they agree"
+                    .format(java.util.Locale.US, dist, engineAcc, phoneAcc))
             emitLocation(phone); return
         }
         emitSolution(sol, base, convergence.converging(sol))
