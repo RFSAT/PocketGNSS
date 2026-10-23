@@ -71,6 +71,38 @@ object PhoneNmea {
         }
     }
 
+    /**
+     * Dilution of precision from the geometry of the satellites used, (PDOP, HDOP, VDOP), one receiver clock as in
+     * RTKLIB's dops(); null with fewer than 4 satellites or a degenerate geometry. Azimuth / elevation in degrees.
+     */
+    fun dops(azEl: List<Pair<Double, Double>>): Triple<Double, Double, Double>? {
+        if (azEl.size < 4) return null
+        val n = Array(4) { DoubleArray(4) }
+        for ((az, el) in azEl) {
+            val a = Math.toRadians(az); val e = Math.toRadians(el)
+            val h = doubleArrayOf(Math.cos(e) * Math.sin(a), Math.cos(e) * Math.cos(a), Math.sin(e), 1.0)
+            for (i in 0..3) for (j in 0..3) n[i][j] += h[i] * h[j]
+        }
+        // invert the 4 x 4 normal matrix (Gauss-Jordan with partial pivoting)
+        val q = Array(4) { i -> DoubleArray(4) { j -> if (i == j) 1.0 else 0.0 } }
+        for (c in 0..3) {
+            val p = (c..3).maxByOrNull { abs(n[it][c]) }!!
+            if (abs(n[p][c]) < 1e-12) return null
+            if (p != c) { val t = n[p]; n[p] = n[c]; n[c] = t; val u = q[p]; q[p] = q[c]; q[c] = u }
+            val d = n[c][c]
+            for (j in 0..3) { n[c][j] /= d; q[c][j] /= d }
+            for (r in 0..3) if (r != c) {
+                val f = n[r][c]
+                if (f != 0.0) for (j in 0..3) { n[r][j] -= f * n[c][j]; q[r][j] -= f * q[c][j] }
+            }
+        }
+        if (q[0][0] < 0 || q[1][1] < 0 || q[2][2] < 0) return null
+        return Triple(sqrt(q[0][0] + q[1][1] + q[2][2]), sqrt(q[0][0] + q[1][1]), sqrt(q[2][2]))
+    }
+
+    /** Elevation mask of the phone RTK engine (degrees): its solutions' DOP counts satellites at or above it. */
+    const val ENGINE_MASK_DEG = 15.0
+
     private fun systemId(talker: String) = when (talker) { "GP" -> 1; "GL" -> 2; "GA" -> 3; "GB" -> 4; "GQ" -> 5; "GI" -> 6; else -> 0 }
 
     /** NMEA sentences for one epoch. [fix] null = no position yet (satellites only). */
@@ -83,6 +115,15 @@ object PhoneNmea {
         val date = "%02d%02d%02d".format(Locale.US, cal.get(Calendar.DAY_OF_MONTH), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.YEAR) % 100)
         val mapped = sats.mapNotNull { s -> nmeaId(s)?.let { it to s } }
         val used = mapped.filter { it.second.usedInFix }.distinctBy { it.first.first to it.first.second }
+        // DOP from the satellites used; for the engine's solutions (differential / RTK) those above its mask.
+        val dop = dops(used.map { it.second }.filter { fix == null || fix.quality == 1 || it.elevation >= ENGINE_MASK_DEG }
+            .map { it.azimuth.toDouble() to it.elevation.toDouble() })
+        // GSA: one per constellation with satellites used, with PDOP / HDOP / VDOP of the whole solution.
+        val gsa = used.groupBy { it.first.first }.map { (talker, list) ->
+            val ids = list.map { "%02d".format(it.first.second) }.take(12)
+            val d = dop?.let { "%.2f,%.2f,%.2f".format(Locale.US, it.first, it.second, it.third) } ?: ",,"
+            "GNGSA,A,${if (fix != null) 3 else 1},${(ids + List(12 - ids.size) { "" }).joinToString(",")},$d,${systemId(talker)}"
+        }
 
         if (fix != null) {
             val (la, ns) = Nmea.formatLat(fix.latitude, 7)
@@ -92,8 +133,8 @@ object PhoneNmea {
             // Height split into MSL + geoid separation when Android provides both, else ellipsoid height with separation 0.
             val msl = fix.altitudeMsl ?: fix.altitude
             val sep = if (fix.altitudeMsl != null && fix.altitude != null) fix.altitude - fix.altitudeMsl else 0.0
-            // HDOP is not given by Android: a nominal value derived from the accuracy keeps estimators sensible.
-            val hdop = ((fix.accuracy ?: 5f) / 2.5f).coerceIn(0.5f, 20f)
+            // HDOP from the geometry; without satellite positions a nominal value from the accuracy keeps estimators sensible.
+            val hdop = dop?.second?.toFloat() ?: ((fix.accuracy ?: 5f) / 2.5f).coerceIn(0.5f, 20f)
             // NMEA 4.1 mode letter: A autonomous, D differential, R RTK fixed, F RTK float.
             val mode = when (fix.quality) { 4 -> "R"; 5 -> "F"; 2 -> "D"; else -> "A" }
             val nUsed = fix.satellitesUsed ?: used.size
@@ -112,16 +153,14 @@ object PhoneNmea {
                 add("GNGST,$tm,,%.3f,%.3f,0.0,%.3f,%.3f,%s".format(Locale.US, sd, sd, sd, sd,
                     fix.verticalAccuracy?.let { "%.3f".format(Locale.US, it) } ?: ""))
             }
+            // GSA before GGA too, so this epoch's fix carries this epoch's DOP.
+            gsa.forEach(::add)
             add("GNGGA,$tm,$la,$ns,$lo,$ew,${fix.quality},%02d,%.2f,%s,M,%.3f,M,$age,$station".format(Locale.US, nUsed.coerceAtMost(99), hdop,
                 msl?.let { "%.3f".format(Locale.US, it) } ?: "", sep))
         } else {
             add("GNRMC,$tm,V,,,,,,,$date,,,N,V")
             add("GNGGA,$tm,,,,,0,00,99.99,,,,,,")
-        }
-        // GSA: one per constellation with satellites used.
-        for ((talker, list) in used.groupBy { it.first.first }) {
-            val ids = list.map { "%02d".format(it.first.second) }.take(12)
-            add("GNGSA,A,${if (fix != null) 3 else 1},${(ids + List(12 - ids.size) { "" }).joinToString(",")},,,,${systemId(talker)}")
+            gsa.forEach(::add)
         }
         // GSV: per constellation and signal, four satellites per sentence.
         for ((key, list) in mapped.groupBy { it.first.first to it.first.third }) {

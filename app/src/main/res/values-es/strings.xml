@@ -360,6 +360,9 @@
     <string name="live_ntrip_receiver">desactivado (el receptor usa su propio cliente NTRIP)</string>
     <string name="live_ntrip_setup">Sin Wi-Fi ni SIM en el receptor, el teléfono puede retransmitir las correcciones: elija un perfil de caster en Ajustes &gt; Relé NTRIP y active NTRIP (si no hay punto de montaje elegido, primero muestra la lista).</string>
     <string name="live_ntrip_value">%1$s · %2$s · %3$.0f B/s</string>
+    <string name="live_phone_fix">Posición propia del teléfono</string>
+    <string name="live_phone_fix_frozen">Android la mantiene fija en un punto</string>
+    <string name="live_phone_fix_value">%1$s · a %2$s de la solución del motor RTK</string>
     <string name="live_phone_no_rtk">GNSS del teléfono con Phone RTK desactivado (Ajustes): las correcciones no se aplican y la posición sigue siendo autónoma.</string>
     <string name="live_position">Posición</string>
     <string name="live_ppp_frame_etrs">Coordenadas en ETRS89 (ETRF2000), convertidas desde el marco global de las correcciones (ITRF2020), como las usan las redes RTK europeas y los sistemas nacionales.</string>
@@ -592,7 +595,7 @@
     <string name="setup_phone_auto_noar">Este teléfono rara vez tiene fase portadora suficiente para fijar: la resolución de ambigüedades está desactivada, así que da soluciones flotantes / de código honestas en lugar de falsas fijas.</string>
     <string name="setup_phone_auto_normal">Este teléfono da una fase portadora utilizable: ajustes estándar.</string>
     <string name="setup_phone_corr">Correcciones</string>
-    <string name="setup_phone_corr_ppp">PPP (HAS)</string>
+    <string name="setup_phone_corr_ppp">PPP (HAS / SSR)</string>
     <string name="setup_phone_corr_rtk">RTK (base)</string>
     <string name="setup_phone_forget">Olvidar lo aprendido</string>
     <string name="setup_phone_learned">Aprendido</string>

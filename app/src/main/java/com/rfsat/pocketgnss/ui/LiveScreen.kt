@@ -161,6 +161,13 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
                 KeyValue(stringResource(R.string.live_rtk_engine), pluralStringResource(R.plurals.live_rtk_engine_value, rtkState.signals, rtkState.signals, rtkState.withPhase,
                     rtkState.solution?.ratio ?: 0.0), live = true, valueColor = if (rtkState.noPhase && rtkState.epochs > 5) WarnAmber else Color.Unspecified)
                 val small = MaterialTheme.typography.bodySmall
+                // The phone's own fix beside the engine's, for comparison.
+                rtkState.phoneAcc?.let { pa ->
+                    KeyValue(stringResource(R.string.live_phone_fix), stringResource(R.string.live_phone_fix_value, formatAccuracy(pa),
+                        rtkState.phoneDistance?.let { formatDistance(it) } ?: "—") +
+                        (if (rtkState.phoneFrozen) " · " + stringResource(R.string.live_phone_fix_frozen) else ""), live = true,
+                        valueColor = if (rtkState.phoneFrozen) WarnAmber else Color.Unspecified)
+                }
                 if (s.phonePpp) {
                     // PPP: SSR corrections instead of a base station
                     val sol = rtkState.solution

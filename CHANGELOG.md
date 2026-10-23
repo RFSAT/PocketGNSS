@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.12.9 (build 11209)
+With phone RTK, Live shows the phone's own fix beside the RTK position: its reported accuracy, how far it is from the RTK solution, and a warning when Android holds it on one point while the phone stands still. PDOP, HDOP and VDOP now come from the satellite geometry (VDOP and PDOP were missing). The PPP choice is named PPP (HAS / SSR): it works with Galileo HAS and with IGS SSRA streams.
+
 ## 1.12.8 (build 11208)
 Phone RTK is more accurate when standing still: tested on a car roof, the height error fell from 17 m to about 2 m and the position sits within a metre of a 24-minute average. The engine now gives the code more weight and always runs in moving mode, so the "Phone is: moving / still" choice remains only for PPP. On drives it also stays closer to the phone's own track.
 

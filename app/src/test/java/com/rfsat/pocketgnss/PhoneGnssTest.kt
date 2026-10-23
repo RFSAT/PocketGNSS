@@ -44,6 +44,20 @@ class PhoneGnssTest {
         assertTrue(s.any { it.label == "S123" }); assertTrue(s.any { it.label == "R69" }); assertTrue(s.any { it.label == "J2" })
         assertTrue(s.first { it.label == "C28" }.used)
         assertEquals(Constellation.QZSS, s.first { it.label == "J2" }.constellation)
+        // DOP from the used satellites' geometry, in this epoch's fix (GSA comes before GGA)
+        val d = PhoneNmea.dops(listOf(172.0 to 66.0, 61.0 to 38.0, 180.0 to 23.0, 83.0 to 37.0))!!
+        assertEquals(d.second, f.hdop!!, 0.01); assertEquals(d.third, f.vdop!!, 0.01); assertEquals(d.first, f.pdop!!, 0.01)
+    }
+
+    @Test fun dopFromGeometry() {
+        // Zenith + three at 0° elevation, 120° apart: HDOP = VDOP-free textbook case checked against the normal equations
+        val good = PhoneNmea.dops(listOf(0.0 to 90.0, 0.0 to 10.0, 120.0 to 10.0, 240.0 to 10.0, 60.0 to 45.0, 300.0 to 45.0))!!
+        assertTrue(good.second in 0.6..1.5); assertTrue(good.third in 0.8..3.0)
+        assertEquals(good.first * good.first, good.second * good.second + good.third * good.third, 1e-9)
+        // all satellites in one direction: much worse
+        val bad = PhoneNmea.dops(listOf(0.0 to 30.0, 10.0 to 40.0, 20.0 to 35.0, 5.0 to 60.0))
+        assertTrue(bad == null || bad.second > 5 * good.second)
+        assertNull(PhoneNmea.dops(listOf(0.0 to 90.0, 0.0 to 10.0, 120.0 to 10.0)))
     }
 
     @Test fun searchingEpochHasSatellitesButNoFix() {

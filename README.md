@@ -267,7 +267,7 @@ Ephemeris stream opens a second NTRIP connection with the account of a saved cas
 
 ### Phone PPP with Galileo HAS
 
-Setup > Receiver connection > Phone RTK > Corrections: **PPP (HAS)** runs precise point positioning instead of RTK:
+Setup > Receiver connection > Phone RTK > Corrections: **PPP (HAS / SSR)** runs precise point positioning instead of RTK:
 no base station; the NTRIP relay brings state-space (SSR) corrections of the satellites' orbits, clocks and code
 biases, and RTKLIB's PPP filter (float ambiguities, estimated troposphere, tides, phase wind-up) works on the phone's
 raw measurements alone. Sources:

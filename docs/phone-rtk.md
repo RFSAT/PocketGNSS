@@ -102,7 +102,7 @@ Setup shows the profile and the verdict, and can reset it.
 
 ## PPP with Galileo HAS (no base station)
 
-Setup > Receiver connection > Phone RTK > Corrections > **PPP (HAS)** switches the engine from RTK to precise point
+Setup > Receiver connection > Phone RTK > Corrections > **PPP (HAS / SSR)** switches the engine from RTK to precise point
 positioning. There is no base: the NTRIP relay connects to a stream of state-space corrections (SSR: orbit, clock and
 code-bias corrections to the broadcast ephemerides) and the engine (RTKLIB `pppos`) processes the phone's own
 measurements with them.

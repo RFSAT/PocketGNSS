@@ -52,6 +52,11 @@ data class PhoneRtkState(
     /** Engine solutions not used because they were too far from the phone's own fix ([PositionCheck]), and filter restarts. */
     val rejected: Int = 0,
     val resets: Int = 0,
+    /** The phone's own fix beside the engine's: its reported horizontal accuracy (m) and its distance from the engine solution (m). */
+    val phoneAcc: Double? = null,
+    val phoneDistance: Double? = null,
+    /** Android has held its fix on one point for [PhoneRtkLink.FROZEN_MS] or more ("static hold" while the phone is still). */
+    val phoneFrozen: Boolean = false,
 )
 
 /**
@@ -88,6 +93,8 @@ class PhoneRtkLink private constructor(
     @Volatile private var sats: List<PhoneSat> = emptyList()
     @Volatile private var lastLocation: Location? = null
     @Volatile private var lastLocationMs = 0L
+    /** When the phone's own fix last changed position. */
+    @Volatile private var phoneMovedMs = 0L
     private var noDataSince = 0L
     private val check = PositionCheck()
     @Volatile private var lastSolutionMs = 0L
@@ -113,6 +120,8 @@ class PhoneRtkLink private constructor(
 
     private val listener = LocationListener { loc ->
         if (isMock(loc)) return@LocationListener
+        val prev = lastLocation
+        if (prev == null || prev.latitude != loc.latitude || prev.longitude != loc.longitude) phoneMovedMs = System.currentTimeMillis()
         lastLocation = loc; lastLocationMs = System.currentTimeMillis()
         // Before the engine has a solution (or when raw measurements stop), Android's position keeps the link alive.
         if (System.currentTimeMillis() - lastSolutionMs > 3000) emitLocation(loc)
@@ -186,13 +195,18 @@ class PhoneRtkLink private constructor(
             Quad(gated.status.code.takeIf { st != 0 } ?: 0, gated, RtkBase.from(baseOut), RtkNative.message())
         }
         val withPhase = e.obs.count { it.phase != null }
-        _state.value = PhoneRtkState(if (status != 0) sol else _state.value.solution, base, _state.value.epochs + 1, e.obs.size, withPhase,
-            msg.trim().lineSequence().lastOrNull { it.isNotBlank() } ?: "", noPhase = withPhase == 0, source = _state.value.source,
-            ionoFree = iono.ionoFree, rejected = check.rejected, resets = check.resets)
-        if (status == RtkStatus.NONE.code) return
-        // The phone's own fix as a sanity check: a solution far from it is not used, and a filter stuck there restarts.
         val now = System.currentTimeMillis()
         val phone = lastLocation?.takeIf { now - lastLocationMs <= 2_500 }
+        val shown = if (status != 0) sol else _state.value.solution
+        _state.value = PhoneRtkState(shown, base, _state.value.epochs + 1, e.obs.size, withPhase,
+            msg.trim().lineSequence().lastOrNull { it.isNotBlank() } ?: "", noPhase = withPhase == 0, source = _state.value.source,
+            ionoFree = iono.ionoFree, rejected = check.rejected, resets = check.resets,
+            phoneAcc = phone?.takeIf { it.hasAccuracy() }?.accuracy?.toDouble(),
+            phoneDistance = if (phone != null && shown != null && shown.status != RtkStatus.NONE)
+                com.rfsat.pocketgnss.protocol.Geo.distance(shown.latitude, shown.longitude, phone.latitude, phone.longitude) else null,
+            phoneFrozen = phone != null && phoneMovedMs > 0 && now - phoneMovedMs >= FROZEN_MS)
+        if (status == RtkStatus.NONE.code) return
+        // The phone's own fix as a sanity check: a solution far from it is not used, and a filter stuck there restarts.
         val verdict = check.check(now, sol.latitude, sol.longitude, kotlin.math.hypot(sol.stdEast, sol.stdNorth),
             phone?.latitude, phone?.longitude, phone?.takeIf { it.hasAccuracy() }?.accuracy?.toDouble())
         if (verdict != PositionCheck.Verdict.USE) {
@@ -320,6 +334,9 @@ class PhoneRtkLink private constructor(
 
         /** Lets a session replay show its engine state where phone RTK shows it. */
         fun publish(st: PhoneRtkState) { shared.value = st }
+
+        /** The phone's own fix counts as held ("static hold") after this long on exactly one point. */
+        const val FROZEN_MS = 30_000L
 
         /** 6 Jan 1980 00:00:00 UTC in Unix milliseconds. */
         private const val GPS_EPOCH_MS = 315_964_800_000L

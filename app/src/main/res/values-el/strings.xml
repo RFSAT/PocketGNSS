@@ -360,6 +360,9 @@
     <string name="live_ntrip_receiver">ανενεργή (ο δέκτης χρησιμοποιεί τον δικό του πελάτη NTRIP)</string>
     <string name="live_ntrip_setup">Χωρίς Wi-Fi ή SIM στον δέκτη, το τηλέφωνο μπορεί να αναμεταδίδει τις διορθώσεις: επιλέξτε προφίλ caster στο Ρυθμίσεις &gt; Αναμετάδοση NTRIP και ενεργοποιήστε το NTRIP (αν δεν έχει επιλεγεί mountpoint, εμφανίζεται πρώτα η λίστα).</string>
     <string name="live_ntrip_value">%1$s · %2$s · %3$.0f B/s</string>
+    <string name="live_phone_fix">Θέση του ίδιου του τηλεφώνου</string>
+    <string name="live_phone_fix_frozen">κρατείται σε ένα σημείο από το Android</string>
+    <string name="live_phone_fix_value">%1$s · %2$s από τη λύση της μηχανής RTK</string>
     <string name="live_phone_no_rtk">GNSS τηλεφώνου με απενεργοποιημένο Phone RTK (Ρυθμίσεις): οι διορθώσεις δεν εφαρμόζονται, η θέση μένει αυτόνομη.</string>
     <string name="live_position">Θέση</string>
     <string name="live_ppp_frame_etrs">Συντεταγμένες σε ETRS89 (ETRF2000), μετασχηματισμένες από το παγκόσμιο σύστημα αναφοράς των διορθώσεων (ITRF2020), όπως τις χρησιμοποιούν τα ευρωπαϊκά δίκτυα RTK και τα εθνικά συστήματα.</string>
@@ -592,7 +595,7 @@
     <string name="setup_phone_auto_noar">Αυτό το τηλέφωνο σπάνια έχει αρκετή φάση φέροντος για fixed: η επίλυση ασαφειών είναι απενεργοποιημένη, ώστε να δίνει ειλικρινείς λύσεις float / κώδικα αντί για ψευδείς fixed.</string>
     <string name="setup_phone_auto_normal">Αυτό το τηλέφωνο δίνει χρήσιμη φάση φέροντος: κανονικές ρυθμίσεις.</string>
     <string name="setup_phone_corr">Διορθώσεις</string>
-    <string name="setup_phone_corr_ppp">PPP (HAS)</string>
+    <string name="setup_phone_corr_ppp">PPP (HAS / SSR)</string>
     <string name="setup_phone_corr_rtk">RTK (βάση)</string>
     <string name="setup_phone_forget">Διαγραφή όσων μαθεύτηκαν</string>
     <string name="setup_phone_learned">Εκμάθηση</string>
