@@ -41,7 +41,7 @@ void prtk_default_opt(prtk_opt_t *o)
     o->snrmask = 0.0;
     o->armode = ARMODE_CONT;
     o->glo_ar = 0;
-    o->eratio = 300.0;   /* phone code noise is much larger than geodetic receivers' */
+    o->eratio = 100.0;   /* phone code: noisier than geodetic receivers', but it anchors ambiguities that restart often */
     o->thresar = 3.0;
     o->maxage = 30.0;
     o->minfixsats = 5;

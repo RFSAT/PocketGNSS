@@ -5,7 +5,7 @@ import com.rfsat.pocketgnss.raw.RawEpoch
 /** How the phone is used: moving (kinematic, the default) or held still on a point (static). */
 enum class RtkMode(val code: Int) { KINEMATIC(1), STATIC(2) }
 
-/** Engine settings. Defaults suit phones: noisy code (error ratio 300), 15° mask, no GLONASS ambiguity fixing. */
+/** Engine settings. Defaults suit phones: code weighted at 1/100 of the phase, 15° mask, no GLONASS ambiguity fixing. */
 data class RtkOptions(
     val mode: RtkMode = RtkMode.KINEMATIC,
     val gps: Boolean = true,
@@ -26,7 +26,14 @@ data class RtkOptions(
     /** 0 off, 1 continuous, 3 fix-and-hold (RTKLIB ARMODE_*). */
     val arMode: Int = 1,
     val glonassAr: Boolean = false,
-    val errorRatio: Double = 300.0,
+    /**
+     * Code / carrier-phase error ratio. 100 for phone RTK: the phone's phase slips often and its ambiguities restart
+     * from the code, so with less code weight (300, RTKLIB demo5's phone default) the float drifts on biased
+     * ambiguities. Galaxy S24 on a car roof, 24 min: height 6.7 m above the code DGNSS average at 300, 1.9 m at 100,
+     * horizontal 0.5-0.7 m from it either way; on two drives the float sat 1.8 and 2.1 m (median) from the phone's
+     * fix at 100, 2.0 and 2.5 m at 300.
+     */
+    val errorRatio: Double = 100.0,
     val arRatio: Double = 3.0,
     /** Base observations older than this are not used (s). */
     val maxBaseAgeSec: Double = 30.0,

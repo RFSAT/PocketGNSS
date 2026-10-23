@@ -356,10 +356,14 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     fun currentPhoneProfile(): com.rfsat.pocketgnss.rtk.PhoneProfile? =
         com.rfsat.pocketgnss.rtk.PhoneProfile.decode(store.value.phoneProfile)?.takeIf { it.model == android.os.Build.MODEL }
 
-    /** Phone RTK engine options from the settings (RTK or PPP, moving or still). */
+    /**
+     * Phone RTK engine options from the settings. RTK always runs kinematic: in static mode the position has no process
+     * noise, so a start on reflected code locks in. A Galaxy S24 on a car roof for 24 minutes ended 17 m above the
+     * code average in static mode against 2 m in kinematic. PPP keeps the moving / still choice (error ratio 300).
+     */
     private fun rtkOptions(s: com.rfsat.pocketgnss.data.AppSettings) = com.rfsat.pocketgnss.rtk.RtkOptions(
-        mode = if (s.phoneRtkStatic) com.rfsat.pocketgnss.rtk.RtkMode.STATIC else com.rfsat.pocketgnss.rtk.RtkMode.KINEMATIC,
-        ppp = s.phonePpp)
+        mode = if (s.phonePpp && s.phoneRtkStatic) com.rfsat.pocketgnss.rtk.RtkMode.STATIC else com.rfsat.pocketgnss.rtk.RtkMode.KINEMATIC,
+        ppp = s.phonePpp, errorRatio = if (s.phonePpp) 300.0 else 100.0)
 
     fun connectPhone() {
         if (!phoneHasGnss) { disconnect(context.getString(R.string.no_gnss_short)); return }

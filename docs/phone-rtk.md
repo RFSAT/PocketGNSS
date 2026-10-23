@@ -13,7 +13,7 @@ Phones **without** a GNSS receiver get a clear notice that PocketGNSS is only us
 
 ## Using it
 
-1. Setup > Receiver connection > **Phone**; **Phone RTK** is on by default; choose *Moving* or *Still on a point*.
+1. Setup > Receiver connection > **Phone**; **Phone RTK** is on by default.
 2. Setup > NTRIP relay: a caster profile and mountpoint (**Choose** lists the caster's mountpoints). For a phone,
    network streams that send broadcast ephemerides work best (Metrica MSM_VRS / MSM_NEAR; EUREF MSM stations within
    about 20 km).
@@ -35,7 +35,7 @@ measurements the engine needs.
 * **Second band** (L5 / E5a): with L1 only, float solutions and occasional fixes on short baselines; L1 + L5 fixes
   faster and more reliably.
 * **Antenna and handling**: phone antennas are linearly polarised and suffer multipath. Hold the phone flat and
-  still, away from the body, ideally on a pole or a ground plane; choose *Still on a point* when it does not move.
+  still, away from the body, ideally on a pole or a ground plane (a car roof works well).
 * **Constellations**: GPS, GLONASS, Galileo, BeiDou and QZSS, but GLONASS with code only. GLONASS satellites each
   use their own frequency, and between a phone and a geodetic base the GLONASS carrier phase carries channel-dependent
   biases that the float filter cannot absorb (survey receivers calibrate them). In tests the float solution sat 9.3 m
@@ -58,6 +58,23 @@ measurements the engine needs.
   2 × (its accuracy + the phone's) is therefore not shown; the phone's fix is, until the two agree
   (`PositionCheck.preferPhone`). On a 35-minute Galaxy S24 drive this caught 60 of 1911 float epochs, all at start-up,
   after an underpass or at a stop. Fixed and PPP solutions are not affected.
+
+* **Standing still**: phone RTK always runs RTKLIB's kinematic mode, and the code weighs 1/100 of the phase (error
+  ratio 100, not demo5's 300). In static mode the position carries no process noise, and a phone's phase slips so often
+  that its ambiguities keep restarting from the current position: a start on reflected code then locks in. A Galaxy S24
+  on a car roof in an open car park for 24 minutes (Metrica station 17 km away), compared with the average of code
+  DGNSS over the same time (heights above sea level):
+
+  | Engine | Horizontal from the code average | Height above it |
+  |---|---|---|
+  | static, error ratio 300 (1.12.7 "Still on a point") | 2.4 m | 17 m |
+  | kinematic, error ratio 300 | 0.5 m | 6.7 m |
+  | kinematic, error ratio 100 (now) | 0.7 m | 1.9 m |
+
+  The code average itself is good to about a metre; on two drives the error ratio of 100 also brought the float closer
+  to the phone's own fix (median 1.8 m against 2.0 m, and 2.1 m against 2.5 m). PPP keeps the moving / still choice.
+  While the phone stands still Android may freeze its own fix ("static hold"): the S24's stayed on one point, about
+  3 m from the code average, for the whole 24 minutes.
 
 ## Trusting a fix
 
@@ -139,8 +156,8 @@ NTRIP relay ──RTCM 3──> PhoneRtkLink.write ──> input_rtcm3 ─> base
   time so the RTCM decoder resolves weeks correctly even if the phone clock is wrong); `prtk_jni.c`: JNI bridge.
 * `rtk/RtkNative.kt`, `rtk/PhoneRtk.kt` (options, solution, arrays), `link/PhoneRtkLink.kt` (Android side; the link
   accepts RTCM like a receiver, so the existing NTRIP relay feeds it and sends its GGA).
-* Phone settings: kinematic or static, GPS + Galileo + GLONASS + BeiDou + QZSS, 15° mask, code/phase error ratio 300
-  (phone code is noisy), continuous ambiguity resolution with ratio 3 (confirmed over 3 epochs, see above), no GLONASS ambiguity fixing
+* Phone settings: always kinematic (see "Standing still" above), GPS + Galileo + GLONASS + BeiDou + QZSS, 15° mask,
+  code/phase error ratio 100 (see there), continuous ambiguity resolution with ratio 3 (confirmed over 3 epochs, see above), no GLONASS ambiguity fixing
   (inter-channel biases), broadcast ionosphere, Saastamoinen troposphere, base data up to 30 s old.
 * If the native engine is not available for a phone's processor, the app falls back to Android's location.
 

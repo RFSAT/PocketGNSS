@@ -166,7 +166,7 @@ class SessionAnalysis {
             *(1..6).map { 100.0 * a[it] / a[0] }.toTypedArray()))
 
         val noHalf: (RawEpoch) -> RawEpoch = { e -> e.copy(obs = e.obs.map { it.copy(lli = it.lli and 1) }) }
-        val variants = listOf(
+        val variants = (listOf(
             Variant("single", RtkOptions(), engineMode = 0),
             Variant("single_gps", RtkOptions(galileo = false, glonass = false, beidou = false, qzss = false), engineMode = 0),
             Variant("single_gal", RtkOptions(gps = false, glonass = false, beidou = false, qzss = false), engineMode = 0),
@@ -230,7 +230,20 @@ class SessionAnalysis {
             Variant("eratio100_no_half", RtkOptions(errorRatio = 100.0), noHalf),
             Variant("snr25_no_half", RtkOptions(snrMaskDbHz = 25.0), noHalf),
             Variant("static_no_half", RtkOptions(mode = com.rfsat.pocketgnss.rtk.RtkMode.STATIC), noHalf),
-        ).filter { v -> System.getProperty("session.variants")?.split(',')?.contains(v.name) ?: true }
+            Variant("app_static", RtkOptions(mode = com.rfsat.pocketgnss.rtk.RtkMode.STATIC)),
+            Variant("static_er100", RtkOptions(mode = com.rfsat.pocketgnss.rtk.RtkMode.STATIC, errorRatio = 100.0)),
+            Variant("static_er30", RtkOptions(mode = com.rfsat.pocketgnss.rtk.RtkMode.STATIC, errorRatio = 30.0)),
+            Variant("er100", RtkOptions(errorRatio = 100.0)),
+            Variant("er50", RtkOptions(errorRatio = 50.0)),
+            Variant("er30", RtkOptions(errorRatio = 30.0)),
+            Variant("er200", RtkOptions(errorRatio = 200.0)),
+            Variant("er100_no_l5_phase", RtkOptions(errorRatio = 100.0), { e -> e.copy(obs = e.obs.map { if (it.band == com.rfsat.pocketgnss.raw.Band.L5) it.copy(phase = null, lli = 0) else it }) }),
+            Variant("static_er50", RtkOptions(mode = com.rfsat.pocketgnss.rtk.RtkMode.STATIC, errorRatio = 50.0)),
+            Variant("static_no_l5_phase", RtkOptions(mode = com.rfsat.pocketgnss.rtk.RtkMode.STATIC), { e -> e.copy(obs = e.obs.map { if (it.band == com.rfsat.pocketgnss.raw.Band.L5) it.copy(phase = null, lli = 0) else it }) }),
+            Variant("static_el25", RtkOptions(mode = com.rfsat.pocketgnss.rtk.RtkMode.STATIC, elevationMaskDeg = 25.0)),
+            Variant("static_snr30", RtkOptions(mode = com.rfsat.pocketgnss.rtk.RtkMode.STATIC, snrMaskDbHz = 30.0)),
+            Variant("dgps_static_avg", RtkOptions(), engineMode = 5),
+        )).filter { v -> System.getProperty("session.variants")?.split(',')?.contains(v.name) ?: true }
         for (v in variants) {
             val rows = run(v, all, frames)
             File(outDir, "${v.name}.csv").writeText("tow,status,lat,lon,h,sdH,ns,ratio,phase,codeRms,msg\n" + rows.joinToString("\n") { r ->

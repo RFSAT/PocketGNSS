@@ -109,11 +109,12 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
                         SwitchRow(stringResource(R.string.setup_phone_rtk), s.phoneRtk, { v -> upd { it.copy(phoneRtk = v) } },
                             stringResource(if (com.rfsat.pocketgnss.link.PhoneRtkLink.engineAvailable) R.string.setup_phone_rtk_help else R.string.setup_phone_rtk_missing),
                             enabled = com.rfsat.pocketgnss.link.PhoneRtkLink.engineAvailable)
-                        if (s.phoneRtk) ChoiceRow(stringResource(R.string.setup_phone_rtk_mode), listOf(false to stringResource(R.string.setup_phone_rtk_moving),
-                            true to stringResource(R.string.setup_phone_rtk_static)), s.phoneRtkStatic) { v -> upd { it.copy(phoneRtkStatic = v) } }
                         if (s.phoneRtk) {
                             ChoiceRow(stringResource(R.string.setup_phone_corr), listOf(false to stringResource(R.string.setup_phone_corr_rtk),
                                 true to stringResource(R.string.setup_phone_corr_ppp)), s.phonePpp) { v -> upd { it.copy(phonePpp = v) } }
+                            // Moving / still only for PPP: phone RTK always runs kinematic (see GnssEngine.rtkOptions).
+                            if (s.phonePpp) ChoiceRow(stringResource(R.string.setup_phone_rtk_mode), listOf(false to stringResource(R.string.setup_phone_rtk_moving),
+                                true to stringResource(R.string.setup_phone_rtk_static)), s.phoneRtkStatic) { v -> upd { it.copy(phoneRtkStatic = v) } }
                             if (s.phonePpp) {
                                 Text(stringResource(R.string.setup_ppp_help), style = MaterialTheme.typography.bodySmall, color = muted)
                                 if (s.ntrip.mountpoint.uppercase().startsWith("SSRC"))
