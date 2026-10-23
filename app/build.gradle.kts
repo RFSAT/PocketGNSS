@@ -140,6 +140,11 @@ val buildHostRtk by tasks.registering(Exec::class) {
 }
 tasks.withType<Test>().configureEach {
     dependsOn(buildHostRtk)
+    // Full stack traces in the console, so a CI failure can be diagnosed from the log alone.
+    testLogging {
+        events("failed")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
     systemProperty("java.library.path", hostRtkDir.get().asFile.path)
     // Optional: a folder with all PROJ-data geoid grids of HeightModels (-PgeoidDir=...), to check every model against PROJ.
     (project.findProperty("geoidDir") as String?)?.let { systemProperty("geoid.dir", it) }
