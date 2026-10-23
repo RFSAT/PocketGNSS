@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.12.10 (build 11210)
+Fixes a rare crash when a receiver answered a settings command at the same moment the command timed out or the connection closed.
+
 ## 1.12.9 (build 11209)
 With phone RTK, Live shows the phone's own fix beside the RTK position: its reported accuracy, how far it is from the RTK solution, and a warning when Android holds it on one point while the phone stands still. PDOP, HDOP and VDOP now come from the satellite geometry (VDOP and PDOP were missing). The PPP choice is named PPP (HAS / SSR): it works with Galileo HAS and with IGS SSRA streams.
 

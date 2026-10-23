@@ -658,7 +658,9 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         waiters.add(match to d)
         withContext(Dispatchers.IO) { writeRaw(frame) }
         val r = withTimeoutOrNull(timeoutMs) { d.await() }
-        waiters.removeAll { it.second === d }
+        // removeIf, not Kotlin's removeAll { }: that walks the list by index and fails (index out of bounds) when the
+        // reader thread or a disconnect removes a waiter at the same moment; CopyOnWriteArrayList.removeIf is atomic.
+        waiters.removeIf { it.second === d }
         return when {
             r == null -> UbxResult.Timeout
             expectData != null -> UbxResult.Data(r)
