@@ -27,8 +27,9 @@ static obsd_t obs[MAXOBS * 2];   /* the last epoch given to rtkpos: rover then b
 static int last_nobs = 0;
 extern int ppp_ssr_absbias;  /* ppp.c */
 extern int pntpos_iflc;      /* pntpos.c */
+extern double glo_code_fact; /* rtkpos.c */
 /* Tuning knobs (prtk_tune), applied at the next prtk_init; negative = RTKLIB / app default. */
-static double tune[PRTK_TUNE_N] = { -1, -1, -1, -1, -1, -1, -1, -1 };
+static double tune[PRTK_TUNE_N] = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
 
 void prtk_tune(int key, double value) { if (key >= 0 && key < PRTK_TUNE_N) tune[key] = value; }
 
@@ -126,6 +127,7 @@ int prtk_init(const prtk_opt_t *o)
     if (tune[PRTK_TUNE_MAXINNO_PHASE] >= 0) opt.maxinno[0] = tune[PRTK_TUNE_MAXINNO_PHASE];
     if (tune[PRTK_TUNE_IONO] >= 0 && opt.mode == PMODE_SINGLE) opt.ionoopt = tune[PRTK_TUNE_IONO] >= 1 ? IONOOPT_IFLC : IONOOPT_BRDC;
     pntpos_iflc = tune[PRTK_TUNE_START_IFLC] >= 1;
+    glo_code_fact = tune[PRTK_TUNE_GLO_CODE] > 0 ? tune[PRTK_TUNE_GLO_CODE] : 1.0;
     if (tune[PRTK_TUNE_ERR_PHASE] >= 0) opt.err[1] = opt.err[2] = tune[PRTK_TUNE_ERR_PHASE];
     if (tune[PRTK_TUNE_ELMIN] >= 0) opt.elmin = tune[PRTK_TUNE_ELMIN] * D2R;
     if (tune[PRTK_TUNE_ERATIO_L1] >= 0) opt.eratio[0] = tune[PRTK_TUNE_ERATIO_L1];

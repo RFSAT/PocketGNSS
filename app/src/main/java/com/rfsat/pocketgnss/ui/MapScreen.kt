@@ -19,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -61,7 +62,9 @@ fun MapScreen(engine: GnssEngine) {
     }
     var fitKey by remember { mutableIntStateOf(0) }
     var recenterKey by remember { mutableIntStateOf(0) }
-    var follow by remember { mutableStateOf(false) }
+    // Following the position is a setting: it stays on between visits and app runs until switched off.
+    val follow = s.mapFollow
+    fun setFollow(on: Boolean) { if (s.mapFollow != on) engine.store.update { it.copy(mapFollow = on) } }
     var selected by remember { mutableStateOf<SurveyPoint?>(null) }
     val context = androidx.compose.ui.platform.LocalContext.current
     androidx.compose.runtime.LaunchedEffect(s.tileCacheMb) {
@@ -83,11 +86,15 @@ fun MapScreen(engine: GnssEngine) {
             if (s.ownMap.isNotBlank()) ChoiceChip(s.ownMapOn, stringResource(R.string.map_own), { engine.store.update { it.copy(ownMapOn = !it.ownMapOn) } },
                 container = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
         }
+        if (follow) Surface(Modifier.align(Alignment.TopEnd).padding(top = 56.dp, end = 8.dp), shape = RoundedCornerShape(10.dp), color = OnGreen) {
+            Text(stringResource(R.string.map_following), Modifier.padding(horizontal = 10.dp, vertical = 4.dp), color = Color.White,
+                style = MaterialTheme.typography.labelMedium)
+        }
         Column(Modifier.align(Alignment.CenterEnd).padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SmallFloatingActionButton(onClick = { follow = false; recenterKey++ }) { Icon(Icons.Filled.MyLocation, stringResource(R.string.map_recenter)) }
-            SmallFloatingActionButton(onClick = { follow = !follow },
+            SmallFloatingActionButton(onClick = { recenterKey++ }) { Icon(Icons.Filled.MyLocation, stringResource(R.string.map_recenter)) }
+            SmallFloatingActionButton(onClick = { setFollow(!follow) },
                 containerColor = if (follow) OnGreen else MaterialTheme.colorScheme.primaryContainer) { Icon(Icons.Filled.Navigation, stringResource(R.string.map_follow)) }
-            SmallFloatingActionButton(onClick = { follow = false; fitKey++ }) { Icon(Icons.Filled.FitScreen, stringResource(R.string.map_fit)) }
+            SmallFloatingActionButton(onClick = { setFollow(false); fitKey++ }) { Icon(Icons.Filled.FitScreen, stringResource(R.string.map_fit)) }
             SmallFloatingActionButton(onClick = { engine.markPoint(engine.nextPointName())?.let { engine.toast(it.name) } }) {
                 Icon(Icons.Filled.AddLocationAlt, stringResource(R.string.live_mark))
             }

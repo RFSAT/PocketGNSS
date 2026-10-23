@@ -20,6 +20,7 @@ import com.rfsat.pocketgnss.rtk.PhoneProfile
 import com.rfsat.pocketgnss.rtk.PositionCheck
 import com.rfsat.pocketgnss.rtk.ProfileLearner
 import com.rfsat.pocketgnss.rtk.RoverArrays
+import com.rfsat.pocketgnss.rtk.forEngine
 import com.rfsat.pocketgnss.rtk.RtkBase
 import com.rfsat.pocketgnss.rtk.RtkNative
 import com.rfsat.pocketgnss.rtk.RtkOptions
@@ -164,7 +165,7 @@ class PhoneRtkLink private constructor(
             return
         }
         noDataSince = 0L
-        arrays.fill(e)
+        arrays.fill(e.forEngine(options))
         // Learn this phone: satellites with carrier phase, and how many slipped, per epoch; saved about once a minute.
         val phaseSats = e.obs.filter { it.phase != null }.map { it.sat }.toSet()
         val slipSats = e.obs.filter { it.phase != null && it.lli and 1 != 0 }.map { it.sat }.toSet()

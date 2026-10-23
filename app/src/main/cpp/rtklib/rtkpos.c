@@ -50,6 +50,9 @@
 #include <stdarg.h>
 #include "rtklib.h"
 
+/* PocketGNSS: extra error factor for GLONASS code (phone and base differ by a bias on every GLONASS channel) */
+double glo_code_fact=1.0;
+
 /* algorithm configuration -------------------------------------------------- */
 #define STD_PREC_VAR_THRESH 0  /* pos variance threshold to skip standard precision */
                               /* solution: 0   = run every epoch, */
@@ -416,7 +419,7 @@ static double varerr(int sat, int sys, double el, double snr_rover, double snr_b
     /* adjust variance for constellation */
     switch (sys) {
         case SYS_GPS: fact*=EFACT_GPS;break;
-        case SYS_GLO: fact*=EFACT_GLO;break;
+        case SYS_GLO: fact*=EFACT_GLO*(code?glo_code_fact:1.0);break;
         case SYS_GAL: fact*=EFACT_GAL;break;
         case SYS_SBS: fact*=EFACT_SBS;break;
         case SYS_QZS: fact*=EFACT_QZS;break;

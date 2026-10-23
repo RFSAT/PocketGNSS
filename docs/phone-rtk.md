@@ -36,6 +36,11 @@ measurements the engine needs.
   faster and more reliably.
 * **Antenna and handling**: phone antennas are linearly polarised and suffer multipath. Hold the phone flat and
   still, away from the body, ideally on a pole or a ground plane; choose *Still on a point* when it does not move.
+* **Constellations**: GPS, GLONASS, Galileo, BeiDou and QZSS, but GLONASS with code only. GLONASS satellites each
+  use their own frequency, and between a phone and a geodetic base the GLONASS carrier phase carries channel-dependent
+  biases that the float filter cannot absorb (survey receivers calibrate them). In tests the float solution sat 9.3 m
+  from the phone's own track on a drive with GLONASS phase and 2.5 m without it, the same as without GLONASS at all
+  (`RtkOptions.glonassPhase`). Weighting GLONASS code down made no difference: the phase is what matters.
 * **Corrections**: the stream must contain broadcast ephemerides (RTCM 1019 / 1020 / 1042 / 1045 / 1046; Live warns
   when none arrive) and the base must be close (network / VRS streams, or a single station within about 20 km).
 

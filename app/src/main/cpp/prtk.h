@@ -118,7 +118,8 @@ void prtk_reset(void);
 #define PRTK_TUNE_ELMIN         5   /* elevation mask, degrees */
 #define PRTK_TUNE_ERATIO_L1     6   /* code / phase error ratio on L1 / E1 / B1 (slot 0) */
 #define PRTK_TUNE_ERATIO_L5     7   /* code / phase error ratio on L5 / E5a / B2a (slot 2) */
-#define PRTK_TUNE_N             8
+#define PRTK_TUNE_GLO_CODE      8   /* GLONASS code error factor (inter-channel biases), default 1 */
+#define PRTK_TUNE_N             9
 void prtk_tune(int key, double value);
 /* analysis: DD code residuals of the last epoch at a trial position (see prtk.c) */
 int prtk_dd_code(const double *rr, int f, int *sats, double *res, double *elev, int max);

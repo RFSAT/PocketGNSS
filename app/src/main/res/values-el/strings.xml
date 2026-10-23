@@ -413,6 +413,7 @@
     <string name="map_clear_track">Καθαρισμός διαδρομής</string>
     <string name="map_fit">Προβολή όλων</string>
     <string name="map_follow">Ακολούθηση</string>
+    <string name="map_following">Ακολουθεί τη θέση</string>
     <string name="map_own">Δικός</string>
     <string name="map_recenter">Κεντράρισμα στη θέση</string>
     <string name="map_satellite">Δορυφορικός</string>
@@ -508,7 +509,7 @@
     <string name="phint_android">Η θέση του ίδιου του Android· η ακρίβεια είναι εκτίμηση του τηλεφώνου</string>
     <string name="phint_dgnss">Κώδικας με διορθώσεις (πολύ λίγη φάση φέροντος): επίπεδο μέτρου</string>
     <string name="phint_fixed">Φάση φέροντος, επιλυμένες ασάφειες: εκατοστά αν η λύση είναι σωστή</string>
-    <string name="phint_float">Φάση φέροντος, χωρίς επίλυση: δεκατόμετρα</string>
+    <string name="phint_float">Φάση φέρουσας, χωρίς επίλυση ασαφειών: δέκατα του μέτρου έως μέτρα, όπως δείχνει η ακρίβεια</string>
     <string name="phint_ppp">Ακριβής απόλυτος προσδιορισμός, χωρίς βάση: δεκατόμετρα έως περίπου ένα μέτρο σε τηλέφωνο</string>
     <string name="phint_ppp_conv">Σύγκλιση: η ακρίβεια βελτιώνεται τα πρώτα 20–30 λεπτά σε ανοιχτό ουρανό</string>
     <string name="phint_single">Χωρίς διορθώσεις: μέτρα</string>

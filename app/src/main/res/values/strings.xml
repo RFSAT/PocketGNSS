@@ -415,6 +415,7 @@
     <string name="map_clear_track">Clear track</string>
     <string name="map_fit">Fit all</string>
     <string name="map_follow">Follow</string>
+    <string name="map_following">Following the position</string>
     <string name="map_own">Own</string>
     <string name="map_recenter">Centre on position</string>
     <string name="map_satellite">Satellite</string>
@@ -510,7 +511,7 @@
     <string name="phint_android">Android\'s own position; its accuracy is the phone\'s estimate</string>
     <string name="phint_dgnss">Code with corrections (too little carrier phase): metre level</string>
     <string name="phint_fixed">Carrier phase, ambiguities fixed: centimetres if the fix is right</string>
-    <string name="phint_float">Carrier phase, not fixed: decimetres</string>
+    <string name="phint_float">Carrier phase, not fixed: decimetres to metres, as the accuracy shows</string>
     <string name="phint_ppp">Precise point positioning, no base: decimetres to about a metre on a phone</string>
     <string name="phint_ppp_conv">Converging: accuracy improves over the first 20–30 minutes under open sky</string>
     <string name="phint_single">No corrections used: metres</string>

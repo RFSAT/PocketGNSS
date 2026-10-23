@@ -413,6 +413,7 @@
     <string name="map_clear_track">Spur löschen</string>
     <string name="map_fit">Alles zeigen</string>
     <string name="map_follow">Folgen</string>
+    <string name="map_following">Folgt der Position</string>
     <string name="map_own">Eigene</string>
     <string name="map_recenter">Auf Position zentrieren</string>
     <string name="map_satellite">Satellit</string>
@@ -508,7 +509,7 @@
     <string name="phint_android">Androids eigene Position; die Genauigkeit ist die Schätzung des Telefons</string>
     <string name="phint_dgnss">Code mit Korrekturen (zu wenig Trägerphase): Meterbereich</string>
     <string name="phint_fixed">Trägerphase, Mehrdeutigkeiten gelöst: Zentimeter, wenn der Fix stimmt</string>
-    <string name="phint_float">Trägerphase, nicht gelöst: Dezimeter</string>
+    <string name="phint_float">Trägerphase, nicht fixiert: Dezimeter bis Meter, wie die Genauigkeit zeigt</string>
     <string name="phint_ppp">Präzise Punktpositionierung ohne Basis: Dezimeter bis etwa ein Meter auf einem Telefon</string>
     <string name="phint_ppp_conv">Konvergiert: Die Genauigkeit steigt in den ersten 20–30 Minuten unter freiem Himmel</string>
     <string name="phint_single">Keine Korrekturen genutzt: Meter</string>

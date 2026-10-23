@@ -6,6 +6,7 @@ import com.rfsat.pocketgnss.rtk.FixGate
 import com.rfsat.pocketgnss.rtk.IonoChooser
 import com.rfsat.pocketgnss.rtk.PppConvergence
 import com.rfsat.pocketgnss.rtk.RoverArrays
+import com.rfsat.pocketgnss.rtk.forEngine
 import com.rfsat.pocketgnss.rtk.RtkBase
 import com.rfsat.pocketgnss.rtk.RtkNative
 import com.rfsat.pocketgnss.rtk.RtkOptions
@@ -160,7 +161,7 @@ class RawReplayLink(dir: File, private val options: RtkOptions, private val spee
                 if (j < frames.size && RtcmFrames.epochTowMs(frames[j], towMs)!! > towMs + 50) break
                 while (fi <= minOf(j, frames.size - 1)) { RtkNative.inputRtcm(frames[fi], 0, frames[fi].size); fi++ }
             }
-            arrays.fill(e)
+            arrays.fill(e.forEngine(options))
             if (options.ppp) iono.update(IonoChooser.dualSatellites(e))?.let { f -> RtkNative.setIono(if (f) 1 else 0); convergence.reset() }
             val rst = RtkNative.rover(e.gpsWeek, e.towSeconds, arrays.n, arrays.sys, arrays.prn, arrays.codes, arrays.p, arrays.l, arrays.d,
                 arrays.snr, arrays.lli, solOut)

@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.12.6 (build 11206)
+Phone RTK no longer uses GLONASS carrier phase (GLONASS code still counts): its channel-by-channel biases between a phone and a base pulled RTK float positions several metres off (9 m against 2.5 m on a test drive). The map's follow mode stays on until you switch it off and shows when it is on. The float banner says decimetres to metres, matching the accuracy shown.
+
 ## 1.12.5 (build 11205)
 Phone RTK uses Galileo E1 again on phones that flag it their own way (Galaxy S24), and RINEX files of sessions with Galileo are no longer empty. RTK float and code DGNSS no longer claim centimetres when the phone receives reflected signals: the accuracy follows how well the code fits, and Live warns. Recorded sessions replay from the GnssLogger file too.
 

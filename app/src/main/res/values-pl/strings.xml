@@ -413,6 +413,7 @@
     <string name="map_clear_track">Wyczyść ślad</string>
     <string name="map_fit">Pokaż wszystko</string>
     <string name="map_follow">Śledź</string>
+    <string name="map_following">Śledzi pozycję</string>
     <string name="map_own">Własna</string>
     <string name="map_recenter">Wyśrodkuj na pozycji</string>
     <string name="map_satellite">Satelitarna</string>
@@ -508,7 +509,7 @@
     <string name="phint_android">Własna pozycja Androida; dokładność to szacunek telefonu</string>
     <string name="phint_dgnss">Kod z poprawkami (za mało fazy nośnej): poziom metra</string>
     <string name="phint_fixed">Faza nośna, nieoznaczoności rozwiązane: centymetry, jeśli fix jest poprawny</string>
-    <string name="phint_float">Faza nośna, bez rozwiązania: decymetry</string>
+    <string name="phint_float">Faza nośna, bez ustalenia: od decymetrów do metrów, jak pokazuje dokładność</string>
     <string name="phint_ppp">Precyzyjne pozycjonowanie absolutne, bez bazy: od decymetrów do około metra na telefonie</string>
     <string name="phint_ppp_conv">Zbieżność: dokładność rośnie przez pierwsze 20–30 minut pod otwartym niebem</string>
     <string name="phint_single">Bez poprawek: metry</string>

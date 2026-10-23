@@ -11,6 +11,14 @@ data class RtkOptions(
     val gps: Boolean = true,
     val galileo: Boolean = true,
     val glonass: Boolean = true,
+    /**
+     * GLONASS carrier phase. Off for phones: GLONASS satellites each transmit on their own frequency, and between a
+     * phone and a geodetic base the phase carries a channel-dependent bias the float filter cannot absorb (survey
+     * receivers calibrate it). Tested on a Galaxy S24 against a Metrica base: with GLONASS phase the float solution sat
+     * 9.3 m (median) from the phone's own track on a drive and 36 m by a building; with GLONASS code but no GLONASS
+     * phase 2.5 m and 24 m, the same as without GLONASS at all. GLONASS code still adds satellites and geometry.
+     */
+    val glonassPhase: Boolean = false,
     val beidou: Boolean = true,
     val qzss: Boolean = true,
     val elevationMaskDeg: Double = 15.0,
@@ -172,6 +180,11 @@ class PppConvergence(private val minMinutes: Double = 15.0, private val maxStdM:
 
     fun reset() { startSec = null }
 }
+
+/** The epoch as the engine gets it under [o]: without GLONASS carrier phase unless [RtkOptions.glonassPhase]. */
+fun com.rfsat.pocketgnss.raw.RawEpoch.forEngine(o: RtkOptions): com.rfsat.pocketgnss.raw.RawEpoch =
+    if (o.glonassPhase || obs.none { it.system == 'R' && it.phase != null }) this
+    else copy(obs = obs.map { if (it.system == 'R' && it.phase != null) it.copy(phase = null, lli = 0) else it })
 
 /** A rover epoch as the parallel arrays [RtkNative.rover] takes. */
 class RoverArrays(capacity: Int = 256) {

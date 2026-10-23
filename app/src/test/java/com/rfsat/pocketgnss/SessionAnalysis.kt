@@ -6,6 +6,7 @@ import com.rfsat.pocketgnss.raw.GnssLogReader
 import com.rfsat.pocketgnss.raw.RawConvert
 import com.rfsat.pocketgnss.raw.RawEpoch
 import com.rfsat.pocketgnss.rtk.RoverArrays
+import com.rfsat.pocketgnss.rtk.forEngine
 import com.rfsat.pocketgnss.rtk.RtkNative
 import com.rfsat.pocketgnss.rtk.RtkOptions
 import com.rfsat.pocketgnss.rtk.RtkSolution
@@ -33,7 +34,7 @@ class SessionAnalysis {
     fun run(v: Variant, epochs: List<RawEpoch>, frames: List<ByteArray>): List<Row> {
         val out = ArrayList<Row>()
         val arrays = RoverArrays(); val sol = DoubleArray(RtkSolution.SIZE)
-        for (k in 0 until 8) RtkNative.tune(k, v.tune[k] ?: -1.0)
+        for (k in 0 until 9) RtkNative.tune(k, v.tune[k] ?: -1.0)
         if (v.engineMode != null) { val o = v.options; check(RtkNative.init(v.engineMode, o.navsys, o.elevationMaskDeg, o.snrMaskDbHz, o.arMode, 0, o.errorRatio,
             o.arRatio, o.maxBaseAgeSec, o.minFixSats, 1)) } else check(RtkNative.startFor(v.options, this))
         try {
@@ -48,7 +49,7 @@ class SessionAnalysis {
                     if (j < frames.size && RtcmFrames.epochTowMs(frames[j], towMs)!! > towMs + 50) break
                     while (fi <= minOf(j, frames.size - 1)) { RtkNative.inputRtcm(frames[fi], 0, frames[fi].size); fi++ }
                 }
-                arrays.fill(e)
+                arrays.fill(e.forEngine(v.options))
                 val st = RtkNative.rover(e.gpsWeek, e.towSeconds, arrays.n, arrays.sys, arrays.prn, arrays.codes, arrays.p, arrays.l, arrays.d,
                     arrays.snr, arrays.lli, sol)
                 val s = RtkSolution.from(sol)
@@ -56,7 +57,7 @@ class SessionAnalysis {
                 out.add(Row(e.towSeconds, if (st == 0) RtkStatus.NONE else s.status, s.latitude, s.longitude, s.height, Math.hypot(s.stdEast, s.stdNorth),
                     s.satellites, s.ratio, e.obs.count { it.phase != null }, msg, s.codeRms))
             }
-        } finally { if (v.engineMode != null) RtkNative.free() else RtkNative.freeFor(this); for (k in 0 until 8) RtkNative.tune(k, -1.0) }
+        } finally { if (v.engineMode != null) RtkNative.free() else RtkNative.freeFor(this); for (k in 0 until 9) RtkNative.tune(k, -1.0) }
         return out
     }
 
@@ -184,6 +185,24 @@ class SessionAnalysis {
             Variant("w_gal", RtkOptions(gps = false, glonass = false, beidou = false, qzss = false), tune = mapOf(6 to 3000.0, 7 to 100.0)),
             Variant("w_noglo", RtkOptions(glonass = false), tune = mapOf(6 to 3000.0, 7 to 100.0)),
             Variant("w_noglo_static", RtkOptions(glonass = false, mode = com.rfsat.pocketgnss.rtk.RtkMode.STATIC), tune = mapOf(6 to 3000.0, 7 to 100.0)),
+            Variant("noglo_nohalf", RtkOptions(glonass = false), noHalf),
+            Variant("glo", RtkOptions(glonass = true, glonassPhase = true)),
+            Variant("glo_nophase", RtkOptions(glonass = true, glonassPhase = true), { e -> e.copy(obs = e.obs.map { if (it.system == 'R') it.copy(phase = null) else it }) }),
+            Variant("glo_nocode", RtkOptions(glonass = true, glonassPhase = true), { e -> e.copy(obs = e.obs.map { if (it.system == 'R') it.copy(pseudorange = null) else it }) }),
+            Variant("glo_code5", RtkOptions(glonass = true, glonassPhase = true), tune = mapOf(8 to 5.0)),
+            Variant("glo_code10", RtkOptions(glonass = true, glonassPhase = true), tune = mapOf(8 to 10.0)),
+            Variant("glo_code30", RtkOptions(glonass = true, glonassPhase = true), tune = mapOf(8 to 30.0)),
+            Variant("glo_code100", RtkOptions(glonass = true, glonassPhase = true), tune = mapOf(8 to 100.0)),
+            Variant("noglo_noslip", RtkOptions(glonass = false), { e -> e.copy(obs = e.obs.map { it.copy(lli = it.lli and 2) }) }),
+            Variant("noglo_noflags", RtkOptions(glonass = false), { e -> e.copy(obs = e.obs.map { it.copy(lli = 0) }) }),
+            Variant("noglo_noflags_static", RtkOptions(glonass = false, mode = com.rfsat.pocketgnss.rtk.RtkMode.STATIC), { e -> e.copy(obs = e.obs.map { it.copy(lli = 0) }) }),
+            Variant("noglo_l5w", RtkOptions(glonass = false), tune = mapOf(6 to 1000.0, 7 to 300.0)),
+            Variant("noglo_l5w2", RtkOptions(glonass = false), tune = mapOf(6 to 600.0, 7 to 150.0)),
+            Variant("noglo_er100", RtkOptions(glonass = false, errorRatio = 100.0)),
+            Variant("noglo_er1000", RtkOptions(glonass = false, errorRatio = 1000.0)),
+            Variant("noglo_el10", RtkOptions(glonass = false, elevationMaskDeg = 10.0)),
+            Variant("noglo_el20", RtkOptions(glonass = false, elevationMaskDeg = 20.0)),
+            Variant("noglo_snr25", RtkOptions(glonass = false, snrMaskDbHz = 25.0)),
             Variant("dgps", RtkOptions(), engineMode = 5),
             Variant("dgpsw", RtkOptions(), engineMode = 5, tune = mapOf(6 to 3000.0, 7 to 100.0)),
             Variant("dgpsw_gps", RtkOptions(galileo = false, glonass = false, beidou = false, qzss = false), engineMode = 5, tune = mapOf(6 to 3000.0, 7 to 100.0)),
