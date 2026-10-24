@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.12.11 (build 11211)
+Phone RTK is far more accurate on dual-frequency phones where signals are reflected: weak signals (below 30 dB-Hz) are left out and the L1 code, which suffers most from reflections, counts less than the L5 code. In a static test beside a geodetic receiver the RTK float came within 2 m of it instead of 22 m. Phones without L5 keep the full L1 code weight.
+
 ## 1.12.10 (build 11210)
 Fixes a rare crash when a receiver answered a settings command at the same moment the command timed out or the connection closed.
 

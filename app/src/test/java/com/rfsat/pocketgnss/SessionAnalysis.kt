@@ -175,7 +175,7 @@ class SessionAnalysis {
             Variant("rtk_gps", RtkOptions(galileo = false, glonass = false, beidou = false, qzss = false)),
             Variant("rtk_gal", RtkOptions(gps = false, glonass = false, beidou = false, qzss = false)),
             Variant("rtk_bds", RtkOptions(gps = false, galileo = false, glonass = false, qzss = false)),
-            Variant("app", RtkOptions()),
+            Variant("app", RtkOptions(snrMaskDbHz = 30.0)),   // as GnssEngine.rtkOptions for phone RTK
             Variant("single_iflc", RtkOptions(), engineMode = 0, tune = mapOf(2 to 1.0)),
             Variant("w_l1_3000_l5_100", RtkOptions(), tune = mapOf(6 to 3000.0, 7 to 100.0)),
             Variant("w_l1_1000_l5_100", RtkOptions(), tune = mapOf(6 to 1000.0, 7 to 100.0)),
@@ -243,6 +243,14 @@ class SessionAnalysis {
             Variant("static_el25", RtkOptions(mode = com.rfsat.pocketgnss.rtk.RtkMode.STATIC, elevationMaskDeg = 25.0)),
             Variant("static_snr30", RtkOptions(mode = com.rfsat.pocketgnss.rtk.RtkMode.STATIC, snrMaskDbHz = 30.0)),
             Variant("dgps_static_avg", RtkOptions(), engineMode = 5),
+            // 2026-10-24 S24 static test beside an EOS Arrow Gold: strong L1 code multipath, L5 code 2-5x cleaner
+            Variant("snr30", RtkOptions(snrMaskDbHz = 30.0)),
+            Variant("snr30_w1000", RtkOptions(snrMaskDbHz = 30.0), tune = mapOf(6 to 1000.0, 7 to 100.0)),
+            Variant("snr30_w3000", RtkOptions(snrMaskDbHz = 30.0), tune = mapOf(6 to 3000.0, 7 to 100.0)),
+            Variant("snr33_w1000", RtkOptions(snrMaskDbHz = 33.0), tune = mapOf(6 to 1000.0, 7 to 100.0)),
+            Variant("snr30_w1000_el20", RtkOptions(snrMaskDbHz = 30.0, elevationMaskDeg = 20.0), tune = mapOf(6 to 1000.0, 7 to 100.0)),
+            Variant("snr25_w1000", RtkOptions(snrMaskDbHz = 25.0), tune = mapOf(6 to 1000.0, 7 to 100.0)),
+            Variant("snr30_w1000_static", RtkOptions(snrMaskDbHz = 30.0, mode = com.rfsat.pocketgnss.rtk.RtkMode.STATIC), tune = mapOf(6 to 1000.0, 7 to 100.0)),
         )).filter { v -> System.getProperty("session.variants")?.split(',')?.contains(v.name) ?: true }
         for (v in variants) {
             val rows = run(v, all, frames)

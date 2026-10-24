@@ -22,6 +22,11 @@ data class RtkOptions(
     val beidou: Boolean = true,
     val qzss: Boolean = true,
     val elevationMaskDeg: Double = 15.0,
+    /**
+     * Signals weaker than this (dB-Hz) are left out; 0 = none. Phone RTK uses 30 (GnssEngine.rtkOptions): weak phone
+     * signals are mostly reflected, and together with L1 code weighted 10x below L5 code (prtk.c) a Galaxy S24 static
+     * test ended 2.1 m from a geodetic RTK fix instead of 22 m (15 m with the mask alone, 20 m with the weighting alone).
+     */
     val snrMaskDbHz: Double = 0.0,
     /** 0 off, 1 continuous, 3 fix-and-hold (RTKLIB ARMODE_*). */
     val arMode: Int = 1,

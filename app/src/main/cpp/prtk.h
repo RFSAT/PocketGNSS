@@ -120,6 +120,11 @@ void prtk_reset(void);
 #define PRTK_TUNE_ERATIO_L5     7   /* code / phase error ratio on L5 / E5a / B2a (slot 2) */
 #define PRTK_TUNE_GLO_CODE      8   /* GLONASS code error factor (inter-channel biases), default 1 */
 #define PRTK_TUNE_N             9
+
+/* RTK: while an epoch has at least PRTK_L5_MIN_SATS satellites with L5 / E5a / B2a code, L1 / E1 / B1 code errors are
+   taken as PRTK_L1_CODE_FACTOR times larger (prtk_init, prtk_rover) */
+#define PRTK_L1_CODE_FACTOR     10.0
+#define PRTK_L5_MIN_SATS        4
 void prtk_tune(int key, double value);
 /* analysis: DD code residuals of the last epoch at a trial position (see prtk.c) */
 int prtk_dd_code(const double *rr, int f, int *sats, double *res, double *elev, int max);

@@ -25,6 +25,7 @@ static double maxage = 30.0;
 static int ppp = 0;          /* PPP mode: no base, SSR corrections */
 static obsd_t obs[MAXOBS * 2];   /* the last epoch given to rtkpos: rover then base observations */
 static int last_nobs = 0;
+static double eratio_l1 = 100.0, eratio_l1_weak = 100.0; /* L1 code error ratio without / with L5 code (prtk_init) */
 extern int ppp_ssr_absbias;  /* ppp.c */
 extern int pntpos_iflc;      /* pntpos.c */
 extern double glo_code_fact; /* rtkpos.c */
@@ -130,7 +131,14 @@ int prtk_init(const prtk_opt_t *o)
     glo_code_fact = tune[PRTK_TUNE_GLO_CODE] > 0 ? tune[PRTK_TUNE_GLO_CODE] : 1.0;
     if (tune[PRTK_TUNE_ERR_PHASE] >= 0) opt.err[1] = opt.err[2] = tune[PRTK_TUNE_ERR_PHASE];
     if (tune[PRTK_TUNE_ELMIN] >= 0) opt.elmin = tune[PRTK_TUNE_ELMIN] * D2R;
-    if (tune[PRTK_TUNE_ERATIO_L1] >= 0) opt.eratio[0] = tune[PRTK_TUNE_ERATIO_L1];
+    /* RTK on dual-frequency phones: L1 / E1 / B1 code carries far more multipath than L5 / E5a / B2a code (Galaxy S24
+       beside an EOS Arrow Gold, 2026-10-24: code-minus-carrier 4-18 m on L1 against 1.5-3.5 m on L5), so while an epoch
+       has enough L5 code, L1 code gets PRTK_L1_CODE_FACTOR less weight (prtk_rover). With the 30 dB-Hz mask
+       (GnssEngine) the float there ended 2.1 m from the EOS fix instead of 22 m. L1-only phones keep the full L1 weight:
+       there the code is all that anchors the ambiguities. */
+    eratio_l1 = opt.eratio[0];
+    eratio_l1_weak = ppp ? opt.eratio[0] : opt.eratio[0] * PRTK_L1_CODE_FACTOR;
+    if (tune[PRTK_TUNE_ERATIO_L1] >= 0) opt.eratio[0] = eratio_l1 = eratio_l1_weak = tune[PRTK_TUNE_ERATIO_L1];
     if (tune[PRTK_TUNE_ERATIO_L5] >= 0) opt.eratio[2] = tune[PRTK_TUNE_ERATIO_L5];
     if (ppp) {
         /* Float PPP: SSR orbits / clocks referred to the antenna phase centre (HAS, IGS SSRA streams), estimated
@@ -331,6 +339,8 @@ int prtk_rover(int week, double tow, int n, const char *sys, const int *prn, con
         rov[j].LLI[idx] = (uint8_t)lli[i];
     }
     if (nr == 0) { strcpy(message, "no usable rover signals"); return PRTK_NONE; }
+    for (i = k = 0; i < nr; i++) if (rov[i].P[2] != 0.0 && rov[i].SNR[2] >= rtk.opt.snrmask.mask[2][0]) k++;
+    rtk.opt.eratio[0] = k >= PRTK_L5_MIN_SATS ? eratio_l1_weak : eratio_l1;
     qsort(rov, nr, sizeof(obsd_t), cmp_obs);
     for (i = 0; i < nr; i++) obs[nobs++] = rov[i];
     /* the latest base epoch, if recent enough */

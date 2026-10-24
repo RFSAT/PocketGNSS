@@ -363,7 +363,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
      */
     private fun rtkOptions(s: com.rfsat.pocketgnss.data.AppSettings) = com.rfsat.pocketgnss.rtk.RtkOptions(
         mode = if (s.phonePpp && s.phoneRtkStatic) com.rfsat.pocketgnss.rtk.RtkMode.STATIC else com.rfsat.pocketgnss.rtk.RtkMode.KINEMATIC,
-        ppp = s.phonePpp, errorRatio = if (s.phonePpp) 300.0 else 100.0)
+        ppp = s.phonePpp, errorRatio = if (s.phonePpp) 300.0 else 100.0, snrMaskDbHz = if (s.phonePpp) 0.0 else 30.0)
 
     fun connectPhone() {
         if (!phoneHasGnss) { disconnect(context.getString(R.string.no_gnss_short)); return }
