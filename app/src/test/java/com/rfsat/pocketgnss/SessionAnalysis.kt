@@ -23,7 +23,12 @@ import java.util.Locale
  */
 class SessionAnalysis {
     data class Variant(val name: String, val options: RtkOptions, val edit: (RawEpoch) -> RawEpoch = { it }, val engineMode: Int? = null,
-                       val tune: Map<Int, Double> = emptyMap())
+                       val tune: Map<Int, Double> = emptyMap(),
+                       /** Emulate the live link: PositionCheck against the phone's own fixes (with filter resets), base data [baseLagMs] late. */
+                       val live: Boolean = false, val baseLagMs: Long = 0)
+
+    /** The phone's own fixes of the session (UTC ms, lat, lon, accuracy), for [Variant.live]. */
+    var phoneFixes: List<GnssLogReader.Fix> = emptyList()
 
     private fun epochs(dir: File) = GnssLogReader(File(dir, "gnss_log.txt").bufferedReader()).use { r -> r.epochs().toList() }
     private inline fun <T> GnssLogReader.use(f: (GnssLogReader) -> T): T = try { f(this) } finally { close() }
@@ -40,9 +45,11 @@ class SessionAnalysis {
         try {
             var fi = 0
             RtkNative.setTime(epochs[0].gpsWeek, epochs[0].towSeconds)
+            val check = com.rfsat.pocketgnss.rtk.PositionCheck()
+            val fixTimes = phoneFixes.map { it.timeMs }
             for (e0 in epochs) {
                 val e = v.edit(e0)
-                val towMs = (e.towSeconds * 1000).toLong()
+                val towMs = (e.towSeconds * 1000).toLong() - v.baseLagMs
                 while (fi < frames.size) {
                     var j = fi
                     while (j < frames.size && RtcmFrames.epochTowMs(frames[j], towMs) == null) j++
@@ -52,7 +59,20 @@ class SessionAnalysis {
                 arrays.fill(e.forEngine(v.options))
                 val st = RtkNative.rover(e.gpsWeek, e.towSeconds, arrays.n, arrays.sys, arrays.prn, arrays.codes, arrays.p, arrays.l, arrays.d,
                     arrays.snr, arrays.lli, sol)
-                val s = RtkSolution.from(sol)
+                var s = RtkSolution.from(sol)
+                if (v.live && st != 0) {
+                    s = com.rfsat.pocketgnss.rtk.HonestAccuracy.apply(com.rfsat.pocketgnss.rtk.FixGate.apply(s, v.options))
+                    val utc = e.gpsWeek * 604_800_000L + (e.towSeconds * 1000).toLong() + 315_964_800_000L - 18_000L
+                    val i = fixTimes.binarySearch(utc).let { if (it >= 0) it else -it - 2 }
+                    val f = phoneFixes.getOrNull(i)?.takeIf { utc - it.timeMs in 0..2500 }
+                    val verdict = check.check(utc, s.latitude, s.longitude, Math.hypot(s.stdEast, s.stdNorth), f?.latitude, f?.longitude, f?.accuracy)
+                    if (verdict == com.rfsat.pocketgnss.rtk.PositionCheck.Verdict.REJECT_AND_RESET) RtkNative.reset()
+                    if (verdict != com.rfsat.pocketgnss.rtk.PositionCheck.Verdict.USE) {
+                        out.add(Row(e.towSeconds, RtkStatus.NONE, s.latitude, s.longitude, s.height, Math.hypot(s.stdEast, s.stdNorth), s.satellites, s.ratio,
+                            e.obs.count { it.phase != null }, if (verdict == com.rfsat.pocketgnss.rtk.PositionCheck.Verdict.REJECT_AND_RESET) "RESET" else "REJECT", s.codeRms))
+                        continue
+                    }
+                }
                 val msg = RtkNative.message().lines().filter { it.isNotBlank() }.joinToString(" | ") { it.replace(Regex("^\\d\\d:\\d\\d:\\d\\d\\.\\d+: "), "") }
                 out.add(Row(e.towSeconds, if (st == 0) RtkStatus.NONE else s.status, s.latitude, s.longitude, s.height, Math.hypot(s.stdEast, s.stdNorth),
                     s.satellites, s.ratio, e.obs.count { it.phase != null }, msg, s.codeRms))
@@ -102,6 +122,7 @@ class SessionAnalysis {
         assumeTrue("no session (-PsessionDir)", path != null && RtkNative.available)
         val dir = File(path!!)
         val all = epochs(dir)
+        phoneFixes = GnssLogReader(File(dir, "gnss_log.txt").bufferedReader()).use { r -> while (r.nextRaw() != null) {}; r.fixes.sortedBy { it.timeMs } }
         System.getProperty("session.dump")?.let { which -> File("build/session").mkdirs(); File("build/session/dump.txt").writeText(all.take(600).joinToString("\n") { e ->
             "%.1f ".format(Locale.US, e.towSeconds) + e.obs.filter { o -> which.split(',').any { o.sat == it } }.joinToString(" ") { o ->
                 "${o.sat} ${o.code} P=${o.pseudorange?.let { "%.1f".format(Locale.US, it) }} L=${o.phase?.let { "%.1f".format(Locale.US, it) }} lli=${o.lli}" } }) }
@@ -251,6 +272,26 @@ class SessionAnalysis {
             Variant("snr30_w1000_el20", RtkOptions(snrMaskDbHz = 30.0, elevationMaskDeg = 20.0), tune = mapOf(6 to 1000.0, 7 to 100.0)),
             Variant("snr25_w1000", RtkOptions(snrMaskDbHz = 25.0), tune = mapOf(6 to 1000.0, 7 to 100.0)),
             Variant("snr30_w1000_static", RtkOptions(snrMaskDbHz = 30.0, mode = com.rfsat.pocketgnss.rtk.RtkMode.STATIC), tune = mapOf(6 to 1000.0, 7 to 100.0)),
+            // 2026-10-24 house roof (dense urban) beside the EOS Arrow Gold: faster convergence?
+            Variant("v1128", RtkOptions(), tune = mapOf(6 to 100.0)),                      // 1.12.8: no mask, L1 code full weight
+            Variant("snr30_l1full", RtkOptions(snrMaskDbHz = 30.0), tune = mapOf(6 to 100.0)),
+            Variant("snr0_l1w", RtkOptions()),                                              // L1 down-weighting only
+            Variant("snr25_l1w", RtkOptions(snrMaskDbHz = 25.0)),
+            Variant("snr33_l1full", RtkOptions(snrMaskDbHz = 33.0), tune = mapOf(6 to 100.0)),
+            Variant("l1x3", RtkOptions(snrMaskDbHz = 30.0), tune = mapOf(6 to 300.0)),
+            Variant("u_l1x30", RtkOptions(snrMaskDbHz = 30.0), tune = mapOf(6 to 3000.0)),
+            Variant("u_l1x100", RtkOptions(snrMaskDbHz = 30.0), tune = mapOf(6 to 10000.0)),
+            Variant("u_snr33", RtkOptions(snrMaskDbHz = 33.0)),
+            Variant("u_snr35", RtkOptions(snrMaskDbHz = 35.0)),
+            Variant("u_el20", RtkOptions(snrMaskDbHz = 30.0, elevationMaskDeg = 20.0)),
+            Variant("u_el25", RtkOptions(snrMaskDbHz = 30.0, elevationMaskDeg = 25.0)),
+            Variant("u_snr33_el20", RtkOptions(snrMaskDbHz = 33.0, elevationMaskDeg = 20.0)),
+            Variant("u_er300", RtkOptions(snrMaskDbHz = 30.0, errorRatio = 300.0)),
+            Variant("u_er50", RtkOptions(snrMaskDbHz = 30.0, errorRatio = 50.0)),
+            Variant("u_noglo", RtkOptions(snrMaskDbHz = 30.0, glonass = false)),
+            Variant("live", RtkOptions(snrMaskDbHz = 30.0), live = true, baseLagMs = 1000),
+            Variant("live_nolag", RtkOptions(snrMaskDbHz = 30.0), live = true),
+            Variant("lag", RtkOptions(snrMaskDbHz = 30.0), baseLagMs = 1000),
         )).filter { v -> System.getProperty("session.variants")?.split(',')?.contains(v.name) ?: true }
         for (v in variants) {
             val rows = run(v, all, frames)
