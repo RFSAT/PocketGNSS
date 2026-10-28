@@ -154,12 +154,13 @@ data class RtkBase(
 
 /**
  * PPP ionosphere model for the phone at hand. The ionosphere-free combination needs two frequencies; on a phone that
- * tracks L1 only it would leave no satellites, so after [switchAfter] epochs with fewer than [minDual] dual-frequency
+ * tracks L1 only it would leave no satellites, so after [switchAfter] epochs (patient: a dual-frequency phone needs a
+ * minute or so after start to deliver carrier phase on L5) with fewer than [minDual] dual-frequency
  * satellites the engine falls back to the broadcast ionosphere model, and goes back when the phone delivers L5 / E5a
  * on at least [goodDual] satellites for [returnAfter] epochs.
  */
 class IonoChooser(ionoFree: Boolean = true, private val minDual: Int = 4, private val goodDual: Int = 6,
-                  private val switchAfter: Int = 30, private val returnAfter: Int = 60) {
+                  private val switchAfter: Int = 90, private val returnAfter: Int = 60) {
     var ionoFree = ionoFree; private set
     private var run = 0
 

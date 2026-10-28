@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.12.13 (build 11213)
+Galileo HAS connects: port 443 casters (EUSPA's ntrip.gsc-europa.eu) use TLS and NTRIP 2 automatically, with the certificate checked, and a "Galileo HAS (EUSPA)" profile is ready for the login. PPP pairs L1 with L5 for GPS and BeiDou too. Live shows the RTK engine's solution, the phone's own fix and their distance on separate lines. The app log can be switched off and filtered by type and source.
+
 ## 1.12.12 (build 11212)
 Phone RTK under open sky is about twice as accurate: L1 code is given less weight only where it is reflected. Tested against a geodetic receiver: 0.4 m instead of 0.8 m. Caster settings and profiles are saved reliably: typed values are kept even without pressing Done, and switching profiles no longer copies values between them. Passwords can be shown with the eye button. The ephemeris stream starts by itself.
 

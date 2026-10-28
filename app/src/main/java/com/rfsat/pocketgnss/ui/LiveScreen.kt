@@ -134,7 +134,9 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
             val phone = s.ntripEnabled || ntrip.status != NtripStatus.OFF
             KeyValue(stringResource(R.string.live_ntrip), if (!phone) stringResource(R.string.live_ntrip_receiver) else
                 stringResource(R.string.live_ntrip_value, ntrip.status.name.lowercase(), ntrip.mountpoint, ntrip.bytesPerSec) +
-                    (if (ntrip.lastDataMs > 0) " · " + stringResource(R.string.live_ntrip_last, (System.currentTimeMillis() - ntrip.lastDataMs) / 1000.0) else ""),
+                    // the age of the last data only when it is getting old, so the line stays short
+                    ((System.currentTimeMillis() - ntrip.lastDataMs) / 1000.0).takeIf { ntrip.lastDataMs > 0 && it >= 3 }
+                        ?.let { " · " + stringResource(R.string.live_ntrip_last, it) }.orEmpty(),
                 live = true)
             ntrip.base?.let { b ->
                 val g = b.geodetic
@@ -161,13 +163,17 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
                 KeyValue(stringResource(R.string.live_rtk_engine), pluralStringResource(R.plurals.live_rtk_engine_value, rtkState.signals, rtkState.signals, rtkState.withPhase,
                     rtkState.solution?.ratio ?: 0.0), live = true, valueColor = if (rtkState.noPhase && rtkState.epochs > 5) WarnAmber else Color.Unspecified)
                 val small = MaterialTheme.typography.bodySmall
-                // The phone's own fix beside the engine's, for comparison.
+                // The engine's own solution and the phone's own fix, one per line, whichever of them is shown above.
+                val eng = rtkState.solution?.takeIf { it.status != com.rfsat.pocketgnss.rtk.RtkStatus.NONE }
+                KeyValue(stringResource(R.string.live_rtk_solution), eng?.let {
+                    methodText(com.rfsat.pocketgnss.link.PhoneRtkLink.methodName(it.status)) + " " + formatAccuracy(kotlin.math.hypot(it.stdEast, it.stdNorth))
+                } ?: "—", live = true)
                 rtkState.phoneAcc?.let { pa ->
-                    KeyValue(stringResource(R.string.live_phone_fix), stringResource(R.string.live_phone_fix_value, formatAccuracy(pa),
-                        rtkState.phoneDistance?.let { formatDistance(it) } ?: "—") +
+                    KeyValue(stringResource(R.string.live_phone_fix), formatAccuracy(pa) +
                         (if (rtkState.phoneFrozen) " · " + stringResource(R.string.live_phone_fix_frozen) else ""), live = true,
                         valueColor = if (rtkState.phoneFrozen) WarnAmber else Color.Unspecified)
                 }
+                rtkState.phoneDistance?.let { d -> KeyValue(stringResource(R.string.live_fix_gap), formatDistance(d), live = true) }
                 if (s.phonePpp) {
                     // PPP: SSR corrections instead of a base station
                     val sol = rtkState.solution

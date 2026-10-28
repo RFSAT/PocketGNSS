@@ -3739,8 +3739,10 @@ extern double ionppp(const double *pos, const double *azel, double re,
 /* select iono-free linear combination (L1/L2 or L1/L5) ----------------------*/
 extern int seliflc(int optnf,int sys)
 {
-    /* use L1/L5 for Galileo if L5 is enabled */
-    return((optnf==2||sys!=SYS_GAL)?1:2);
+    /* PocketGNSS: phones track L1 + L5 / E5a / B2a (frequency slot 2) and no L2, so every system but GLONASS pairs
+       L1 with slot 2 when three slots are enabled (RTKLIB demo5 did so for Galileo only; GPS then had no ionosphere-free
+       combination and BeiDou paired B1C with B1I, 14 MHz apart) */
+    return((optnf==2||sys==SYS_GLO)?1:2);
 }
 /* troposphere model -----------------------------------------------------------
 * compute tropospheric delay by standard atmosphere and saastamoinen model

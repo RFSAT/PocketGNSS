@@ -167,7 +167,7 @@ fun <T> Picker(label: String, options: List<T>, selected: T, text: (T) -> String
     }
 }
 
-/** Key and value; live = true keeps a changing value on one line so rows below never jump. */
+/** Key (left column, muted) and value (right column); live = true keeps a changing value on one line so rows below never jump. */
 @Composable
 fun KeyValue(key: String, value: String, live: Boolean = false, valueColor: Color = Color.Unspecified) {
     val keyWidth = LocalKeyWidth.current
@@ -175,8 +175,10 @@ fun KeyValue(key: String, value: String, live: Boolean = false, valueColor: Colo
         val keyMod = if (keyWidth != null) Modifier.width(keyWidth).padding(end = 8.dp) else Modifier.weight(0.42f)
         val valMod = if (keyWidth != null) Modifier.weight(1f) else Modifier.weight(0.58f)
         Text(key, keyMod, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        if (live) FitText(value, valMod, MaterialTheme.typography.bodySmall, color = valueColor)
-        else Text(value, valMod, style = MaterialTheme.typography.bodySmall, color = valueColor)
+        // label muted on the left, value in the normal text colour and a heavier weight on the right
+        val vc = if (valueColor != Color.Unspecified) valueColor else MaterialTheme.colorScheme.onSurface
+        if (live) FitText(value, valMod, MaterialTheme.typography.bodySmall, color = vc, fontWeight = FontWeight.Medium)
+        else Text(value, valMod, style = MaterialTheme.typography.bodySmall, color = vc, fontWeight = FontWeight.Medium)
     }
 }
 

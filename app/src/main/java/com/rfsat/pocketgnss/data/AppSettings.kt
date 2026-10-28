@@ -92,6 +92,8 @@ data class AppSettings(
     val mapLayer: MapLayer = MapLayer.SATELLITE,
     /** Map keeps the position centred (kept between visits and app runs). */
     val mapFollow: Boolean = false,
+    /** App log recording (Tools > App log). */
+    val appLog: Boolean = true,
     /** Own map (MBTiles) copied into the app, shown over the base map when [ownMapOn]; "" = none. */
     val ownMap: String = "",
     val ownMapOn: Boolean = true,
@@ -198,6 +200,7 @@ class SettingsStore(context: Context, keystore: SecretCipher = KeystoreCipher) {
             keepScreenOn = prefs.getBoolean("screenOn", d.keepScreenOn),
             mapLayer = enumOr(prefs.getString("mapLayer", null), d.mapLayer),
             mapFollow = prefs.getBoolean("mapFollow", d.mapFollow),
+            appLog = prefs.getBoolean("appLog", d.appLog),
             ephStream = prefs.getBoolean("ephStream", d.ephStream),
             ephProfile = prefs.getString("ephProfile", d.ephProfile) ?: "",
             ephMount = prefs.getString("ephMount", d.ephMount) ?: d.ephMount,
@@ -243,6 +246,7 @@ class SettingsStore(context: Context, keystore: SecretCipher = KeystoreCipher) {
             .putBoolean("server", s.nmeaServer).putInt("serverPort", s.nmeaServerPort).putBoolean("serverLocal", s.nmeaServerLocalOnly)
             .putString("coordFormat", s.coordFormat.name).putString("gridSystem", s.gridSystem.name).putInt("utmZone", s.utmZone).putString("heightRef", s.heightRef.name).putString("heightModel", s.heightModel)
             .putBoolean("screenOn", s.keepScreenOn).putString("mapLayer", s.mapLayer.name).putBoolean("mapFollow", s.mapFollow)
+            .putBoolean("appLog", s.appLog)
             .putBoolean("ephStream", s.ephStream).putString("ephProfile", s.ephProfile).putString("ephMount", s.ephMount)
             .putString("ownMap", s.ownMap).putBoolean("ownMapOn", s.ownMapOn).putInt("tileCacheMb", s.tileCacheMb)
             .putString("logMinQ", s.logMinQuality.name).putFloat("logInterval", s.logIntervalSec.toFloat())

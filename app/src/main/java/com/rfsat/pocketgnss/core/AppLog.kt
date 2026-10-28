@@ -29,6 +29,9 @@ object AppLog {
     const val MAX_ENTRIES = 2000
     const val MAX_BYTES = 1_000_000L
 
+    /** Recording on (Tools > App log); off records nothing new except crashes. */
+    @Volatile var enabled = true
+
     private val buf = ArrayDeque<Entry>()
     private val _entries = MutableStateFlow<List<Entry>>(emptyList())
     val entries: StateFlow<List<Entry>> = _entries.asStateFlow()
@@ -67,6 +70,7 @@ object AppLog {
     }
 
     fun add(level: Level, tag: String, message: String, now: Long = System.currentTimeMillis()) {
+        if (!enabled) return
         val entry = Entry(now, level, tag, message)
         synchronized(buf) {
             buf.addLast(entry)

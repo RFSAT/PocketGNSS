@@ -90,7 +90,19 @@ class NtripClient(private val scope: CoroutineScope, private val forward: (ByteA
     private fun open(cfg: NtripConfig): Socket {
         val plain = Socket()
         plain.connect(InetSocketAddress(cfg.host, cfg.port), 8000)
-        val s = if (cfg.tls) (SSLSocketFactory.getDefault() as SSLSocketFactory).createSocket(plain, cfg.host, cfg.port, true) else plain
+        val s = if (!cfg.secure) plain else try {
+            // SNI with the caster's name; the certificate must be valid and issued for that name.
+            val t = (SSLSocketFactory.getDefault() as SSLSocketFactory).createSocket(plain, cfg.host, cfg.port, true) as javax.net.ssl.SSLSocket
+            t.soTimeout = 10_000
+            t.startHandshake()
+            if (!javax.net.ssl.HttpsURLConnection.getDefaultHostnameVerifier().verify(cfg.host, t.session)) {
+                t.close(); throw IOException("TLS: the caster's certificate is not for ${cfg.host}")
+            }
+            t
+        } catch (e: javax.net.ssl.SSLException) {
+            try { plain.close() } catch (_: Exception) {}
+            throw IOException("TLS connection to ${cfg.host}:${cfg.port} failed: ${e.message ?: e.javaClass.simpleName}")
+        }
         s.soTimeout = 1000
         return s
     }

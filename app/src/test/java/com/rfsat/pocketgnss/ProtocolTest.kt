@@ -277,4 +277,17 @@ class BitWriter {
         bits.forEachIndexed { i, b -> if (b) out[i / 8] = (out[i / 8].toInt() or (0x80 shr (i % 8))).toByte() }
         return out
     }
+
+    @Test fun galileoHasCasterIsNtrip2OverTls() {
+        val has = com.rfsat.pocketgnss.data.CasterProfiles.presets.first { it.name.startsWith("Galileo HAS") }.config
+        assertTrue(has.secure && has.port == 443 && has.mountpoint == "SSRA00EUH0" && has.ggaIntervalSec == 0)
+        // port 443 alone means TLS and NTRIP 2, even with both switches left off
+        val c = com.rfsat.pocketgnss.protocol.NtripConfig(host = "ntrip.gsc-europa.eu", port = 443, mountpoint = "SSRA00EUH0", user = "u", password = "p",
+            version2 = false, tls = false)
+        assertTrue(c.secure)
+        val req = com.rfsat.pocketgnss.protocol.Ntrip.request(c)
+        assertTrue(req.startsWith("GET /SSRA00EUH0 HTTP/1.1\r\n"))
+        assertTrue(req.contains("Host: ntrip.gsc-europa.eu\r\n") && req.contains("Ntrip-Version: Ntrip/2.0"))
+        assertTrue(!com.rfsat.pocketgnss.protocol.NtripConfig(host = "x", port = 2101, mountpoint = "m").secure)
+    }
 }

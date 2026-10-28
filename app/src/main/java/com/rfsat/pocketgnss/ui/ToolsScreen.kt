@@ -131,7 +131,7 @@ fun ToolsTab(engine: GnssEngine, initialTool: ToolId? = null) {
             ToolId.RECEIVER_WEB -> ReceiverWebTool(engine)
             ToolId.TTFF -> TtffTool(engine)
             ToolId.STREAM -> StreamTool(engine)
-            ToolId.APP_LOG -> AppLogTool()
+            ToolId.APP_LOG -> AppLogTool(engine)
         }
     }
 }

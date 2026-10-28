@@ -125,8 +125,10 @@ code-bias corrections to the broadcast ephemerides) and the engine (RTKLIB `pppo
 measurements with them.
 
 * **Galileo HAS Internet Data Distribution**: free; register at the European GNSS Service Centre (gsc-europa.eu >
-  Galileo HAS > HAS Internet Data Distribution). After approval the caster address and account come by e-mail; enter
-  them as a caster profile (Setup > NTRIP relay) and choose the mountpoint it names. The stream carries RTCM 3 SSR
+  Galileo HAS > HAS Internet Data Distribution). After approval the account comes by e-mail (October 2026:
+  `ntrip.gsc-europa.eu`, port 443, mountpoint `SSRA00EUH0`). Pick the profile "Galileo HAS (EUSPA)" in Setup > NTRIP
+  relay and enter the user name and password. Port 443 is HTTPS: the app connects over TLS with NTRIP 2 on that port
+  whatever the switches say, and checks that the certificate belongs to the caster. The stream carries RTCM 3 SSR
   1059 / 1060 (GPS) and 1242 / 1243 (Galileo) and the broadcast ephemerides 1019 / 1046.
 * **IGS real-time** `SSRA…` streams (free registration at igs-ip.net): profile "IGS products (PPP)"
   (`products.igs-ip.net:2101`), Get mountpoints, pick an `SSRA…` stream, and switch on the ephemeris stream

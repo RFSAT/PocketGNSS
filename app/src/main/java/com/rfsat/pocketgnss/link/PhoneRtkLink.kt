@@ -183,9 +183,11 @@ class PhoneRtkLink private constructor(
         learner.add(phaseSats.size, slipSats.size)
         if (++learnedEpochs % 60 == 0) onProfile(learner.profile())
         // PPP on a phone without a second frequency: broadcast ionosphere instead of the ionosphere-free combination.
-        if (options.ppp) iono.update(IonoChooser.dualSatellites(e))?.let { f ->
+        val dual = if (options.ppp) IonoChooser.dualSatellites(e) else 0
+        if (options.ppp) iono.update(dual)?.let { f ->
             synchronized(engineLock) { if (RtkNative.owner === this) RtkNative.setIono(if (f) 1 else 0) }; convergence.reset()
-            com.rfsat.pocketgnss.core.AppLog.i("Phone RTK", if (f) "PPP: dual frequency, ionosphere-free combination" else "PPP: single frequency, broadcast ionosphere model")
+            com.rfsat.pocketgnss.core.AppLog.i("Phone RTK", if (f) "PPP: dual frequency ($dual satellites with L1 + L5 code and carrier phase), ionosphere-free combination"
+                else "PPP: single frequency (only $dual satellites with L1 + L5 code and carrier phase for 90 s), broadcast ionosphere model")
         }
         val (status, sol, base, msg) = synchronized(engineLock) {
             if (closed || RtkNative.owner !== this) return

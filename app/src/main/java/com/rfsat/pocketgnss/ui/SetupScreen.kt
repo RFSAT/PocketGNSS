@@ -182,7 +182,10 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
             ChoiceRow(stringResource(R.string.ntrip_kind), listOf(true to stringResource(R.string.ntrip_kind_vrs), false to stringResource(R.string.ntrip_kind_single)),
                 s.ntrip.ggaIntervalSec > 0) { vrs -> upd { it.copy(ntrip = it.ntrip.copy(ggaIntervalSec = if (vrs) 10 else 0)) } }
             TextSetting(stringResource(R.string.ntrip_host), s.ntrip.host, { v -> upd { it.copy(ntrip = it.ntrip.copy(host = v)) } }, keyboard = KeyboardType.Uri)
-            NumberField(stringResource(R.string.ntrip_port), s.ntrip.port.toDouble(), { v -> upd { it.copy(ntrip = it.ntrip.copy(port = v.toInt())) } }, Modifier.fillMaxWidth(), min = 1.0, max = 65535.0)
+            NumberField(stringResource(R.string.ntrip_port), s.ntrip.port.toDouble(), { v ->
+                // port 443 is HTTPS: such casters (Galileo HAS) need TLS and NTRIP 2
+                upd { it.copy(ntrip = it.ntrip.copy(port = v.toInt(), tls = it.ntrip.tls || v.toInt() == 443, version2 = it.ntrip.version2 || v.toInt() == 443)) }
+            }, Modifier.fillMaxWidth(), min = 1.0, max = 65535.0)
             // Usual NTRIP flow: query the caster's sourcetable, pick an endpoint, then connect (or type a known one).
             var choose by remember { mutableStateOf(false) }
             if (choose) MountpointDialog(engine, onDismiss = { choose = false })

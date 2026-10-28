@@ -137,6 +137,10 @@ object CasterProfiles {
         CasterProfile("EUREF-IP (BKG)", NtripConfig(host = "euref-ip.net", port = 2101, ggaIntervalSec = 0)),
         CasterProfile("EUREF-IP (ROB, Belgium)", NtripConfig(host = "www.euref-ip.be", port = 2101, ggaIntervalSec = 0)),
         CasterProfile("IGS-IP (BKG)", NtripConfig(host = "igs-ip.net", port = 2101, ggaIntervalSec = 0)),
+        // Galileo HAS Internet Data Distribution (EUSPA, after HAS IDD registration): NTRIP 2 over TLS on port 443,
+        // SSR orbit / clock / bias corrections for PPP (HAS / SSR) mode.
+        CasterProfile("Galileo HAS (EUSPA)", NtripConfig(host = "ntrip.gsc-europa.eu", port = 443, mountpoint = "SSRA00EUH0",
+            version2 = true, tls = true, ggaIntervalSec = 0)),
         // IGS real-time products (free registration at igs-ip.net): PPP correction streams SSRA… and the broadcast
         // ephemeris stream BCEP00BKG0. The mountpoint is chosen from the caster's sourcetable (Get mountpoints).
         CasterProfile("IGS products (PPP)", NtripConfig(host = "products.igs-ip.net", port = 2101, ggaIntervalSec = 0)),
@@ -153,7 +157,7 @@ object CasterProfiles {
         "NEAR" -> "Nearest single base · GPS+GLO"
         else -> when {
             // IGS real-time naming: TTTT XX AAA F (product type, scheme, analysis centre, 0 = RTCM SSR / 1 = IGS SSR)
-            name.startsWith("SSRA") -> "PPP corrections (SSR, antenna phase centre): for PPP (HAS) mode"
+            name.startsWith("SSRA") -> "PPP corrections (SSR, antenna phase centre): for PPP (HAS / SSR) mode"
             name.startsWith("SSRC") -> "SSR to the centre of mass: not usable here, choose an SSRA… stream"
             name.startsWith("BCEP") -> "Broadcast ephemerides only: for the ephemeris stream"
             name.startsWith("IONO") -> "Ionosphere model only"

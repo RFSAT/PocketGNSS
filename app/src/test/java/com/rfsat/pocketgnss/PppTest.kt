@@ -159,7 +159,7 @@ class PppTest {
         val tow = RtcmFrames.epochTowMs(first, 4 * 86_400_000L + 7_200_000L)!! / 1000
         assertTrue("SSR epoch $tow", tow in (4 * 86400 + 7200 - 120)..(4 * 86400 + 7200 + 120))
         val c = IonoChooser(true)
-        repeat(29) { assertEquals(null, c.update(1)) }
+        repeat(89) { assertEquals(null, c.update(1)) }
         assertEquals(false, c.update(0))
         repeat(59) { assertEquals(null, c.update(8)) }
         assertEquals(true, c.update(8))

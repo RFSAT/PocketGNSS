@@ -23,6 +23,8 @@ data class NtripConfig(
     val ggaIntervalSec: Int = 10,
 ) {
     val usable: Boolean get() = host.isNotBlank() && port in 1..65535 && mountpoint.isNotBlank()
+    /** Encrypted connection: TLS switched on, or the HTTPS port 443 (Galileo HAS at ntrip.gsc-europa.eu:443 needs it). */
+    val secure: Boolean get() = tls || port == 443
 }
 
 /** One STR line of a caster's sourcetable. */
@@ -43,7 +45,7 @@ object Ntrip {
     fun request(c: NtripConfig, mountpoint: String = c.mountpoint): String {
         val path = "/" + mountpoint.trimStart('/')
         val sb = StringBuilder()
-        if (c.version2) {
+        if (c.version2 || c.secure) {   // NTRIP over TLS is NTRIP 2 (HTTP/1.1)
             sb.append("GET ").append(path).append(" HTTP/1.1\r\n")
             sb.append("Host: ").append(c.host).append(if (c.port != 80 && c.port != 443) ":${c.port}" else "").append("\r\n")
             sb.append("Ntrip-Version: Ntrip/2.0\r\n")

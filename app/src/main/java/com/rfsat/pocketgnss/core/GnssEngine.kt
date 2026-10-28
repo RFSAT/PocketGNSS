@@ -297,6 +297,11 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         // Outputs follow the settings.
         scope.launch {
             store.settings.collect { s ->
+                if (AppLog.enabled != s.appLog) {
+                    if (!s.appLog) AppLog.i("App", "Log recording switched off")
+                    AppLog.enabled = s.appLog
+                    if (s.appLog) AppLog.i("App", "Log recording switched on")
+                }
                 simulator?.configure(s.simConfig)
                 guidance.warnAt = s.guideWarn
                 if (s.ephStream || ephClient.running) updateEphStream()

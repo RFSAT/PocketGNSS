@@ -31,19 +31,36 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** Tools > App log: what the app did and what went wrong, newest first, to share for debugging. */
+/**
+ * Tools > App log: what the app did and what went wrong, newest first, to share for debugging. Recording can be switched
+ * off; the list can be filtered by type (errors, warnings, information) and by source (NTRIP, phone RTK, RTK engine...).
+ */
 @Composable
-fun AppLogTool() {
+fun AppLogTool(engine: com.rfsat.pocketgnss.core.GnssEngine) {
     val context = LocalContext.current
+    val s by engine.store.settings.collectAsState()
     val entries by AppLog.entries.collectAsState()
-    var minLevel by rememberSaveable { mutableStateOf(2) }      // 0 errors, 1 + warnings, 2 everything
+    var showE by rememberSaveable { mutableStateOf(true) }
+    var showW by rememberSaveable { mutableStateOf(true) }
+    var showI by rememberSaveable { mutableStateOf(true) }
+    var source by rememberSaveable { mutableStateOf("") }          // "" = every source
     var confirmClear by remember { mutableStateOf(false) }
     val time = remember { SimpleDateFormat("dd.MM HH:mm:ss", Locale.US) }
-    val shown = entries.asReversed().filter { it.level.ordinal <= minLevel }
+    val sources = remember(entries) { entries.map { it.tag }.distinct().sorted() }
+    val shown = entries.asReversed().filter { e ->
+        (source.isEmpty() || e.tag == source) && when (e.level) { AppLog.Level.ERROR -> showE; AppLog.Level.WARN -> showW; AppLog.Level.INFO -> showI }
+    }
+    val allSources = stringResource(R.string.applog_all)
     Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(stringResource(R.string.applog_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        ChoiceRow(stringResource(R.string.applog_show), listOf(0 to stringResource(R.string.applog_errors), 1 to stringResource(R.string.applog_warnings),
-            2 to stringResource(R.string.applog_all)), minLevel) { minLevel = it }
+        SwitchRow(stringResource(R.string.applog_record), s.appLog, { v -> engine.store.update { it.copy(appLog = v) } }, stringResource(R.string.applog_record_help))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ChoiceChip(showE, stringResource(R.string.applog_errors) + " (" + entries.count { it.level == AppLog.Level.ERROR } + ")", { showE = !showE })
+            ChoiceChip(showW, stringResource(R.string.applog_warnings) + " (" + entries.count { it.level == AppLog.Level.WARN } + ")", { showW = !showW })
+            ChoiceChip(showI, stringResource(R.string.applog_info) + " (" + entries.count { it.level == AppLog.Level.INFO } + ")", { showI = !showI })
+        }
+        if (sources.size > 1) Picker(stringResource(R.string.applog_source), listOf("") + sources, source.takeIf { it in sources } ?: "",
+            { it.ifEmpty { allSources } }, { source = it })
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ActionButton(onClick = {
                 val name = "pocketgnss_log_" + SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date()) + ".txt"
