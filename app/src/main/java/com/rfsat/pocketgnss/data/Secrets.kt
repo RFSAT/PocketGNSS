@@ -54,6 +54,21 @@ object KeystoreCipher : SecretCipher {
     } catch (_: Exception) { null }
 }
 
+/**
+ * Keeps the ciphertext of each password once encrypted or decrypted, so saving the settings again reuses it: the
+ * Keystore is not asked on every save, and a moment when it cannot encrypt (it can fail transiently) no longer replaces
+ * a stored password with nothing. Failures are reported through [onFail] ("encrypt" / "decrypt"), never the password.
+ */
+class CachingCipher(private val inner: SecretCipher, private val onFail: (String) -> Unit = {}) : SecretCipher {
+    private val byPlain = HashMap<String, String>()
+
+    @Synchronized override fun encrypt(plain: String): String? =
+        byPlain[plain] ?: inner.encrypt(plain)?.also { byPlain[plain] = it } ?: run { onFail("encrypt"); null }
+
+    @Synchronized override fun decrypt(stored: String): String? =
+        inner.decrypt(stored)?.also { byPlain[it] = stored } ?: run { onFail("decrypt"); null }
+}
+
 /** A saved NTRIP caster account: Metrica VRS, EUREF-IP, BKG, our own EOS Arrow Gold base... */
 data class CasterProfile(val name: String, val config: NtripConfig)
 

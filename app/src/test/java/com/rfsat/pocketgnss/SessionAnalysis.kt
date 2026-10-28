@@ -34,12 +34,13 @@ class SessionAnalysis {
     private inline fun <T> GnssLogReader.use(f: (GnssLogReader) -> T): T = try { f(this) } finally { close() }
 
     data class Row(val tow: Double, val status: RtkStatus, val lat: Double, val lon: Double, val h: Double, val sdH: Double, val ns: Int,
-                   val ratio: Double, val phaseSignals: Int, val msg: String, val codeRms: Double = 0.0)
+                   val ratio: Double, val phaseSignals: Int, val msg: String, val codeRms: Double = 0.0,
+                   val l1Rms: Double = 0.0, val l1Down: Boolean = false)
 
     fun run(v: Variant, epochs: List<RawEpoch>, frames: List<ByteArray>): List<Row> {
         val out = ArrayList<Row>()
         val arrays = RoverArrays(); val sol = DoubleArray(RtkSolution.SIZE)
-        for (k in 0 until 9) RtkNative.tune(k, v.tune[k] ?: -1.0)
+        for (k in 0 until 11) RtkNative.tune(k, v.tune[k] ?: -1.0)
         if (v.engineMode != null) { val o = v.options; check(RtkNative.init(v.engineMode, o.navsys, o.elevationMaskDeg, o.snrMaskDbHz, o.arMode, 0, o.errorRatio,
             o.arRatio, o.maxBaseAgeSec, o.minFixSats, 1)) } else check(RtkNative.startFor(v.options, this))
         try {
@@ -75,9 +76,9 @@ class SessionAnalysis {
                 }
                 val msg = RtkNative.message().lines().filter { it.isNotBlank() }.joinToString(" | ") { it.replace(Regex("^\\d\\d:\\d\\d:\\d\\d\\.\\d+: "), "") }
                 out.add(Row(e.towSeconds, if (st == 0) RtkStatus.NONE else s.status, s.latitude, s.longitude, s.height, Math.hypot(s.stdEast, s.stdNorth),
-                    s.satellites, s.ratio, e.obs.count { it.phase != null }, msg, s.codeRms))
+                    s.satellites, s.ratio, e.obs.count { it.phase != null }, msg, s.codeRms, s.l1CodeRms, s.l1DownWeighted))
             }
-        } finally { if (v.engineMode != null) RtkNative.free() else RtkNative.freeFor(this); for (k in 0 until 9) RtkNative.tune(k, -1.0) }
+        } finally { if (v.engineMode != null) RtkNative.free() else RtkNative.freeFor(this); for (k in 0 until 11) RtkNative.tune(k, -1.0) }
         return out
     }
 
@@ -273,6 +274,27 @@ class SessionAnalysis {
             Variant("snr25_w1000", RtkOptions(snrMaskDbHz = 25.0), tune = mapOf(6 to 1000.0, 7 to 100.0)),
             Variant("snr30_w1000_static", RtkOptions(snrMaskDbHz = 30.0, mode = com.rfsat.pocketgnss.rtk.RtkMode.STATIC), tune = mapOf(6 to 1000.0, 7 to 100.0)),
             // 2026-10-24 house roof (dense urban) beside the EOS Arrow Gold: faster convergence?
+            Variant("k_nol5ph", RtkOptions(snrMaskDbHz = 30.0), { e -> e.copy(obs = e.obs.map { if (it.band == com.rfsat.pocketgnss.raw.Band.L5) it.copy(phase = null, lli = 0) else it }) }),
+            Variant("k_static_nol5ph", RtkOptions(snrMaskDbHz = 30.0, mode = com.rfsat.pocketgnss.rtk.RtkMode.STATIC), { e -> e.copy(obs = e.obs.map { if (it.band == com.rfsat.pocketgnss.raw.Band.L5) it.copy(phase = null, lli = 0) else it }) }),
+            Variant("k_static", RtkOptions(snrMaskDbHz = 30.0, mode = com.rfsat.pocketgnss.rtk.RtkMode.STATIC)),
+            Variant("k_hold", RtkOptions(snrMaskDbHz = 30.0, arMode = 3)),
+            Variant("k_ar2", RtkOptions(snrMaskDbHz = 30.0, arRatio = 2.0)),
+            Variant("f_ar2", RtkOptions(snrMaskDbHz = 30.0, arRatio = 2.0), { e -> e.copy(obs = e.obs.map { if (it.band == com.rfsat.pocketgnss.raw.Band.L5) it.copy(phase = null, lli = 0) else it }) }),
+            Variant("f_ar25", RtkOptions(snrMaskDbHz = 30.0, arRatio = 2.5), { e -> e.copy(obs = e.obs.map { if (it.band == com.rfsat.pocketgnss.raw.Band.L5) it.copy(phase = null, lli = 0) else it }) }),
+            Variant("f_hold", RtkOptions(snrMaskDbHz = 30.0, arMode = 3), { e -> e.copy(obs = e.obs.map { if (it.band == com.rfsat.pocketgnss.raw.Band.L5) it.copy(phase = null, lli = 0) else it }) }),
+            Variant("f_el20", RtkOptions(snrMaskDbHz = 30.0, elevationMaskDeg = 20.0), { e -> e.copy(obs = e.obs.map { if (it.band == com.rfsat.pocketgnss.raw.Band.L5) it.copy(phase = null, lli = 0) else it }) }),
+            Variant("f_snr33", RtkOptions(snrMaskDbHz = 33.0), { e -> e.copy(obs = e.obs.map { if (it.band == com.rfsat.pocketgnss.raw.Band.L5) it.copy(phase = null, lli = 0) else it }) }),
+            Variant("f_noglo", RtkOptions(snrMaskDbHz = 30.0, glonass = false), { e -> e.copy(obs = e.obs.map { if (it.band == com.rfsat.pocketgnss.raw.Band.L5) it.copy(phase = null, lli = 0) else it }) }),
+            Variant("f_static_hold", RtkOptions(snrMaskDbHz = 30.0, mode = com.rfsat.pocketgnss.rtk.RtkMode.STATIC, arMode = 3), { e -> e.copy(obs = e.obs.map { if (it.band == com.rfsat.pocketgnss.raw.Band.L5) it.copy(phase = null, lli = 0) else it }) }),
+            Variant("f_min6", RtkOptions(snrMaskDbHz = 30.0, minFixSats = 6), { e -> e.copy(obs = e.obs.map { if (it.band == com.rfsat.pocketgnss.raw.Band.L5) it.copy(phase = null, lli = 0) else it }) }),
+            Variant("f_er300", RtkOptions(snrMaskDbHz = 30.0, errorRatio = 300.0), { e -> e.copy(obs = e.obs.map { if (it.band == com.rfsat.pocketgnss.raw.Band.L5) it.copy(phase = null, lli = 0) else it }) }),
+            Variant("f_snr0", RtkOptions(snrMaskDbHz = 0.0), { e -> e.copy(obs = e.obs.map { if (it.band == com.rfsat.pocketgnss.raw.Band.L5) it.copy(phase = null, lli = 0) else it }) }),
+            Variant("a_always", RtkOptions(snrMaskDbHz = 30.0), tune = mapOf(9 to 0.0)),          // 1.12.11
+            Variant("a_never", RtkOptions(snrMaskDbHz = 30.0), tune = mapOf(9 to 1e9)),
+            Variant("a_6_4", RtkOptions(snrMaskDbHz = 30.0), tune = mapOf(9 to 6.0, 10 to 4.0)),
+            Variant("a_10_7", RtkOptions(snrMaskDbHz = 30.0), tune = mapOf(9 to 10.0, 10 to 7.0)),
+            Variant("a_12_8", RtkOptions(snrMaskDbHz = 30.0), tune = mapOf(9 to 12.0, 10 to 8.0)),
+            Variant("a_15_10", RtkOptions(snrMaskDbHz = 30.0), tune = mapOf(9 to 15.0, 10 to 10.0)),
             Variant("v1128", RtkOptions(), tune = mapOf(6 to 100.0)),                      // 1.12.8: no mask, L1 code full weight
             Variant("snr30_l1full", RtkOptions(snrMaskDbHz = 30.0), tune = mapOf(6 to 100.0)),
             Variant("snr0_l1w", RtkOptions()),                                              // L1 down-weighting only
@@ -295,8 +317,8 @@ class SessionAnalysis {
         )).filter { v -> System.getProperty("session.variants")?.split(',')?.contains(v.name) ?: true }
         for (v in variants) {
             val rows = run(v, all, frames)
-            File(outDir, "${v.name}.csv").writeText("tow,status,lat,lon,h,sdH,ns,ratio,phase,codeRms,msg\n" + rows.joinToString("\n") { r ->
-                "%.3f,%s,%.9f,%.9f,%.3f,%.3f,%d,%.1f,%d,%.2f,\"%s\"".format(Locale.US, r.tow, r.status, r.lat, r.lon, r.h, r.sdH, r.ns, r.ratio, r.phaseSignals, r.codeRms, r.msg.replace("\"", "'")) })
+            File(outDir, "${v.name}.csv").writeText("tow,status,lat,lon,h,sdH,ns,ratio,phase,codeRms,l1Rms,l1Down,msg\n" + rows.joinToString("\n") { r ->
+                "%.3f,%s,%.9f,%.9f,%.3f,%.3f,%d,%.1f,%d,%.2f,%.2f,%d,\"%s\"".format(Locale.US, r.tow, r.status, r.lat, r.lon, r.h, r.sdH, r.ns, r.ratio, r.phaseSignals, r.codeRms, r.l1Rms, if (r.l1Down) 1 else 0, r.msg.replace("\"", "'")) })
             val counts = rows.groupingBy { it.status }.eachCount()
             val good = rows.filter { it.status == RtkStatus.FIX || it.status == RtkStatus.FLOAT || it.status == RtkStatus.DGPS }
             // scatter about the median of the last half (the phone was still)

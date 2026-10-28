@@ -74,6 +74,8 @@ typedef struct {
     int nfix;              /* consecutive epochs with fixed ambiguities */
     double code_rms;       /* RMS of the double-differenced code residuals after the update (m), 0 when none */
     int ncode;             /* how many there were */
+    double l1_rms;         /* smoothed RMS of the L1 / E1 / B1 code residuals (m), 0 before the first */
+    int l1_down;           /* 1 while L1 code is down-weighted for reflections */
 } prtk_sol_t;
 
 typedef struct {
@@ -119,12 +121,22 @@ void prtk_reset(void);
 #define PRTK_TUNE_ERATIO_L1     6   /* code / phase error ratio on L1 / E1 / B1 (slot 0) */
 #define PRTK_TUNE_ERATIO_L5     7   /* code / phase error ratio on L5 / E5a / B2a (slot 2) */
 #define PRTK_TUNE_GLO_CODE      8   /* GLONASS code error factor (inter-channel biases), default 1 */
-#define PRTK_TUNE_N             9
+#define PRTK_TUNE_L1_ON         9   /* L1 code down-weighting starts above this smoothed L1 code residual RMS (m); 0 = always */
+#define PRTK_TUNE_L1_OFF       10   /* ... and stops below this one (m) */
+#define PRTK_TUNE_N            11
 
-/* RTK: while an epoch has at least PRTK_L5_MIN_SATS satellites with L5 / E5a / B2a code, L1 / E1 / B1 code errors are
-   taken as PRTK_L1_CODE_FACTOR times larger (prtk_init, prtk_rover) */
+/* RTK: while an epoch has at least PRTK_L5_MIN_SATS satellites with L5 / E5a / B2a code AND the L1 / E1 / B1 code shows
+   reflections (its double-differenced residuals, smoothed over about PRTK_L1_TAU epochs, above PRTK_L1_ON m, until they
+   fall below PRTK_L1_OFF m), L1 code errors are taken as PRTK_L1_CODE_FACTOR times larger (prtk_rover). Under open sky
+   the L1 code keeps its full weight. Galaxy S24 replays against an EOS Arrow Gold: L1 residuals 4.5 m (median) under
+   open sky, 5-6 m (90 %: 10-12 m) on drives, 16 m on a house roof among buildings; with 15 / 10 m the open-sky float
+   is 0.43 m from the truth (0.83 m when always down-weighted) and the house roof keeps the 1.12.11 gain (5.7 m against
+   16 m without down-weighting). */
 #define PRTK_L1_CODE_FACTOR     10.0
 #define PRTK_L5_MIN_SATS        4
+#define PRTK_L1_ON             15.0
+#define PRTK_L1_OFF            10.0
+#define PRTK_L1_TAU             30.0
 void prtk_tune(int key, double value);
 /* analysis: DD code residuals of the last epoch at a trial position (see prtk.c) */
 int prtk_dd_code(const double *rr, int f, int *sats, double *res, double *elev, int max);

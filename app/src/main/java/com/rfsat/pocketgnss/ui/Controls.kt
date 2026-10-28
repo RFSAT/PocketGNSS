@@ -1,6 +1,16 @@
 package com.rfsat.pocketgnss.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.res.stringResource
+import com.rfsat.pocketgnss.R
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -58,7 +68,11 @@ fun Section(title: String, content: @Composable () -> Unit) {
     }
 }
 
-/** Numeric text field that validates and commits on Done or focus loss. */
+/**
+ * Numeric text field. What the user types is committed on Done, on leaving the field, after a short pause in typing and
+ * when the screen closes; only real edits are committed (a value changed elsewhere, e.g. by choosing another caster
+ * profile, replaces the text instead of being overwritten by it).
+ */
 @Composable
 fun NumberField(
     label: String,
@@ -72,36 +86,57 @@ fun NumberField(
 ) {
     fun show(v: Double) = if (decimals == 0) v.toLong().toString() else "%.${decimals}f".format(java.util.Locale.US, v)
     var text by remember { mutableStateOf(show(value)) }
-    var focused by remember { mutableStateOf(false) }
-    LaunchedEffect(value) { if (!focused) text = show(value) }
+    var dirty by remember { mutableStateOf(false) }
+    LaunchedEffect(value) { if (!dirty) text = show(value) }
     val focus = LocalFocusManager.current
     val parsed = text.replace(',', '.').toDoubleOrNull()
     val valid = parsed != null && parsed in min..max
-    fun commit() { if (valid) onCommit(parsed!!) else text = show(value) }
+    val latest by rememberUpdatedState({
+        if (dirty) { dirty = false; if (valid) onCommit(parsed!!) else text = show(value) }
+    })
+    LaunchedEffect(text, dirty) { if (dirty) { delay(COMMIT_PAUSE_MS); latest() } }
+    DisposableEffect(Unit) { onDispose { latest() } }
     OutlinedTextField(
-        value = text, onValueChange = { text = it }, label = { Text(label) }, singleLine = true, isError = !valid,
+        value = text, onValueChange = { text = it; dirty = true }, label = { Text(label) }, singleLine = true, isError = !valid,
         suffix = if (suffix.isNotEmpty()) ({ Text(suffix) }) else null,
         keyboardOptions = KeyboardOptions(
             keyboardType = if (decimals == 0 && min >= 0) KeyboardType.Number else KeyboardType.Decimal, imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = { commit(); focus.clearFocus() }),
-        modifier = modifier.onFocusChanged { if (focused && !it.isFocused) commit(); focused = it.isFocused },
+        keyboardActions = KeyboardActions(onDone = { latest(); focus.clearFocus() }),
+        modifier = modifier.onFocusChanged { if (!it.isFocused) latest() },
     )
 }
 
-/** Text field that commits on Done or focus loss (host names, mountpoints, user names...). */
+/** Pause in typing after which a text or number field commits what was typed (ms). */
+const val COMMIT_PAUSE_MS = 1500L
+
+/**
+ * Text field (host names, mountpoints, user names, passwords...). Committed like [NumberField]: on Done, on leaving the
+ * field, after a short pause in typing and when the screen closes, and only when the user edited it. Passwords are
+ * hidden behind dots with an eye button to show them, and are not trimmed.
+ */
 @Composable
 fun TextSetting(label: String, value: String, onCommit: (String) -> Unit, modifier: Modifier = Modifier, password: Boolean = false,
                 keyboard: KeyboardType = KeyboardType.Text) {
     var text by remember { mutableStateOf(value) }
-    var focused by remember { mutableStateOf(false) }
-    LaunchedEffect(value) { if (!focused) text = value }
+    var dirty by remember { mutableStateOf(false) }
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(value) { if (!dirty) text = value }
     val focus = LocalFocusManager.current
+    val latest by rememberUpdatedState({ if (dirty) { dirty = false; onCommit(if (password) text else text.trim()) } })
+    LaunchedEffect(text, dirty) { if (dirty) { delay(COMMIT_PAUSE_MS); latest() } }
+    DisposableEffect(Unit) { onDispose { latest() } }
     OutlinedTextField(
-        value = text, onValueChange = { text = it }, label = { Text(label) }, singleLine = true,
-        visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
+        value = text, onValueChange = { text = it; dirty = true }, label = { Text(label) }, singleLine = true,
+        visualTransformation = if (password && !visible) PasswordVisualTransformation() else VisualTransformation.None,
         keyboardOptions = KeyboardOptions(keyboardType = if (password) KeyboardType.Password else keyboard, imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = { onCommit(text.trim()); focus.clearFocus() }),
-        modifier = modifier.fillMaxWidth().onFocusChanged { if (focused && !it.isFocused) onCommit(text.trim()); focused = it.isFocused },
+        keyboardActions = KeyboardActions(onDone = { latest(); focus.clearFocus() }),
+        trailingIcon = if (password) ({
+            IconButton(onClick = { visible = !visible }) {
+                Icon(if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                    contentDescription = stringResource(if (visible) R.string.password_hide else R.string.password_show))
+            }
+        }) else null,
+        modifier = modifier.fillMaxWidth().onFocusChanged { if (!it.isFocused) latest() },
     )
 }
 

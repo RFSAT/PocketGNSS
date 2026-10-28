@@ -291,6 +291,9 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
             }
         }
         logWatchers()
+        // The ephemeris stream is checked every 20 s as well, so it starts as soon as phone RTK is up and its settings
+        // are complete, whatever order they arrived in (no need to switch it off and on).
+        scope.launch { while (isActive) { delay(20_000); if (store.value.ephStream) updateEphStream() } }
         // Outputs follow the settings.
         scope.launch {
             store.settings.collect { s ->

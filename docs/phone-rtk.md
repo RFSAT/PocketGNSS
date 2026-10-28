@@ -59,6 +59,23 @@ measurements the engine needs.
   (`PositionCheck.preferPhone`). On a 35-minute Galaxy S24 drive this caught 60 of 1911 float epochs, all at start-up,
   after an underpass or at a stop. Fixed and PPP solutions are not affected.
 
+* **Reflected L1 code**: a phone's L1 / E1 / B1 code suffers far more from reflections than its L5 / E5a / B2a code. The
+  engine smooths the RMS of the L1 code residuals (about 30 s); above 15 m it gives L1 code 10x less weight than L5 code
+  (while 4+ satellites have L5 code), below 10 m full weight again, and the app log notes each change. Signals under
+  30 dB-Hz are left out. Galaxy S24, scored against an EOS Arrow Gold RTK fix:
+
+  | | Open sky, Korfos (5-50 min) | Among houses, roof (after 5 min) |
+  |---|---|---|
+  | L1 always down-weighted (1.12.11) | 0.83 m median, 1.06 m 95 % | 5.9 m median |
+  | L1 never down-weighted | 0.43 m, 0.66 m | 16.3 m |
+  | adaptive (now) | 0.43 m, 0.66 m | 5.7 m |
+
+  On two drives the adaptive weighting matched the never-down-weighted results against the phone's own fix (median
+  1.6 and 2.0 m, against 2.7 and 3.2 m always down-weighted). The phone's own fix stayed frozen 0.97 m from the truth
+  at Korfos. Under open sky the S24 fixed ambiguities in 1-3 % of epochs when its L5 phase was left out, but the fixes
+  of different settings lay 0.1-0.5 m apart (some held for 10+ s), so fixes stay guarded as described under "Trusting
+  a fix".
+
 * **Standing still**: phone RTK always runs RTKLIB's kinematic mode, and the code weighs 1/100 of the phase (error
   ratio 100, not demo5's 300). In static mode the position carries no process noise, and a phone's phase slips so often
   that its ambiguities keep restarting from the current position: a start on reflected code then locks in. A Galaxy S24

@@ -507,6 +507,8 @@
     <string name="out_server_local">Solo questo telefono</string>
     <string name="out_server_local_help">Spento: possono collegarsi anche i PC della stessa rete</string>
     <string name="out_server_port">Porta del server</string>
+    <string name="password_hide">Nascondi password</string>
+    <string name="password_show">Mostra password</string>
     <string name="perm_position_desc">Ricevere la posizione ad alta precisione calcolata da PocketGNSS.</string>
     <string name="perm_position_label">Posizione PocketGNSS</string>
     <string name="phint_android">Posizione propria di Android; la precisione è la stima del telefono</string>

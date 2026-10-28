@@ -95,6 +95,8 @@ class PhoneRtkLink private constructor(
     @Volatile private var lastLocationMs = 0L
     /** When the phone's own fix last changed position. */
     @Volatile private var phoneMovedMs = 0L
+    /** L1 code down-weighted for reflections in the last solution (logged when it changes). */
+    private var l1Down = false
     private var noDataSince = 0L
     private val check = PositionCheck()
     @Volatile private var lastSolutionMs = 0L
@@ -193,6 +195,12 @@ class PhoneRtkLink private constructor(
             // Untrusted fixes are reported as float (with the float position), see FixGate.
             val gated = com.rfsat.pocketgnss.rtk.HonestAccuracy.apply(FixGate.apply(RtkSolution.from(solOut), options))
             Quad(gated.status.code.takeIf { st != 0 } ?: 0, gated, RtkBase.from(baseOut), RtkNative.message())
+        }
+        if (status != 0 && sol.l1DownWeighted != l1Down) {
+            l1Down = sol.l1DownWeighted
+            com.rfsat.pocketgnss.core.AppLog.i("Phone RTK", if (l1Down)
+                "L1 code reflected (residuals %.0f m RMS): L1 code given 10x less weight than L5".format(java.util.Locale.US, sol.l1CodeRms)
+                else "L1 code clean again (residuals %.0f m RMS): full weight".format(java.util.Locale.US, sol.l1CodeRms))
         }
         val withPhase = e.obs.count { it.phase != null }
         val now = System.currentTimeMillis()

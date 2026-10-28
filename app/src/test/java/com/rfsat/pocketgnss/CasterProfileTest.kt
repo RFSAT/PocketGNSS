@@ -74,4 +74,23 @@ class CasterProfileTest {
     @Test fun presetsHavePublicHostsOnly() {
         assertTrue(CasterProfiles.presets.all { it.config.host.isNotBlank() && it.config.user.isEmpty() && it.config.password.isEmpty() })
     }
+
+    @Test fun aFailingKeystoreDoesNotWipeStoredPasswords() {
+        var fail = false; val failures = ArrayList<String>()
+        val inner = object : com.rfsat.pocketgnss.data.SecretCipher {
+            override fun encrypt(plain: String) = if (fail) null else "enc:" + plain.reversed()
+            override fun decrypt(stored: String) = if (fail || !stored.startsWith("enc:")) null else stored.removePrefix("enc:").reversed()
+        }
+        val c = com.rfsat.pocketgnss.data.CachingCipher(inner) { failures.add(it) }
+        val stored = c.encrypt("s3cret!")!!
+        fail = true
+        org.junit.Assert.assertEquals(stored, c.encrypt("s3cret!"))          // saved again: same ciphertext, not ""
+        org.junit.Assert.assertNull(c.encrypt("new"))                         // a new password cannot be stored...
+        org.junit.Assert.assertEquals(listOf("encrypt"), failures)            // ...and that is reported
+        fail = false
+        val c2 = com.rfsat.pocketgnss.data.CachingCipher(inner)
+        org.junit.Assert.assertEquals("s3cret!", c2.decrypt(stored))        // read back after a restart
+        fail = true
+        org.junit.Assert.assertEquals(stored, c2.encrypt("s3cret!"))         // and kept on the next save
+    }
 }

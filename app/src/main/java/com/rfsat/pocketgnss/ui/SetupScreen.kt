@@ -157,6 +157,7 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
         }
 
         val noProfile = stringResource(R.string.ntrip_profile_none)
+        val focus = androidx.compose.ui.platform.LocalFocusManager.current
         var profileName by remember(s.activeProfile) { mutableStateOf(s.activeProfile) }
         Section(stringResource(R.string.setup_ntrip)) {
             Text(stringResource(R.string.setup_ntrip_help), style = MaterialTheme.typography.bodySmall, color = muted)
@@ -171,6 +172,7 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton(onClick = {
+                    focus.clearFocus()   // commits a field still being edited before the profile is saved
                     val n = profileName.trim()
                     if (n.isNotEmpty()) upd { st -> st.copy(profiles = st.profiles.filterNot { it.name == n } + CasterProfile(n, st.ntrip), activeProfile = n) }
                 }, compact = true, enabled = profileName.isNotBlank() && s.ntrip.host.isNotBlank()) { Text(stringResource(R.string.ntrip_profile_save)) }

@@ -116,13 +116,20 @@ data class AppSettings(
 }
 
 /** SharedPreferences-backed settings exposed as a StateFlow (same pattern as PocketSpectro). */
-class SettingsStore(context: Context, private val cipher: SecretCipher = KeystoreCipher) {
+class SettingsStore(context: Context, keystore: SecretCipher = KeystoreCipher) {
+    private val cipher = CachingCipher(keystore) { what ->
+        com.rfsat.pocketgnss.core.AppLog.throttled("cipher-$what", 60_000, com.rfsat.pocketgnss.core.AppLog.Level.WARN, "Settings",
+            if (what == "decrypt") "A saved caster password could not be read back (Android Keystore): enter it again in Setup"
+            else "A caster password could not be encrypted (Android Keystore): it is kept only until the app closes")
+    }
+    private val lock = Any()
     private val prefs: SharedPreferences = context.getSharedPreferences("pocketgnss", Context.MODE_PRIVATE)
     private val state = MutableStateFlow(load())
     val settings: StateFlow<AppSettings> = state.asStateFlow()
     val value: AppSettings get() = state.value
 
-    fun update(change: (AppSettings) -> AppSettings) {
+    /** Applies [change] atomically: the screens and the engine (e.g. the learned phone profile) update from different threads. */
+    fun update(change: (AppSettings) -> AppSettings) = synchronized(lock) {
         val next = CasterProfiles.keepInSync(state.value, change(state.value))
         state.value = next
         save(next)

@@ -507,6 +507,8 @@
     <string name="out_server_local">Μόνο αυτό το τηλέφωνο</string>
     <string name="out_server_local_help">Ανενεργό: μπορούν να συνδεθούν και υπολογιστές του ίδιου δικτύου</string>
     <string name="out_server_port">Θύρα διακομιστή</string>
+    <string name="password_hide">Απόκρυψη κωδικού</string>
+    <string name="password_show">Εμφάνιση κωδικού</string>
     <string name="perm_position_desc">Λήψη της θέσης υψηλής ακρίβειας που υπολογίζει το PocketGNSS.</string>
     <string name="perm_position_label">Θέση PocketGNSS</string>
     <string name="phint_android">Η θέση του ίδιου του Android· η ακρίβεια είναι εκτίμηση του τηλεφώνου</string>

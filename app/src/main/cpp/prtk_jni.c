@@ -44,7 +44,7 @@ JNIEXPORT jint JNICALL FN(inputRtcmNav)(JNIEnv *env, jobject thiz, jbyteArray da
 }
 
 /* out: stat, week, tow, lat, lon, h, x, y, z, sdE, sdN, sdU, vE, vN, vU, ns, ratio, age, baseline, geoid,
- *      floatLat, floatLon, floatH, floatSdE, floatSdN, floatSdU, nfix, codeRms, ncode (29) */
+ *      floatLat, floatLon, floatH, floatSdE, floatSdN, floatSdU, nfix, codeRms, ncode, l1Rms, l1Down (31) */
 JNIEXPORT jint JNICALL FN(rover)(JNIEnv *env, jobject thiz, jint week, jdouble tow, jint n, jbyteArray sys, jintArray prn,
                                  jbyteArray codes, jdoubleArray P, jdoubleArray L, jfloatArray D, jfloatArray snr,
                                  jintArray lli, jdoubleArray out)
@@ -68,13 +68,13 @@ JNIEXPORT jint JNICALL FN(rover)(JNIEnv *env, jobject thiz, jint week, jdouble t
     (*env)->ReleaseFloatArrayElements(env, snr, fs, JNI_ABORT);
     (*env)->ReleaseIntArrayElements(env, lli, il, JNI_ABORT);
     {
-        jdouble v[29] = {
+        jdouble v[31] = {
             s.stat, s.week, s.tow, s.llh[0], s.llh[1], s.llh[2], s.xyz[0], s.xyz[1], s.xyz[2],
             s.enu_std[0], s.enu_std[1], s.enu_std[2], s.vel_enu[0], s.vel_enu[1], s.vel_enu[2],
             s.ns, s.ratio, s.age, s.baseline, s.geoid,
-            s.float_llh[0], s.float_llh[1], s.float_llh[2], s.float_std[0], s.float_std[1], s.float_std[2], s.nfix, s.code_rms, s.ncode
+            s.float_llh[0], s.float_llh[1], s.float_llh[2], s.float_std[0], s.float_std[1], s.float_std[2], s.nfix, s.code_rms, s.ncode, s.l1_rms, s.l1_down
         };
-        (*env)->SetDoubleArrayRegion(env, out, 0, 29, v);
+        (*env)->SetDoubleArrayRegion(env, out, 0, 31, v);
     }
     return st;
 }

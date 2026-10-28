@@ -507,6 +507,8 @@
     <string name="out_server_local">Ce téléphone seulement</string>
     <string name="out_server_local_help">Désactivé : les PC du même réseau peuvent aussi se connecter</string>
     <string name="out_server_port">Port du serveur</string>
+    <string name="password_hide">Masquer le mot de passe</string>
+    <string name="password_show">Afficher le mot de passe</string>
     <string name="perm_position_desc">Recevoir la position de haute précision calculée par PocketGNSS.</string>
     <string name="perm_position_label">Position PocketGNSS</string>
     <string name="phint_android">Position propre d’Android ; sa précision est l’estimation du téléphone</string>

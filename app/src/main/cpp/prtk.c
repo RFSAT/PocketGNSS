@@ -26,11 +26,14 @@ static int ppp = 0;          /* PPP mode: no base, SSR corrections */
 static obsd_t obs[MAXOBS * 2];   /* the last epoch given to rtkpos: rover then base observations */
 static int last_nobs = 0;
 static double eratio_l1 = 100.0, eratio_l1_weak = 100.0; /* L1 code error ratio without / with L5 code (prtk_init) */
+static double l1_on = PRTK_L1_ON, l1_off = PRTK_L1_OFF;  /* reflection thresholds for the L1 down-weighting (m) */
+static double l1_ema = -1.0;                              /* smoothed L1 code residual RMS (m), < 0 before the first */
+static int l1_down = 0;                                   /* L1 code down-weighted now */
 extern int ppp_ssr_absbias;  /* ppp.c */
 extern int pntpos_iflc;      /* pntpos.c */
 extern double glo_code_fact; /* rtkpos.c */
 /* Tuning knobs (prtk_tune), applied at the next prtk_init; negative = RTKLIB / app default. */
-static double tune[PRTK_TUNE_N] = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
+static double tune[PRTK_TUNE_N] = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
 
 void prtk_tune(int key, double value) { if (key >= 0 && key < PRTK_TUNE_N) tune[key] = value; }
 
@@ -133,12 +136,15 @@ int prtk_init(const prtk_opt_t *o)
     if (tune[PRTK_TUNE_ELMIN] >= 0) opt.elmin = tune[PRTK_TUNE_ELMIN] * D2R;
     /* RTK on dual-frequency phones: L1 / E1 / B1 code carries far more multipath than L5 / E5a / B2a code (Galaxy S24
        beside an EOS Arrow Gold, 2026-10-24: code-minus-carrier 4-18 m on L1 against 1.5-3.5 m on L5), so while an epoch
-       has enough L5 code, L1 code gets PRTK_L1_CODE_FACTOR less weight (prtk_rover). With the 30 dB-Hz mask
+       has enough L5 code and the L1 residuals show reflections, L1 code gets PRTK_L1_CODE_FACTOR less weight (prtk_rover). With the 30 dB-Hz mask
        (GnssEngine) the float there ended 2.1 m from the EOS fix instead of 22 m. L1-only phones keep the full L1 weight:
        there the code is all that anchors the ambiguities. */
     eratio_l1 = opt.eratio[0];
     eratio_l1_weak = ppp ? opt.eratio[0] : opt.eratio[0] * PRTK_L1_CODE_FACTOR;
     if (tune[PRTK_TUNE_ERATIO_L1] >= 0) opt.eratio[0] = eratio_l1 = eratio_l1_weak = tune[PRTK_TUNE_ERATIO_L1];
+    l1_on = tune[PRTK_TUNE_L1_ON] >= 0 ? tune[PRTK_TUNE_L1_ON] : PRTK_L1_ON;
+    l1_off = tune[PRTK_TUNE_L1_OFF] >= 0 ? tune[PRTK_TUNE_L1_OFF] : PRTK_L1_OFF;
+    l1_ema = -1.0; l1_down = l1_on <= 0.0;
     if (tune[PRTK_TUNE_ERATIO_L5] >= 0) opt.eratio[2] = tune[PRTK_TUNE_ERATIO_L5];
     if (ppp) {
         /* Float PPP: SSR orbits / clocks referred to the antenna phase centre (HAS, IGS SSRA streams), estimated
@@ -277,6 +283,7 @@ void prtk_reset(void)
     rtkfree(&rtk);
     rtkinit(&rtk, &o);
     for (i = 0; i < 6; i++) rtk.rb[i] = rb[i];
+    l1_ema = -1.0; l1_down = l1_on <= 0.0;
 }
 
 int prtk_input_rtcm(const uint8_t *data, int n) { return input(&rtcm, data, n, 1); }
@@ -340,7 +347,7 @@ int prtk_rover(int week, double tow, int n, const char *sys, const int *prn, con
     }
     if (nr == 0) { strcpy(message, "no usable rover signals"); return PRTK_NONE; }
     for (i = k = 0; i < nr; i++) if (rov[i].P[2] != 0.0 && rov[i].SNR[2] >= rtk.opt.snrmask.mask[2][0]) k++;
-    rtk.opt.eratio[0] = k >= PRTK_L5_MIN_SATS ? eratio_l1_weak : eratio_l1;
+    rtk.opt.eratio[0] = k >= PRTK_L5_MIN_SATS && l1_down ? eratio_l1_weak : eratio_l1;
     qsort(rov, nr, sizeof(obsd_t), cmp_obs);
     for (i = 0; i < nr; i++) obs[nobs++] = rov[i];
     /* the latest base epoch, if recent enough */
@@ -402,6 +409,18 @@ int prtk_rover(int week, double tow, int n, const char *sys, const int *prn, con
         for (i = 0; i < MAXSAT; i++) for (f = 0; f < NFREQ; f++) if (rtk.ssat[i].resp[f] != 0.0) { s2 += rtk.ssat[i].resp[f] * rtk.ssat[i].resp[f]; nc++; }
         sol->code_rms = nc > 0 ? sqrt(s2 / nc) : 0.0;
         sol->ncode = nc;
+        /* L1 code alone: reflections show here first (the phone's L1 code multipath is several times its L5 one) */
+        for (s2 = 0.0, nc = 0, i = 0; i < MAXSAT; i++) if (rtk.ssat[i].resp[0] != 0.0) { s2 += rtk.ssat[i].resp[0] * rtk.ssat[i].resp[0]; nc++; }
+        if (nc >= 4) {
+            double r = sqrt(s2 / nc);
+            l1_ema = l1_ema < 0.0 ? r : l1_ema + (r - l1_ema) / PRTK_L1_TAU;
+            if (l1_on > 0.0) {
+                if (!l1_down && l1_ema > l1_on) l1_down = 1;
+                else if (l1_down && l1_ema < l1_off) l1_down = 0;
+            }
+        }
+        sol->l1_rms = l1_ema > 0.0 ? l1_ema : 0.0;
+        sol->l1_down = l1_down;
     }
     sol->geoid = geoidh(pos);
     sol->ns = rtk.sol.ns;
