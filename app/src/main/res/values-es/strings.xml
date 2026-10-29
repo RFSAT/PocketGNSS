@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="acc_estimated">estimada (active GST para un valor medido)</string>
-    <string name="acc_measured">informada por el receptor</string>
+    <string name="acc_estimated">precisión aproximada (sin GST)</string>
+    <string name="acc_measured">precisión</string>
     <string name="action_back">Atrás</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_close">Cerrar</string>
@@ -382,6 +382,7 @@
     <string name="live_rtk_engine">Phone RTK</string>
     <string name="live_rtk_hint">Active el relé NTRIP (caster y punto de montaje en Ajustes) para RTK; hasta entonces el teléfono da una posición autónoma.</string>
     <string name="live_rtk_no_basepos">aún no hay posición de la estación (1005/1006)</string>
+    <string name="live_rtk_no_solution">sin solución por ahora</string>
     <string name="live_rtk_noeph">Aún no han llegado efemérides transmitidas del caster (RTCM 1019/1020/1045/1046/1042) y el teléfono las necesita para calcular la posición de los satélites. Muchos flujos de red (VRS, estación más cercana) no las incluyen: active el flujo de efemérides (Configuración &gt; Conexión del receptor).</string>
     <string name="live_rtk_nophase">Este teléfono no da fase portadora en este momento: RTK no puede fijar (teléfono solo de código o ahorro de energía activo). La posición se queda a nivel de metro.</string>
     <string name="live_rtk_reflected">Las señales llegan al teléfono por reflexión (residuos de código %1$s): la posición puede desviarse metros o más, diga lo que diga la precisión del RTK. Sitúese a cielo abierto, lejos de paredes, coches y de su cuerpo.</string>
@@ -515,12 +516,12 @@
     <string name="password_show">Mostrar contraseña</string>
     <string name="perm_position_desc">Recibir la posición de alta precisión que calcula PocketGNSS.</string>
     <string name="perm_position_label">Posición de PocketGNSS</string>
-    <string name="phint_android">Posición propia de Android; su precisión es la estimación del teléfono</string>
-    <string name="phint_dgnss">Código con correcciones (muy poca fase portadora): nivel de metro</string>
-    <string name="phint_fixed">Fase portadora, ambigüedades fijadas: centímetros si la solución es correcta</string>
-    <string name="phint_float">Fase portadora, sin fijar: de decímetros a metros, según indica la precisión</string>
-    <string name="phint_ppp">Posicionamiento puntual preciso, sin base: de decímetros a cerca de un metro en un teléfono</string>
-    <string name="phint_ppp_conv">Convergiendo: la precisión mejora durante los primeros 20–30 minutos a cielo abierto</string>
+    <string name="phint_android">Posición propia de Android (no RTK)</string>
+    <string name="phint_dgnss">Código con correcciones: metros</string>
+    <string name="phint_fixed">Ambigüedades fijadas: centímetros</string>
+    <string name="phint_float">Aún sin fijar: decímetros a metros</string>
+    <string name="phint_ppp">PPP sin base: decímetros a ~1 m</string>
+    <string name="phint_ppp_conv">Convergiendo: 20–30 min a cielo abierto</string>
     <string name="phint_single">Sin correcciones: metros</string>
     <string name="point_code">Código / categoría</string>
     <string name="point_edit">Editar punto</string>

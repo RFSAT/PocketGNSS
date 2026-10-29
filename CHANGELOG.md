@@ -7,6 +7,10 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.12.14 (build 11214)
+Live: when the phone RTK engine has no solution, its line says so and shows the engine's reason (no base station data, no ephemerides, no SSR corrections...) instead of staying empty or showing an old solution.
+Live: the top box is easier to read. The caption "accuracy" now sits right under the ± number it belongs to, and the hint about the method is one short line below a thin rule, across the whole width (it no longer looks like it continues into the right-hand caption).
+
 ## 1.12.13 (build 11213)
 Galileo HAS connects: port 443 casters (EUSPA's ntrip.gsc-europa.eu) use TLS and NTRIP 2 automatically, with the certificate checked, and a "Galileo HAS (EUSPA)" profile is ready for the login. PPP pairs L1 with L5 for GPS and BeiDou too. Live shows the RTK engine's solution, the phone's own fix and their distance on separate lines. The app log can be switched off and filtered by type and source.
 

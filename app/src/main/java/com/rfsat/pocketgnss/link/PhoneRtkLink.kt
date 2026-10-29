@@ -57,6 +57,8 @@ data class PhoneRtkState(
     val phoneDistance: Double? = null,
     /** Android has held its fix on one point for [PhoneRtkLink.FROZEN_MS] or more ("static hold" while the phone is still). */
     val phoneFrozen: Boolean = false,
+    /** Epochs since the engine last produced a solution (0 = this one did). */
+    val epochsWithoutSolution: Int = 0,
 )
 
 /**
@@ -208,13 +210,14 @@ class PhoneRtkLink private constructor(
         val now = System.currentTimeMillis()
         val phone = lastLocation?.takeIf { now - lastLocationMs <= 2_500 }
         val shown = if (status != 0) sol else _state.value.solution
+        val idle = if (status != 0) 0 else _state.value.epochsWithoutSolution + 1
         _state.value = PhoneRtkState(shown, base, _state.value.epochs + 1, e.obs.size, withPhase,
             msg.trim().lineSequence().lastOrNull { it.isNotBlank() } ?: "", noPhase = withPhase == 0, source = _state.value.source,
             ionoFree = iono.ionoFree, rejected = check.rejected, resets = check.resets,
             phoneAcc = phone?.takeIf { it.hasAccuracy() }?.accuracy?.toDouble(),
             phoneDistance = if (phone != null && shown != null && shown.status != RtkStatus.NONE)
                 com.rfsat.pocketgnss.protocol.Geo.distance(shown.latitude, shown.longitude, phone.latitude, phone.longitude) else null,
-            phoneFrozen = phone != null && phoneMovedMs > 0 && now - phoneMovedMs >= FROZEN_MS)
+            phoneFrozen = phone != null && phoneMovedMs > 0 && now - phoneMovedMs >= FROZEN_MS, epochsWithoutSolution = idle)
         if (status == RtkStatus.NONE.code) return
         // The phone's own fix as a sanity check: a solution far from it is not used, and a filter stuck there restarts.
         val verdict = check.check(now, sol.latitude, sol.longitude, kotlin.math.hypot(sol.stdEast, sol.stdNorth),

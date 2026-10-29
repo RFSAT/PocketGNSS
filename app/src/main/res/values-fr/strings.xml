@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="acc_estimated">estimée (activez GST pour une valeur mesurée)</string>
-    <string name="acc_measured">fournie par le récepteur</string>
+    <string name="acc_estimated">précision approximative (sans GST)</string>
+    <string name="acc_measured">précision</string>
     <string name="action_back">Retour</string>
     <string name="action_cancel">Annuler</string>
     <string name="action_close">Fermer</string>
@@ -382,6 +382,7 @@
     <string name="live_rtk_engine">Phone RTK</string>
     <string name="live_rtk_hint">Activez le relais NTRIP (caster et point de montage dans Réglages) pour le RTK ; d’ici là, le téléphone donne une position autonome.</string>
     <string name="live_rtk_no_basepos">pas encore de position de station (1005/1006)</string>
+    <string name="live_rtk_no_solution">pas de solution pour l\'instant</string>
     <string name="live_rtk_noeph">Aucune éphéméride radiodiffusée reçue du caster pour l’instant (RTCM 1019/1020/1045/1046/1042) ; le téléphone en a besoin pour calculer la position des satellites. Beaucoup de flux de réseau (VRS, station la plus proche) n’en contiennent pas : activez le flux d’éphémérides (Configuration &gt; Connexion au récepteur).</string>
     <string name="live_rtk_nophase">Pas de phase porteuse de ce téléphone pour l’instant : le RTK ne peut pas fixer (téléphone à code seul, ou économie d’énergie encore active). La position reste au niveau métrique.</string>
     <string name="live_rtk_reflected">Les signaux atteignent le téléphone par réflexion (résidus de code %1$s) : la position peut être fausse de plusieurs mètres ou plus, quelle que soit la précision annoncée par le RTK. Placez-vous en ciel dégagé, loin des murs, des voitures et de votre corps.</string>
@@ -515,13 +516,13 @@
     <string name="password_show">Afficher le mot de passe</string>
     <string name="perm_position_desc">Recevoir la position de haute précision calculée par PocketGNSS.</string>
     <string name="perm_position_label">Position PocketGNSS</string>
-    <string name="phint_android">Position propre d’Android ; sa précision est l’estimation du téléphone</string>
-    <string name="phint_dgnss">Code avec corrections (trop peu de phase porteuse) : niveau métrique</string>
-    <string name="phint_fixed">Phase porteuse, ambiguïtés fixées : centimètres si la solution est juste</string>
-    <string name="phint_float">Phase porteuse, non fixée : décimètres à mètres, selon la précision affichée</string>
-    <string name="phint_ppp">Positionnement ponctuel précis, sans base : des décimètres à environ un mètre sur un téléphone</string>
-    <string name="phint_ppp_conv">Convergence : la précision s’améliore pendant les 20 à 30 premières minutes à ciel ouvert</string>
-    <string name="phint_single">Aucune correction utilisée : mètres</string>
+    <string name="phint_android">Position propre d’Android (pas RTK)</string>
+    <string name="phint_dgnss">Code avec corrections : mètres</string>
+    <string name="phint_fixed">Ambiguïtés fixées : centimètres</string>
+    <string name="phint_float">Pas encore fixé : décimètres à mètres</string>
+    <string name="phint_ppp">PPP sans base : décimètres à ~1 m</string>
+    <string name="phint_ppp_conv">Convergence : 20–30 min à ciel ouvert</string>
+    <string name="phint_single">Sans corrections : mètres</string>
     <string name="point_code">Code / catégorie</string>
     <string name="point_edit">Modifier le point</string>
     <string name="point_edit_short">Modifier</string>

@@ -2,8 +2,8 @@
 <resources>
     <!-- App name; a product name, keep as is. -->
     <string name="app_name" translatable="false">PocketGNSS</string>
-    <string name="acc_estimated">estimated (enable GST for measured)</string>
-    <string name="acc_measured">reported by the receiver</string>
+    <string name="acc_estimated">rough accuracy (no GST)</string>
+    <string name="acc_measured">accuracy</string>
     <string name="action_back">Back</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_close">Close</string>
@@ -384,6 +384,7 @@
     <string name="live_rtk_engine">Phone RTK</string>
     <string name="live_rtk_hint">Switch the NTRIP relay on (caster and mountpoint in Setup) for RTK; until then the phone gives a standalone position.</string>
     <string name="live_rtk_no_basepos">no station position (1005/1006) yet</string>
+    <string name="live_rtk_no_solution">no solution at the moment</string>
     <string name="live_rtk_noeph">No broadcast ephemerides from the caster yet (RTCM 1019/1020/1045/1046/1042), and the phone needs them to compute satellite positions. Many network streams (VRS, nearest base) leave them out: switch on the ephemeris stream (Setup &gt; Receiver connection).</string>
     <string name="live_rtk_nophase">No carrier phase from this phone at the moment: RTK cannot fix (code-only phone, or power saving still on). The position stays at metre level.</string>
     <string name="live_rtk_reflected">Signals reach the phone by reflection (code residuals %1$s): the position can be off by metres or more, whatever accuracy RTK claims. Move to open sky, away from walls, cars and your body.</string>
@@ -517,13 +518,13 @@
     <string name="password_show">Show password</string>
     <string name="perm_position_desc">Receive the high-precision position that PocketGNSS computes.</string>
     <string name="perm_position_label">PocketGNSS position</string>
-    <string name="phint_android">Android\'s own position; its accuracy is the phone\'s estimate</string>
-    <string name="phint_dgnss">Code with corrections (too little carrier phase): metre level</string>
-    <string name="phint_fixed">Carrier phase, ambiguities fixed: centimetres if the fix is right</string>
-    <string name="phint_float">Carrier phase, not fixed: decimetres to metres, as the accuracy shows</string>
-    <string name="phint_ppp">Precise point positioning, no base: decimetres to about a metre on a phone</string>
-    <string name="phint_ppp_conv">Converging: accuracy improves over the first 20–30 minutes under open sky</string>
-    <string name="phint_single">No corrections used: metres</string>
+    <string name="phint_android">Android\'s own fix (not RTK)</string>
+    <string name="phint_dgnss">Code with corrections: metres</string>
+    <string name="phint_fixed">Ambiguities fixed: centimetres</string>
+    <string name="phint_float">Not fixed yet: decimetres to metres</string>
+    <string name="phint_ppp">PPP, no base: decimetres to ~1 m</string>
+    <string name="phint_ppp_conv">Converging: 20–30 min under open sky</string>
+    <string name="phint_single">No corrections: metres</string>
     <string name="point_code">Code / category</string>
     <string name="point_edit">Edit point</string>
     <string name="point_edit_short">Edit</string>

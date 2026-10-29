@@ -75,18 +75,21 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
             color = Color.White, fontWeight = FontWeight.Bold)
         // Fix banner: the colour and the expected accuracy class, readable at arm's length on a tractor.
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).background(fixColor(q), RoundedCornerShape(14.dp)).padding(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // Method and accuracy on top, the accuracy's caption right under its number; the one-line hint about the
+            // method below a thin rule, across the whole width, so it does not read as part of the right column.
+            Row(verticalAlignment = Alignment.Top) {
                 val method = if (phoneRtk) rtkState.source.takeIf { it.isNotEmpty() } else null
                 Text(method?.let { m -> phoneMethodLabel(m)?.let { stringResource(it) } ?: m } ?: stringResource(f?.let { fixLabel(it) } ?: fixLabel(q)), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 26.sp, modifier = Modifier.weight(1f),
                     maxLines = 1)
-                Text(if (f != null) formatAccuracy(f.horizontalAccuracy) else "—", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 26.sp)
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(if (f != null) formatAccuracy(f.horizontalAccuracy) else "—", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 26.sp)
+                    if (f != null) Text(stringResource(if (f.measuredAccuracy) R.string.acc_measured else R.string.acc_estimated),
+                        color = Color.White.copy(alpha = 0.9f), fontSize = 12.sp, maxLines = 1)
+                }
             }
-            Row {
-                Text(stringResource(if (phoneRtk && rtkState.source.isNotEmpty()) phoneMethodHint(rtkState.source) else fixHint(q)),
-                    color = Color.White.copy(alpha = 0.9f), fontSize = 13.sp, modifier = Modifier.weight(1f))
-                if (f != null) Text(stringResource(if (f.measuredAccuracy) R.string.acc_measured else R.string.acc_estimated),
-                    color = Color.White.copy(alpha = 0.9f), fontSize = 13.sp)
-            }
+            Box(Modifier.padding(vertical = 6.dp).fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.35f)))
+            Text(stringResource(if (phoneRtk && rtkState.source.isNotEmpty()) phoneMethodHint(rtkState.source) else fixHint(q)),
+                color = Color.White.copy(alpha = 0.9f), fontSize = 13.sp)
         }
 
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -164,10 +167,14 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
                     rtkState.solution?.ratio ?: 0.0), live = true, valueColor = if (rtkState.noPhase && rtkState.epochs > 5) WarnAmber else Color.Unspecified)
                 val small = MaterialTheme.typography.bodySmall
                 // The engine's own solution and the phone's own fix, one per line, whichever of them is shown above.
-                val eng = rtkState.solution?.takeIf { it.status != com.rfsat.pocketgnss.rtk.RtkStatus.NONE }
+                // Without a solution for 3 s the row says so, and the engine's own message below tells why
+                // (no base data, no ephemerides, no SSR corrections for the satellites...).
+                val eng = rtkState.solution?.takeIf { it.status != com.rfsat.pocketgnss.rtk.RtkStatus.NONE && rtkState.epochsWithoutSolution < 3 }
                 KeyValue(stringResource(R.string.live_rtk_solution), eng?.let {
                     methodText(com.rfsat.pocketgnss.link.PhoneRtkLink.methodName(it.status)) + " " + formatAccuracy(kotlin.math.hypot(it.stdEast, it.stdNorth))
-                } ?: "—", live = true)
+                } ?: stringResource(R.string.live_rtk_no_solution), live = true, valueColor = if (eng == null) WarnAmber else Color.Unspecified)
+                if (eng == null && rtkState.epochs > 3 && rtkState.message.isNotBlank())
+                    Text(rtkState.message.replace(Regex("^\\d{1,2}:\\d\\d:\\d\\d(\\.\\d+)?:\\s*"), ""), style = small, color = muted)
                 rtkState.phoneAcc?.let { pa ->
                     KeyValue(stringResource(R.string.live_phone_fix), formatAccuracy(pa) +
                         (if (rtkState.phoneFrozen) " · " + stringResource(R.string.live_phone_fix_frozen) else ""), live = true,

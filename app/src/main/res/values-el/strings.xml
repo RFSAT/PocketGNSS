@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="acc_estimated">εκτίμηση (ενεργοποιήστε το GST για μετρούμενη)</string>
-    <string name="acc_measured">από τον δέκτη</string>
+    <string name="acc_estimated">χονδρική ακρίβεια (χωρίς GST)</string>
+    <string name="acc_measured">ακρίβεια</string>
     <string name="action_back">Πίσω</string>
     <string name="action_cancel">Άκυρο</string>
     <string name="action_close">Κλείσιμο</string>
@@ -382,6 +382,7 @@
     <string name="live_rtk_engine">Phone RTK</string>
     <string name="live_rtk_hint">Ενεργοποιήστε την αναμετάδοση NTRIP (caster και mountpoint στις Ρυθμίσεις) για RTK· μέχρι τότε το τηλέφωνο δίνει αυτόνομη θέση.</string>
     <string name="live_rtk_no_basepos">δεν υπάρχει ακόμη θέση σταθμού (1005/1006)</string>
+    <string name="live_rtk_no_solution">καμία λύση προς το παρόν</string>
     <string name="live_rtk_noeph">Δεν έχουν φτάσει ακόμη εφημερίδες από τον caster (RTCM 1019/1020/1045/1046/1042) και το τηλέφωνο τις χρειάζεται για να υπολογίσει τις θέσεις των δορυφόρων. Πολλές ροές δικτύου (VRS, πλησιέστερος σταθμός) δεν τις περιλαμβάνουν: ενεργοποιήστε τη ροή εφημερίδων (Ρυθμίσεις &gt; Σύνδεση δέκτη).</string>
     <string name="live_rtk_nophase">Αυτή τη στιγμή δεν υπάρχει φάση φέροντος από το τηλέφωνο: το RTK δεν μπορεί να δώσει fixed (τηλέφωνο μόνο κώδικα ή ενεργή εξοικονόμηση ενέργειας). Η θέση μένει σε επίπεδο μέτρου.</string>
     <string name="live_rtk_reflected">Τα σήματα φτάνουν στο τηλέφωνο από ανάκλαση (υπόλοιπα κώδικα %1$s): η θέση μπορεί να απέχει μέτρα ή περισσότερο, όποια ακρίβεια κι αν δείχνει το RTK. Μετακινηθείτε σε ανοιχτό ουρανό, μακριά από τοίχους, αυτοκίνητα και το σώμα σας.</string>
@@ -515,12 +516,12 @@
     <string name="password_show">Εμφάνιση κωδικού</string>
     <string name="perm_position_desc">Λήψη της θέσης υψηλής ακρίβειας που υπολογίζει το PocketGNSS.</string>
     <string name="perm_position_label">Θέση PocketGNSS</string>
-    <string name="phint_android">Η θέση του ίδιου του Android· η ακρίβεια είναι εκτίμηση του τηλεφώνου</string>
-    <string name="phint_dgnss">Κώδικας με διορθώσεις (πολύ λίγη φάση φέροντος): επίπεδο μέτρου</string>
-    <string name="phint_fixed">Φάση φέροντος, επιλυμένες ασάφειες: εκατοστά αν η λύση είναι σωστή</string>
-    <string name="phint_float">Φάση φέρουσας, χωρίς επίλυση ασαφειών: δέκατα του μέτρου έως μέτρα, όπως δείχνει η ακρίβεια</string>
-    <string name="phint_ppp">Ακριβής απόλυτος προσδιορισμός, χωρίς βάση: δεκατόμετρα έως περίπου ένα μέτρο σε τηλέφωνο</string>
-    <string name="phint_ppp_conv">Σύγκλιση: η ακρίβεια βελτιώνεται τα πρώτα 20–30 λεπτά σε ανοιχτό ουρανό</string>
+    <string name="phint_android">Θέση του Android (όχι RTK)</string>
+    <string name="phint_dgnss">Κώδικας με διορθώσεις: μέτρα</string>
+    <string name="phint_fixed">Ασάφειες επιλυμένες: εκατοστά</string>
+    <string name="phint_float">Χωρίς επίλυση ακόμη: δέκατα έως μέτρα</string>
+    <string name="phint_ppp">PPP χωρίς βάση: δέκατα έως ~1 m</string>
+    <string name="phint_ppp_conv">Σύγκλιση: 20–30 λεπτά σε ανοιχτό ουρανό</string>
     <string name="phint_single">Χωρίς διορθώσεις: μέτρα</string>
     <string name="point_code">Κωδικός / κατηγορία</string>
     <string name="point_edit">Επεξεργασία σημείου</string>
