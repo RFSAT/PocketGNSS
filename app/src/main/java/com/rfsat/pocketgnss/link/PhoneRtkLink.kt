@@ -231,12 +231,24 @@ class PhoneRtkLink private constructor(
             msg.trim().lineSequence().lastOrNull { it.isNotBlank() } ?: "", noPhase = withPhase == 0, source = _state.value.source,
             ionoFree = iono.ionoFree, rejected = check.rejected, resets = check.resets,
             phoneAcc = phone?.takeIf { it.hasAccuracy() }?.accuracy?.toDouble(),
-            phoneDistance = if (phone != null && shown != null && shown.status != RtkStatus.NONE)
+            phoneDistance = if (phone != null && status != 0 && shown != null && shown.status != RtkStatus.NONE)
                 com.rfsat.pocketgnss.protocol.Geo.distance(shown.latitude, shown.longitude, phone.latitude, phone.longitude) else null,
             phoneFrozen = phone != null && phoneMovedMs > 0 && now - phoneMovedMs >= FROZEN_MS, epochsWithoutSolution = idle,
             snrMask = snrMask, snrMaskConfigured = if (options.ppp) 0.0 else options.snrMaskDbHz,
             epochWeek = e.gpsWeek, epochTow = e.towSeconds)
-        if (status == RtkStatus.NONE.code) return
+        if (status == RtkStatus.NONE.code) {
+            // A filter that has gone wrong (PPP 21 m from the phone's fix on a roof among houses, then every carrier
+            // phase rejected as an outlier) gives no solution and is never checked against the phone's fix, so it
+            // would stay stuck: with corrections, plenty of carrier phase and still no solution for STUCK_EPOCHS, restart it.
+            val corrected = if (options.ppp) base.ssrSatellites > 0 else base.hasPosition && base.satellites > 0
+            if (corrected && idle >= STUCK_EPOCHS && idle % STUCK_EPOCHS == 0 && withPhase >= STUCK_MIN_PHASE) {
+                synchronized(engineLock) { if (RtkNative.owner === this) RtkNative.reset() }
+                convergence.reset()
+                com.rfsat.pocketgnss.core.AppLog.w("Phone RTK", "No solution for $idle s although $withPhase signals have carrier phase" +
+                    (msg.trim().lineSequence().lastOrNull { it.isNotBlank() }?.let { " ($it)" } ?: "") + ": the engine's filter is restarted")
+            }
+            return
+        }
         // The phone's own fix as a sanity check: a solution far from it is not used, and a filter stuck there restarts.
         val verdict = check.check(now, sol.latitude, sol.longitude, kotlin.math.hypot(sol.stdEast, sol.stdNorth),
             phone?.latitude, phone?.longitude, phone?.takeIf { it.hasAccuracy() }?.accuracy?.toDouble())
@@ -372,6 +384,9 @@ class PhoneRtkLink private constructor(
 
         /** The phone's own fix counts as held ("static hold") after this long on exactly one point. */
         const val FROZEN_MS = 30_000L
+        /** Epochs (s) without a solution, despite [STUCK_MIN_PHASE] signals with carrier phase, after which the filter restarts. */
+        const val STUCK_EPOCHS = 60
+        const val STUCK_MIN_PHASE = 10
 
         /** 6 Jan 1980 00:00:00 UTC in Unix milliseconds. */
         private const val GPS_EPOCH_MS = 315_964_800_000L

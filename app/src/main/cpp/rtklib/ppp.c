@@ -1312,6 +1312,9 @@ extern void pppos(rtk_t *rtk, const obsd_t *obs, int n, const nav_t *nav)
         }
         /* update solution status */
         update_stat(rtk,obs,n,stat);
+        if (rtk->sol.stat==SOLQ_NONE) { /* PocketGNSS: fewer than MIN_NSAT_SOL satellites kept their carrier phase */
+            ppp_errmsg(rtk,"PPP: carrier phase accepted on only %d satellites (the others rejected as outliers)\n",rtk->sol.ns);
+        }
 
         if (stat==SOLQ_FIX&&test_hold_amb(rtk)) {
             matcpy(rtk->x,xp,rtk->nx,1);

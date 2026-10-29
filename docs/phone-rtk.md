@@ -137,7 +137,10 @@ measurements with them.
   `ntrip.gsc-europa.eu`, port 443, mountpoint `SSRA00EUH0`). Pick the profile "Galileo HAS (EUSPA)" in Setup > NTRIP
   relay and enter the user name and password. Port 443 is HTTPS: the app connects over TLS with NTRIP 2 on that port
   whatever the switches say, and checks that the certificate belongs to the caster. The stream carries RTCM 3 SSR
-  1059 / 1060 (GPS) and 1242 / 1243 (Galileo) and the broadcast ephemerides 1019 / 1046.
+  1059 / 1060 (GPS) and 1242 / 1243 (Galileo) and the broadcast ephemerides 1019 / 1046. The caster sends in bursts
+  with pauses of up to about 60 s, so a PPP stream is kept for 90 s without data (RTKLIB uses SSR corrections up to
+  90 s old) before the app reconnects; RTK base streams reconnect after 30 s, the ephemeris stream after 5 minutes.
+  Before 1.12.15 the 30 s limit applied to HAS too, and the reconnections left PPP without corrections.
 * **IGS real-time** `SSRA…` streams (free registration at igs-ip.net): profile "IGS products (PPP)"
   (`products.igs-ip.net:2101`), Get mountpoints, pick an `SSRA…` stream, and switch on the ephemeris stream
   (`BCEP00BKG0`), since SSR streams carry no orbits. `SSRC…` streams refer to the satellites' centre of mass and are
@@ -145,7 +148,7 @@ measurements with them.
 
 Engine settings in PPP: kinematic (or static when "Still on a point" is chosen), orbits and clocks from SSR referred to
 the antenna phase centre, absolute code biases, ionosphere-free combination (switching to the broadcast ionosphere
-model after 30 epochs with fewer than 4 satellites on a second frequency, and back after 60 epochs with L5 / E5a on at
+model after 90 epochs with fewer than 4 satellites on a second frequency, and back after 60 epochs with L5 / E5a on at
 least 6 satellites), estimated zenith troposphere, solid-earth tides and phase wind-up, no ambiguity fixing (HAS has no phase
 biases yet). Satellites without SSR corrections are left out. GLONASS and BeiDou are used only if the stream corrects
 them (HAS: GPS and Galileo).
