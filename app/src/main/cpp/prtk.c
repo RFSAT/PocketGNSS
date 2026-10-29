@@ -29,11 +29,13 @@ static double eratio_l1 = 100.0, eratio_l1_weak = 100.0; /* L1 code error ratio 
 static double l1_on = PRTK_L1_ON, l1_off = PRTK_L1_OFF;  /* reflection thresholds for the L1 down-weighting (m) */
 static double l1_ema = -1.0;                              /* smoothed L1 code residual RMS (m), < 0 before the first */
 static int l1_down = 0;                                   /* L1 code down-weighted now */
+static double snr_cfg = 0.0, snr_cur = 0.0;               /* configured and current C/N0 mask (dB-Hz), see prtk.h */
+static int snr_adapt = 1, snr_up = 0;                     /* adaptive mask on; epochs with enough signals one step up */
 extern int ppp_ssr_absbias;  /* ppp.c */
 extern int pntpos_iflc;      /* pntpos.c */
 extern double glo_code_fact; /* rtkpos.c */
 /* Tuning knobs (prtk_tune), applied at the next prtk_init; negative = RTKLIB / app default. */
-static double tune[PRTK_TUNE_N] = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
+static double tune[PRTK_TUNE_N] = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
 
 void prtk_tune(int key, double value) { if (key >= 0 && key < PRTK_TUNE_N) tune[key] = value; }
 
@@ -145,6 +147,8 @@ int prtk_init(const prtk_opt_t *o)
     l1_on = tune[PRTK_TUNE_L1_ON] >= 0 ? tune[PRTK_TUNE_L1_ON] : PRTK_L1_ON;
     l1_off = tune[PRTK_TUNE_L1_OFF] >= 0 ? tune[PRTK_TUNE_L1_OFF] : PRTK_L1_OFF;
     l1_ema = -1.0; l1_down = l1_on <= 0.0;
+    snr_cfg = snr_cur = o->snrmask > 0 ? o->snrmask : 0.0; snr_up = 0;
+    snr_adapt = tune[PRTK_TUNE_SNR_ADAPT] != 0.0;
     if (tune[PRTK_TUNE_ERATIO_L5] >= 0) opt.eratio[2] = tune[PRTK_TUNE_ERATIO_L5];
     if (ppp) {
         /* Float PPP: SSR orbits / clocks referred to the antenna phase centre (HAS, IGS SSRA streams), estimated
@@ -304,6 +308,51 @@ static int cmp_obs(const void *a, const void *b)
     return (int)p->sat - (int)q->sat;
 }
 
+static void set_snr_mask(double m)
+{
+    int f, i;
+    rtk.opt.snrmask.ena[0] = m > 0.0;
+    for (f = 0; f < NFREQ && f < 3; f++) for (i = 0; i < 9; i++) rtk.opt.snrmask.mask[f][i] = m;
+    snr_cur = m;
+}
+
+/* satellites with L1 / E1 / B1 code at or above m dB-Hz (and not known to be below the elevation mask) */
+static int snr_count(const obsd_t *o, int n, double m)
+{
+    int i, k = 0;
+    double el;
+    for (i = 0; i < n; i++) {
+        if (o[i].P[0] == 0.0 || o[i].SNR[0] < m) continue;
+        el = rtk.ssat[o[i].sat - 1].azel[1];
+        if (el != 0.0 && el < rtk.opt.elmin) continue;
+        k++;
+    }
+    return k;
+}
+
+/* the next mask level below / above m: cfg, cfg - step, ... down to the floor, then 0 (off) */
+static double snr_lower(double m) { return m - PRTK_SNR_STEP >= PRTK_SNR_FLOOR ? m - PRTK_SNR_STEP : 0.0; }
+static double snr_higher(double m)
+{
+    double h = snr_cfg;
+    while (snr_lower(h) > m) h = snr_lower(h);
+    return h;
+}
+
+/* PPP keeps the configured mask (0 there); RTK lowers it while too few satellites pass, see prtk.h */
+static void adapt_snr_mask(const obsd_t *o, int n)
+{
+    double m = snr_cur, up;
+    if (ppp || !snr_adapt || snr_cfg <= 0.0) return;
+    while (m > 0.0 && snr_count(o, n, m) < PRTK_SNR_MIN_SATS) m = snr_lower(m);
+    if (m < snr_cur) { set_snr_mask(m); snr_up = 0; return; }
+    if (snr_cur >= snr_cfg) { snr_up = 0; return; }
+    up = snr_higher(snr_cur);
+    if (snr_count(o, n, up) >= PRTK_SNR_MIN_SATS + 2) {
+        if (++snr_up >= PRTK_SNR_UP_EPOCHS) { set_snr_mask(up); snr_up = 0; }
+    } else snr_up = 0;
+}
+
 int prtk_rover(int week, double tow, int n, const char *sys, const int *prn, const char *codes,
                const double *P, const double *L, const float *D, const float *snr, const int *lli,
                prtk_sol_t *sol)
@@ -346,6 +395,8 @@ int prtk_rover(int week, double tow, int n, const char *sys, const int *prn, con
         rov[j].LLI[idx] = (uint8_t)lli[i];
     }
     if (nr == 0) { strcpy(message, "no usable rover signals"); return PRTK_NONE; }
+    adapt_snr_mask(rov, nr);
+    sol->snr_mask = snr_cur;
     for (i = k = 0; i < nr; i++) if (rov[i].P[2] != 0.0 && rov[i].SNR[2] >= rtk.opt.snrmask.mask[2][0]) k++;
     rtk.opt.eratio[0] = k >= PRTK_L5_MIN_SATS && l1_down ? eratio_l1_weak : eratio_l1;
     qsort(rov, nr, sizeof(obsd_t), cmp_obs);

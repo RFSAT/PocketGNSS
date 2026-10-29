@@ -112,16 +112,18 @@ data class RtkSolution(
     /** Smoothed RMS of the L1 / E1 / B1 code residuals (m), and whether L1 code is down-weighted for reflections. */
     val l1CodeRms: Double = 0.0,
     val l1DownWeighted: Boolean = false,
+    /** C/N0 mask the engine used this epoch (dB-Hz, 0 = none): lower than the configured one while signals are weak. */
+    val snrMask: Double = 0.0,
 ) {
     val hasFloat: Boolean get() = !floatLatitude.isNaN() && !(floatLatitude == 0.0 && floatLongitude == 0.0)
     val speed: Double get() = kotlin.math.hypot(velEast, velNorth)
     val courseDeg: Double? get() = if (speed > 0.2) (Math.toDegrees(kotlin.math.atan2(velEast, velNorth)) + 360) % 360 else null
 
     companion object {
-        const val SIZE = 31
+        const val SIZE = 32
         fun from(v: DoubleArray): RtkSolution = RtkSolution(RtkStatus.of(v[0].toInt()), v[1].toInt(), v[2], v[3], v[4], v[5],
             v[9], v[10], v[11], v[12], v[13], v[14], v[15].toInt(), v[16], v[17], v[18], v[19],
-            v[20], v[21], v[22], v[23], v[24], v[25], v[26].toInt(), v[27], v[28].toInt(), v[29], v[30] != 0.0)
+            v[20], v[21], v[22], v[23], v[24], v[25], v[26].toInt(), v[27], v[28].toInt(), v[29], v[30] != 0.0, v[31])
     }
 }
 

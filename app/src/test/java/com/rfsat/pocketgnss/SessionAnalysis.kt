@@ -35,12 +35,12 @@ class SessionAnalysis {
 
     data class Row(val tow: Double, val status: RtkStatus, val lat: Double, val lon: Double, val h: Double, val sdH: Double, val ns: Int,
                    val ratio: Double, val phaseSignals: Int, val msg: String, val codeRms: Double = 0.0,
-                   val l1Rms: Double = 0.0, val l1Down: Boolean = false)
+                   val l1Rms: Double = 0.0, val l1Down: Boolean = false, val snrMask: Double = 0.0)
 
     fun run(v: Variant, epochs: List<RawEpoch>, frames: List<ByteArray>): List<Row> {
         val out = ArrayList<Row>()
         val arrays = RoverArrays(); val sol = DoubleArray(RtkSolution.SIZE)
-        for (k in 0 until 11) RtkNative.tune(k, v.tune[k] ?: -1.0)
+        for (k in 0 until 12) RtkNative.tune(k, v.tune[k] ?: -1.0)
         if (v.engineMode != null) { val o = v.options; check(RtkNative.init(v.engineMode, o.navsys, o.elevationMaskDeg, o.snrMaskDbHz, o.arMode, 0, o.errorRatio,
             o.arRatio, o.maxBaseAgeSec, o.minFixSats, 1)) } else check(RtkNative.startFor(v.options, this))
         try {
@@ -76,9 +76,9 @@ class SessionAnalysis {
                 }
                 val msg = RtkNative.message().lines().filter { it.isNotBlank() }.joinToString(" | ") { it.replace(Regex("^\\d\\d:\\d\\d:\\d\\d\\.\\d+: "), "") }
                 out.add(Row(e.towSeconds, if (st == 0) RtkStatus.NONE else s.status, s.latitude, s.longitude, s.height, Math.hypot(s.stdEast, s.stdNorth),
-                    s.satellites, s.ratio, e.obs.count { it.phase != null }, msg, s.codeRms, s.l1CodeRms, s.l1DownWeighted))
+                    s.satellites, s.ratio, e.obs.count { it.phase != null }, msg, s.codeRms, s.l1CodeRms, s.l1DownWeighted, s.snrMask))
             }
-        } finally { if (v.engineMode != null) RtkNative.free() else RtkNative.freeFor(this); for (k in 0 until 11) RtkNative.tune(k, -1.0) }
+        } finally { if (v.engineMode != null) RtkNative.free() else RtkNative.freeFor(this); for (k in 0 until 12) RtkNative.tune(k, -1.0) }
         return out
     }
 
@@ -313,12 +313,15 @@ class SessionAnalysis {
             Variant("u_noglo", RtkOptions(snrMaskDbHz = 30.0, glonass = false)),
             Variant("live", RtkOptions(snrMaskDbHz = 30.0), live = true, baseLagMs = 1000),
             Variant("live_nolag", RtkOptions(snrMaskDbHz = 30.0), live = true),
+            // 1.12.15: the C/N0 mask is lowered while fewer than 8 satellites pass it; these keep it fixed (1.12.12-1.12.14)
+            Variant("app_fixedsnr", RtkOptions(snrMaskDbHz = 30.0), tune = mapOf(11 to 0.0)),
+            Variant("live_fixedsnr", RtkOptions(snrMaskDbHz = 30.0), live = true, baseLagMs = 1000, tune = mapOf(11 to 0.0)),
             Variant("lag", RtkOptions(snrMaskDbHz = 30.0), baseLagMs = 1000),
         )).filter { v -> System.getProperty("session.variants")?.split(',')?.contains(v.name) ?: true }
         for (v in variants) {
             val rows = run(v, all, frames)
-            File(outDir, "${v.name}.csv").writeText("tow,status,lat,lon,h,sdH,ns,ratio,phase,codeRms,l1Rms,l1Down,msg\n" + rows.joinToString("\n") { r ->
-                "%.3f,%s,%.9f,%.9f,%.3f,%.3f,%d,%.1f,%d,%.2f,%.2f,%d,\"%s\"".format(Locale.US, r.tow, r.status, r.lat, r.lon, r.h, r.sdH, r.ns, r.ratio, r.phaseSignals, r.codeRms, r.l1Rms, if (r.l1Down) 1 else 0, r.msg.replace("\"", "'")) })
+            File(outDir, "${v.name}.csv").writeText("tow,status,lat,lon,h,sdH,ns,ratio,phase,codeRms,l1Rms,l1Down,snrMask,msg\n" + rows.joinToString("\n") { r ->
+                "%.3f,%s,%.9f,%.9f,%.3f,%.3f,%d,%.1f,%d,%.2f,%.2f,%d,%.0f,\"%s\"".format(Locale.US, r.tow, r.status, r.lat, r.lon, r.h, r.sdH, r.ns, r.ratio, r.phaseSignals, r.codeRms, r.l1Rms, if (r.l1Down) 1 else 0, r.snrMask, r.msg.replace("\"", "'")) })
             val counts = rows.groupingBy { it.status }.eachCount()
             val good = rows.filter { it.status == RtkStatus.FIX || it.status == RtkStatus.FLOAT || it.status == RtkStatus.DGPS }
             // scatter about the median of the last half (the phone was still)

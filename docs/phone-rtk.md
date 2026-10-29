@@ -76,6 +76,14 @@ measurements the engine needs.
   of different settings lay 0.1-0.5 m apart (some held for 10+ s), so fixes stay guarded as described under "Trusting
   a fix".
 
+* **Weak signals**: the 30 dB-Hz mask keeps a phone's weak, mostly reflected signals out where there are enough strong
+  ones. Indoors, by a window or between tall buildings most satellites can stay below it, and a fixed mask then left
+  the engine with no position at all ("lack of valid sats") although the sky plot was full. Since 1.12.15, while fewer
+  than 8 satellites have L1 / E1 / B1 at or above the mask, the engine lowers it to 25 and 20 dB-Hz and then switches
+  it off; it goes back up one step after 10 epochs with 10 or more satellites there. The Live screen and the app log
+  say when this happens. On five recorded sessions (open sky, two drives, a car park, a house roof) the mask came down in 0-12 % of
+  epochs, no epoch lost its solution because of it, and the accuracy was unchanged.
+
 * **Standing still**: phone RTK always runs RTKLIB's kinematic mode, and the code weighs 1/100 of the phase (error
   ratio 100, not demo5's 300). In static mode the position carries no process noise, and a phone's phase slips so often
   that its ambiguities keep restarting from the current position: a start on reflected code then locks in. A Galaxy S24

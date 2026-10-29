@@ -388,6 +388,8 @@
     <string name="live_rtk_reflected">I segnali arrivano al telefono per riflessione (residui di codice %1$s): la posizione può essere sbagliata di metri o più, qualunque precisione indichi l’RTK. Spostatevi a cielo aperto, lontano da muri, auto e dal vostro corpo.</string>
     <string name="live_rtk_solution">Motore RTK</string>
     <string name="live_rtk_station">stazione %1$d</string>
+    <string name="live_rtk_weak">Segnali deboli: il motore usa anche quelli fino a %1$d dB-Hz</string>
+    <string name="live_rtk_weak_all">Segnali deboli: il motore li usa tutti, anche i più deboli</string>
     <string name="live_sats">Satelliti</string>
     <string name="live_sky">Cielo e segnali</string>
     <string name="live_speed">Velocità / rotta</string>
@@ -480,7 +482,7 @@
     <string name="ntrip_st_error">errore</string>
     <string name="ntrip_st_off">spento</string>
     <string name="ntrip_st_streaming">in ricezione</string>
-    <string name="ntrip_st_waiting">in attesa</string>
+    <string name="ntrip_st_waiting">riconnessione</string>
     <string name="ntrip_store_note">Le password sono cifrate con una chiave conservata nell’Android Keystore del telefono; non vengono incluse nei backup e non lasciano mai il telefono, se non verso il caster scelto.</string>
     <string name="ntrip_tls">TLS (caster cifrato)</string>
     <string name="ntrip_user">Nome utente</string>

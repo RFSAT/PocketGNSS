@@ -388,6 +388,8 @@
     <string name="live_rtk_reflected">Sygnały docierają do telefonu po odbiciu (residua kodu %1$s): pozycja może być błędna o metry lub więcej, niezależnie od dokładności podawanej przez RTK. Przejdź pod otwarte niebo, z dala od ścian, samochodów i własnego ciała.</string>
     <string name="live_rtk_solution">Silnik RTK</string>
     <string name="live_rtk_station">stacja %1$d</string>
+    <string name="live_rtk_weak">Słabe sygnały: silnik używa też tych do %1$d dB-Hz</string>
+    <string name="live_rtk_weak_all">Słabe sygnały: silnik używa wszystkich, nawet najsłabszych</string>
     <string name="live_sats">Satelity</string>
     <string name="live_sky">Niebo i sygnały</string>
     <string name="live_speed">Prędkość / kurs</string>
@@ -480,7 +482,7 @@
     <string name="ntrip_st_error">błąd</string>
     <string name="ntrip_st_off">wyłączony</string>
     <string name="ntrip_st_streaming">odbiór strumienia</string>
-    <string name="ntrip_st_waiting">oczekiwanie</string>
+    <string name="ntrip_st_waiting">ponowne łączenie</string>
     <string name="ntrip_store_note">Hasła są szyfrowane kluczem przechowywanym w Android Keystore telefonu; nie trafiają do kopii zapasowych i nie opuszczają telefonu, z wyjątkiem wysyłki do wybranego castera.</string>
     <string name="ntrip_tls">TLS (szyfrowany caster)</string>
     <string name="ntrip_user">Nazwa użytkownika</string>

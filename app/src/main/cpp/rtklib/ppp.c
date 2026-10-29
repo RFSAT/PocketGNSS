@@ -1211,6 +1211,20 @@ static int test_hold_amb(rtk_t *rtk)
     return ++rtk->nfix>=rtk->opt.minfix;
 }
 /* precise point positioning -------------------------------------------------*/
+/* PocketGNSS: say why an epoch has no PPP solution (RTKLIB only traces it, so the app showed no reason) */
+static void ppp_errmsg(rtk_t *rtk, const char *format, ...)
+{
+    char buff[256],tstr[40];
+    int k;
+    va_list ap;
+    time2str(rtk->sol.time,tstr,2);
+    k=sprintf(buff,"%s: ",tstr+11);
+    va_start(ap,format);
+    k+=vsprintf(buff+k,format,ap);
+    va_end(ap);
+    k=k<MAXERRMSG-rtk->neb?k:MAXERRMSG-rtk->neb;
+    if (k>0) {memcpy(rtk->errbuf+rtk->neb,buff,k); rtk->neb+=k;}
+}
 extern void pppos(rtk_t *rtk, const obsd_t *obs, int n, const nav_t *nav)
 {
     const prcopt_t *opt=&rtk->opt;
@@ -1256,11 +1270,18 @@ extern void pppos(rtk_t *rtk, const obsd_t *obs, int n, const nav_t *nav)
         /* prefit residuals */
         if (!(nv=ppp_res(0,obs,n,rs,dts,var,svh,dr,exc,nav,xp,rtk,v,H,R,azel))) {
             trace(2,"%s ppp (%d) no valid obs data\n",str,i+1);
+            if (i==0) {
+                int k,nssr=0;
+                for (k=0;k<n&&k<MAXOBS;k++) if (svh[k]>=0&&norm(rs+k*6,3)>0.0) nssr++;
+                if (nssr==0) ppp_errmsg(rtk,"PPP: none of the %d satellites has current SSR orbit and clock corrections (stream stopped, or corrections and ephemerides do not match)\n",n);
+                else ppp_errmsg(rtk,"PPP: no usable measurement (%d of %d satellites with SSR corrections, all rejected)\n",nssr,n);
+            }
             break;
         }
         /* measurement update of ekf states */
         if ((info=filter(xp,Pp,H,v,R,rtk->nx,nv))) {
             trace(2,"%s ppp (%d) filter error info=%d\n",str,i+1,info);
+            ppp_errmsg(rtk,"PPP: filter error\n");
             break;
         }
         /* postfit residuals */
@@ -1273,6 +1294,7 @@ extern void pppos(rtk_t *rtk, const obsd_t *obs, int n, const nav_t *nav)
     }
     if (i>=MAX_ITER) {
         trace(2,"%s ppp (%d) iteration overflows\n",str,i);
+        ppp_errmsg(rtk,"PPP: measurements inconsistent (outliers in every iteration)\n");
     }
     if (stat==SOLQ_PPP) {
 

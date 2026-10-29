@@ -76,6 +76,7 @@ typedef struct {
     int ncode;             /* how many there were */
     double l1_rms;         /* smoothed RMS of the L1 / E1 / B1 code residuals (m), 0 before the first */
     int l1_down;           /* 1 while L1 code is down-weighted for reflections */
+    double snr_mask;       /* C/N0 mask in use this epoch (dB-Hz, 0 = none): below the configured one with weak signals */
 } prtk_sol_t;
 
 typedef struct {
@@ -123,7 +124,19 @@ void prtk_reset(void);
 #define PRTK_TUNE_GLO_CODE      8   /* GLONASS code error factor (inter-channel biases), default 1 */
 #define PRTK_TUNE_L1_ON         9   /* L1 code down-weighting starts above this smoothed L1 code residual RMS (m); 0 = always */
 #define PRTK_TUNE_L1_OFF       10   /* ... and stops below this one (m) */
-#define PRTK_TUNE_N            11
+#define PRTK_TUNE_SNR_ADAPT    11   /* 0 = the C/N0 mask stays fixed; otherwise it is lowered when too few signals pass it */
+#define PRTK_TUNE_N            12
+
+/* RTK C/N0 mask (prtk_opt_t.snrmask, 30 dB-Hz from the app): it keeps a phone's weak, mostly reflected signals out of
+   the filter where there are enough strong ones (open sky, a car roof). Indoors, by a window or between tall buildings
+   most satellites can stay below it, and a fixed mask leaves the engine without a position at all ("lack of valid
+   sats") although the sky plot is full. So while fewer than PRTK_SNR_MIN_SATS satellites have L1 / E1 / B1 at or above
+   the mask, it is lowered in PRTK_SNR_STEP dB steps down to PRTK_SNR_FLOOR and then switched off (as before 1.12.12);
+   it goes back up one step after PRTK_SNR_UP_EPOCHS epochs with at least PRTK_SNR_MIN_SATS + 2 satellites there. */
+#define PRTK_SNR_MIN_SATS       8
+#define PRTK_SNR_STEP           5.0
+#define PRTK_SNR_FLOOR         20.0
+#define PRTK_SNR_UP_EPOCHS     10
 
 /* RTK: while an epoch has at least PRTK_L5_MIN_SATS satellites with L5 / E5a / B2a code AND the L1 / E1 / B1 code shows
    reflections (its double-differenced residuals, smoothed over about PRTK_L1_TAU epochs, above PRTK_L1_ON m, until they

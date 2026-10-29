@@ -175,6 +175,10 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
                 } ?: stringResource(R.string.live_rtk_no_solution), live = true, valueColor = if (eng == null) WarnAmber else Color.Unspecified)
                 if (eng == null && rtkState.epochs > 3 && rtkState.message.isNotBlank())
                     Text(rtkState.message.replace(Regex("^\\d{1,2}:\\d\\d:\\d\\d(\\.\\d+)?:\\s*"), ""), style = small, color = muted)
+                // Indoors / among buildings the engine lowers its C/N0 mask rather than stay without a position.
+                if (rtkState.snrMaskConfigured > 0 && rtkState.snrMask < rtkState.snrMaskConfigured) Text(
+                    if (rtkState.snrMask > 0) stringResource(R.string.live_rtk_weak, rtkState.snrMask.toInt()) else stringResource(R.string.live_rtk_weak_all),
+                    style = small, color = muted)
                 rtkState.phoneAcc?.let { pa ->
                     KeyValue(stringResource(R.string.live_phone_fix), formatAccuracy(pa) +
                         (if (rtkState.phoneFrozen) " · " + stringResource(R.string.live_phone_fix_frozen) else ""), live = true,
@@ -184,8 +188,11 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
                 if (s.phonePpp) {
                     // PPP: SSR corrections instead of a base station
                     val sol = rtkState.solution
+                    val ssrAge = if (b != null && b.ssrTow > 0 && rtkState.epochWeek > 0) com.rfsat.pocketgnss.link.PhoneRtkLink.ssrAge(rtkState, b) else 0.0
                     if (b != null && b.frames > 0 && b.ssrSatellites > 0) KeyValue(stringResource(R.string.live_ppp_ssr), pluralStringResource(R.plurals.live_ppp_ssr_value,
-                        b.ssrSatellites, b.ssrSatellites, b.codeBiasSatellites, if (sol != null) com.rfsat.pocketgnss.link.PhoneRtkLink.pppAge(sol, b) else 0.0), live = true)
+                        b.ssrSatellites, b.ssrSatellites, b.codeBiasSatellites, ssrAge), live = true,
+                        // RTKLIB drops SSR corrections older than 90 s: then PPP has no solution
+                        valueColor = if (ssrAge > 60) WarnAmber else Color.Unspecified)
                     when {
                         rtkState.noPhase && rtkState.epochs > 5 -> Text(stringResource(R.string.live_rtk_nophase), style = small, color = WarnAmber)
                         !s.ntripEnabled && !replaying -> Text(stringResource(R.string.live_ppp_hint), style = small, color = muted)

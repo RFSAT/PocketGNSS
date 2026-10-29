@@ -7,6 +7,12 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.12.15 (build 11215)
+Phone RTK with weak signals: the engine no longer stays without a position indoors, by a window or between tall buildings. Since 1.12.12 it ignored signals under 30 dB-Hz; when that left fewer than 8 satellites it could not start at all, although the sky plot showed many. Now it lowers the limit to 25 and 20 dB-Hz and then uses all signals, and raises it again when the signals get stronger. The Live screen (under the RTK engine line) and the app log say when this happens. Replays of all recorded sessions: same accuracy, fewer epochs without a solution.
+PPP (Galileo HAS / SSR) without a solution now says why under the RTK engine line (no satellite with current SSR corrections, measurements rejected...); before, RTKLIB failed silently. The age of the SSR corrections is counted to the phone's latest epoch, so it grows when the stream stops (it showed "0 s old" while there was no solution) and turns amber after 60 s (corrections over 90 s old are not used).
+PPP with Galileo HAS: the connection is no longer dropped during the caster's pauses. ntrip.gsc-europa.eu sends its SSR corrections in bursts up to about 60 s apart, and the app gave up after 30 s without data, reconnected with a growing delay and so often had corrections too old to use. A PPP stream is now kept for 90 s without data (the age up to which corrections are used), the ephemeris stream for 5 minutes; RTK base streams still reconnect after 30 s.
+Live: the NTRIP relay line says "reconnecting" instead of "waiting" while it reconnects after the caster stopped sending.
+
 ## 1.12.14 (build 11214)
 Live: when the phone RTK engine has no solution, its line says so and shows the engine's reason (no base station data, no ephemerides, no SSR corrections...) instead of staying empty or showing an old solution.
 Live: the top box is easier to read. The caption "accuracy" now sits right under the ± number it belongs to, and the hint about the method is one short line below a thin rule, across the whole width (it no longer looks like it continues into the right-hand caption).

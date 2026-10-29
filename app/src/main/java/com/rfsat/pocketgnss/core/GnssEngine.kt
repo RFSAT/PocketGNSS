@@ -125,14 +125,16 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 8)
     val messages: SharedFlow<String> = _messages.asSharedFlow()
 
-    val ntripClient = NtripClient(scope, forward = { writeRaw(it); raw.onRtcm(it); caster.send(it) }, gga = { ggaForCaster() })
+    val ntripClient = NtripClient(scope, forward = { writeRaw(it); raw.onRtcm(it); caster.send(it) }, gga = { ggaForCaster() },
+        stallMs = { if (store.value.phonePpp && store.value.phoneRtk) NtripClient.STALL_SSR_MS else NtripClient.STALL_RTK_MS })
     /** Local NTRIP caster for other rovers (Setup > Outputs). */
     val caster = NtripCaster()
     /** App interface: JSON position lines on TCP (Setup > Outputs). */
     val jsonServer = NmeaServer()
     private var lastBroadcastMs = 0L
     /** Phone RTK: a second caster stream with broadcast ephemerides only (Setup > Phone > Ephemeris stream). */
-    val ephClient = NtripClient(scope, forward = { com.rfsat.pocketgnss.link.PhoneRtkLink.current?.writeNav(it); raw.onRtcmNav(it) }, gga = { null })
+    val ephClient = NtripClient(scope, forward = { com.rfsat.pocketgnss.link.PhoneRtkLink.current?.writeNav(it); raw.onRtcmNav(it) }, gga = { null },
+        stallMs = { NtripClient.STALL_EPH_MS })
 
     /**
      * What goes into the app log (Tools > App log): changes of the connection, of the correction streams, of the fix

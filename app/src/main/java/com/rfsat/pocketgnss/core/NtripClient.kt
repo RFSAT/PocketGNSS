@@ -45,9 +45,20 @@ data class NtripState(
 /**
  * NTRIP client on the phone. Forwards every byte of the correction stream to [forward] (the receiver link)
  * and uploads the rover's GGA from [gga] every [NtripConfig.ggaIntervalSec] seconds. Reconnects with a
- * growing back-off (5 s .. 30 s) when the caster or the mobile network drops.
+ * growing back-off (5 s .. 30 s) when the caster or the mobile network drops, or when no data comes for [stallMs]
+ * (read at each check, so it follows the settings): an RTK base sends every second, but the Galileo HAS caster
+ * (ntrip.gsc-europa.eu) pauses up to about 60 s between its SSR transmissions, and ephemeris streams send rarely.
  */
-class NtripClient(private val scope: CoroutineScope, private val forward: (ByteArray) -> Unit, private val gga: () -> String?) {
+class NtripClient(private val scope: CoroutineScope, private val forward: (ByteArray) -> Unit, private val gga: () -> String?,
+                  private val stallMs: () -> Long = { STALL_RTK_MS }) {
+    companion object {
+        /** No data for this long ends the connection (then it reconnects): RTK base data arrives every second. */
+        const val STALL_RTK_MS = 30_000L
+        /** SSR (PPP) streams pause up to about 60 s; RTKLIB uses SSR corrections up to 90 s old. */
+        const val STALL_SSR_MS = 90_000L
+        /** Broadcast ephemeris streams send a message only when an ephemeris changes. */
+        const val STALL_EPH_MS = 300_000L
+    }
     private val state = MutableStateFlow(NtripState())
     val ntrip: StateFlow<NtripState> = state.asStateFlow()
     private var job: Job? = null
@@ -147,7 +158,8 @@ class NtripClient(private val scope: CoroutineScope, private val forward: (ByteA
                 val now = System.currentTimeMillis()
                 if (n < 0) throw IOException("Caster closed the connection")
                 if (n > 0) { lastData = now; if (dechunk != null) dechunk.feed(buf, n) else sink(buf, n) }
-                if (now - lastData > 30_000) throw IOException("No corrections for 30 s")
+                val stall = stallMs()
+                if (now - lastData > stall) throw IOException("No data for ${stall / 1000} s")
                 if (cfg.ggaIntervalSec > 0 && now - lastGga >= cfg.ggaIntervalSec * 1000L) sendGga(s, cfg)?.let { lastGga = it } ?: run { lastGga = now }
                 if (now - lastPublish >= 500) {
                     val dt = (now - windowStart).coerceAtLeast(1)

@@ -388,6 +388,8 @@
     <string name="live_rtk_reflected">Τα σήματα φτάνουν στο τηλέφωνο από ανάκλαση (υπόλοιπα κώδικα %1$s): η θέση μπορεί να απέχει μέτρα ή περισσότερο, όποια ακρίβεια κι αν δείχνει το RTK. Μετακινηθείτε σε ανοιχτό ουρανό, μακριά από τοίχους, αυτοκίνητα και το σώμα σας.</string>
     <string name="live_rtk_solution">Μηχανή RTK</string>
     <string name="live_rtk_station">σταθμός %1$d</string>
+    <string name="live_rtk_weak">Ασθενή σήματα: η μηχανή χρησιμοποιεί και όσα φτάνουν έως %1$d dB-Hz</string>
+    <string name="live_rtk_weak_all">Ασθενή σήματα: η μηχανή χρησιμοποιεί όλα, ακόμη και τα πιο ασθενή</string>
     <string name="live_sats">Δορυφόροι</string>
     <string name="live_sky">Ουρανός και σήματα</string>
     <string name="live_speed">Ταχύτητα / πορεία</string>
@@ -480,7 +482,7 @@
     <string name="ntrip_st_error">σφάλμα</string>
     <string name="ntrip_st_off">ανενεργό</string>
     <string name="ntrip_st_streaming">λήψη ροής</string>
-    <string name="ntrip_st_waiting">αναμονή</string>
+    <string name="ntrip_st_waiting">επανασύνδεση</string>
     <string name="ntrip_store_note">Οι κωδικοί κρυπτογραφούνται με κλειδί που φυλάσσεται στο Android Keystore του τηλεφώνου· δεν περιλαμβάνονται σε αντίγραφα ασφαλείας και δεν φεύγουν ποτέ από το τηλέφωνο, παρά μόνο προς τον caster που επιλέγετε.</string>
     <string name="ntrip_tls">TLS (κρυπτογραφημένος caster)</string>
     <string name="ntrip_user">Όνομα χρήστη</string>

@@ -59,6 +59,12 @@ data class PhoneRtkState(
     val phoneFrozen: Boolean = false,
     /** Epochs since the engine last produced a solution (0 = this one did). */
     val epochsWithoutSolution: Int = 0,
+    /** C/N0 mask in use (dB-Hz, 0 = none) and the configured one: lower while too few satellites pass the configured one. */
+    val snrMask: Double = 0.0,
+    val snrMaskConfigured: Double = 0.0,
+    /** GPS time of the latest rover epoch (for the age of the corrections while there is no solution). */
+    val epochWeek: Int = 0,
+    val epochTow: Double = 0.0,
 )
 
 /**
@@ -99,6 +105,7 @@ class PhoneRtkLink private constructor(
     @Volatile private var phoneMovedMs = 0L
     /** L1 code down-weighted for reflections in the last solution (logged when it changes). */
     private var l1Down = false
+    private var snrMask = options.snrMaskDbHz
     private var noDataSince = 0L
     private val check = PositionCheck()
     @Volatile private var lastSolutionMs = 0L
@@ -206,6 +213,15 @@ class PhoneRtkLink private constructor(
                 "L1 code reflected (residuals %.0f m RMS): L1 code given 10x less weight than L5".format(java.util.Locale.US, sol.l1CodeRms)
                 else "L1 code clean again (residuals %.0f m RMS): full weight".format(java.util.Locale.US, sol.l1CodeRms))
         }
+        if (!options.ppp && sol.snrMask != snrMask) {
+            com.rfsat.pocketgnss.core.AppLog.i("Phone RTK", when {
+                sol.snrMask > snrMask -> "Signals stronger again: the engine uses signals from %.0f dB-Hz".format(java.util.Locale.US, sol.snrMask)
+                sol.snrMask > 0 -> "Weak signals (fewer than 8 satellites at %.0f dB-Hz or more): the engine now uses signals down to %.0f dB-Hz"
+                    .format(java.util.Locale.US, snrMask, sol.snrMask)
+                else -> "Weak signals (fewer than 8 satellites at %.0f dB-Hz or more): the engine now uses all signals".format(java.util.Locale.US, snrMask)
+            })
+            snrMask = sol.snrMask
+        }
         val withPhase = e.obs.count { it.phase != null }
         val now = System.currentTimeMillis()
         val phone = lastLocation?.takeIf { now - lastLocationMs <= 2_500 }
@@ -217,7 +233,9 @@ class PhoneRtkLink private constructor(
             phoneAcc = phone?.takeIf { it.hasAccuracy() }?.accuracy?.toDouble(),
             phoneDistance = if (phone != null && shown != null && shown.status != RtkStatus.NONE)
                 com.rfsat.pocketgnss.protocol.Geo.distance(shown.latitude, shown.longitude, phone.latitude, phone.longitude) else null,
-            phoneFrozen = phone != null && phoneMovedMs > 0 && now - phoneMovedMs >= FROZEN_MS, epochsWithoutSolution = idle)
+            phoneFrozen = phone != null && phoneMovedMs > 0 && now - phoneMovedMs >= FROZEN_MS, epochsWithoutSolution = idle,
+            snrMask = snrMask, snrMaskConfigured = if (options.ppp) 0.0 else options.snrMaskDbHz,
+            epochWeek = e.gpsWeek, epochTow = e.towSeconds)
         if (status == RtkStatus.NONE.code) return
         // The phone's own fix as a sanity check: a solution far from it is not used, and a filter stuck there restarts.
         val verdict = check.check(now, sol.latitude, sol.longitude, kotlin.math.hypot(sol.stdEast, sol.stdNorth),
@@ -338,6 +356,10 @@ class PhoneRtkLink private constructor(
         }
 
         /** Age of the SSR clock corrections at the solution time, s. */
+        /** Age of the SSR corrections at the rover's latest epoch (s). */
+        fun ssrAge(st: PhoneRtkState, base: RtkBase): Double =
+            ((st.epochWeek - base.ssrWeek) * 604_800.0 + st.epochTow - base.ssrTow).coerceAtLeast(0.0)
+
         fun pppAge(s: RtkSolution, base: RtkBase): Double =
             ((s.week - base.ssrWeek) * 604_800.0 + s.tow - base.ssrTow).coerceAtLeast(0.0)
 
