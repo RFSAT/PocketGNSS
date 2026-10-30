@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.12.19 (build 11219)
+Fixed a crash when the sky view was read while satellite data arrived. When the engine has no position because the satellites have no broadcast ephemerides, it now says so instead of "lack of valid sats". Mountpoint lists mark the streams that send ephemerides and put them first when choosing the ephemeris stream.
+
 ## 1.12.18 (build 11218)
 Setup: the ephemeris stream's mountpoint can be picked from the caster's list (Choose), as for the main stream, with broadcast ephemeris streams (BCEP…) at the top; typing it still works.
 

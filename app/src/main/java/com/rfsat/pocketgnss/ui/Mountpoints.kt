@@ -40,6 +40,7 @@ fun MountpointList(list: List<Mountpoint>, lat: Double?, lon: Double?, selected:
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val txtNetwork = stringResource(R.string.corr_mount_network)
     val txtNotRtcm3 = stringResource(R.string.corr_mount_not_rtcm3)
+    val txtEph = stringResource(R.string.corr_mount_eph)
     for (m in CasterProfiles.sortMountpoints(list, lat, lon).sortedBy { !first(it) }.take(max)) {
         val d = if (lat != null && lon != null && m.latitude != null && m.longitude != null) Geo.distance(lat, lon, m.latitude, m.longitude) else null
         val rtcm3 = CasterProfiles.isRtcm3(m.format)
@@ -51,7 +52,8 @@ fun MountpointList(list: List<Mountpoint>, lat: Double?, lon: Double?, selected:
                 Text(if (m.needsGga) txtNetwork else d?.let { formatDistance(it) } ?: "", style = MaterialTheme.typography.bodySmall)
             }
             Text(listOf(CasterProfiles.mountNote(m.name) ?: m.identifier, m.format, m.navSystems, m.country,
-                if (m.needsGga) "GGA" else "", if (m.fee) "fee" else "", if (!rtcm3) txtNotRtcm3 else "")
+                if (m.needsGga) "GGA" else "", if (m.fee) "fee" else "", if (CasterProfiles.carriesEphemerides(m) == true) txtEph else "",
+                if (!rtcm3) txtNotRtcm3 else "")
                 .filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = muted)
         }
         HorizontalDivider()

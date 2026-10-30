@@ -294,11 +294,11 @@ private fun EphStreamRows(engine: GnssEngine) {
         if (names.isEmpty()) Text(stringResource(R.string.eph_no_profile), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
         else Picker(stringResource(R.string.eph_profile), listOf("") + names, s.ephProfile.takeIf { it in names } ?: "", { it.ifEmpty { "—" } },
             { v -> engine.store.update { it.copy(ephProfile = v) }; engine.updateEphStream() })
-        // Pick the mountpoint from the chosen caster's sourcetable (ephemeris-only streams such as BCEP… first), or type it.
+        // Pick the mountpoint from the chosen caster's sourcetable (streams whose sourcetable lists ephemeris messages first), or type it.
         val profile = s.profiles.firstOrNull { it.name == s.ephProfile }
         var choose by remember { mutableStateOf(false) }
         if (choose && profile != null) MountpointDialog(engine, profile.config, s.ephMount, { choose = false },
-            first = { it.name.startsWith("BCEP") }) { m -> engine.store.update { it.copy(ephMount = m.name) }; engine.updateEphStream() }
+            first = { com.rfsat.pocketgnss.data.CasterProfiles.carriesEphemerides(it) == true }) { m -> engine.store.update { it.copy(ephMount = m.name) }; engine.updateEphStream() }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             TextSetting(stringResource(R.string.eph_mount), s.ephMount, { v -> engine.store.update { it.copy(ephMount = v.trim()) }; engine.updateEphStream() },
                 Modifier.weight(1f))

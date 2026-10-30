@@ -109,6 +109,7 @@
     <string name="corr_intro">Tres vías llevan las correcciones al receptor: su propio cliente NTRIP por la red móvil (versión LTE) o por Wi-Fi (ambas versiones), configurado en Herramientas &gt; Ajustes del receptor (secciones 4 y 7); o este relé: el teléfono obtiene RTCM con sus datos móviles y lo reenvía al receptor por Bluetooth o USB, enviando al caster el GGA del receptor. El relé también sirve a otros receptores RTCM 3 conectados por USB o Bluetooth.</string>
     <string name="corr_last">Últimos datos</string>
     <string name="corr_messages">Mensajes RTCM recibidos</string>
+    <string name="corr_mount_eph">efemérides</string>
     <string name="corr_mount_help">Descarga la tabla de fuentes del caster (caster y puerto de Ajustes). Primero aparecen los flujos de red y luego las estaciones individuales, las más cercanas primero. Toque una para elegirla; el ajuste GGA sigue la tabla. GGA = el caster necesita su posición (VRS, MAX, base más cercana).</string>
     <string name="corr_mount_network">red</string>
     <string name="corr_mount_not_rtcm3">no es RTCM 3: inutilizable</string>

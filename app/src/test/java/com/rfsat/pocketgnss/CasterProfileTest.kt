@@ -10,6 +10,16 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CasterProfileTest {
+    private fun mount(name: String, details: String) =
+        com.rfsat.pocketgnss.protocol.Mountpoint(name, name, "RTCM 3.2", details, 2, "GPS+GAL", "", "GRC", 38.0, 23.7, false, 0, "B", false, null)
+
+    @Test fun ephemerisStreamsAreRecognisedFromTheSourcetable() {
+        assertEquals(true, CasterProfiles.carriesEphemerides(mount("MSM_VRS", "1006(10),1019(5),1046(5),1077(1),1097(1)")))
+        assertEquals(false, CasterProfiles.carriesEphemerides(mount("NEAR", "1004(1),1006(10),1012(1)")))
+        assertEquals(null, CasterProfiles.carriesEphemerides(mount("ATHA_4102", "")))
+        assertEquals(true, CasterProfiles.carriesEphemerides(mount("BCEP00BKG0", "")))
+    }
+
     /** Stand-in for the Keystore cipher: reversible, text-safe output (like Base64), not plain text. */
     private val fake = object : SecretCipher {
         override fun encrypt(plain: String) = "k1:" + plain.reversed().toByteArray().joinToString("") { "%02x".format(it) }

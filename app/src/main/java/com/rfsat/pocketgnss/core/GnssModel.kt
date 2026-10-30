@@ -139,8 +139,12 @@ class GnssModel(private val clock: () -> Long = System::currentTimeMillis) {
     var datum: String? = null; private set
     var lastText: String? = null; private set
 
-    /** Feeds one sentence; returns a completed fix when this sentence closes an epoch. */
-    fun accept(s: NmeaSentence): GnssFix? {
+    /**
+     * Feeds one sentence; returns a completed fix when this sentence closes an epoch. Synchronized with [satellites]:
+     * the link thread feeds sentences while the engine reads the sky (a ConcurrentModificationException crashed
+     * 1.12.16 when the two met).
+     */
+    @Synchronized fun accept(s: NmeaSentence): GnssFix? {
         val now = clock()
         when (s) {
             is NmeaSentence.Gga -> { lastGgaMs = now; rmcSinceGga = 0; return fromGga(s, now) }
@@ -188,7 +192,7 @@ class GnssModel(private val clock: () -> Long = System::currentTimeMillis) {
     }
 
     /** Satellites heard in the last [maxAgeMs], sorted by constellation then number. */
-    fun satellites(maxAgeMs: Long = 4000): List<SatInfo> {
+    @Synchronized fun satellites(maxAgeMs: Long = 4000): List<SatInfo> {
         val now = clock()
         sats.entries.removeAll { now - it.value.first > maxAgeMs }
         return sats.values.map { (_, s) ->

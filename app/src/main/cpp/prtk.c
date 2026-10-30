@@ -353,6 +353,15 @@ static void adapt_snr_mask(const obsd_t *o, int n)
     } else snr_up = 0;
 }
 
+/* an ephemeris for satellite sat near time t (4 h: wider than every system's validity, so only a missing one counts) */
+static int has_eph(int sat, gtime_t t)
+{
+    int i;
+    for (i = 0; i < nav.n; i++) if (nav.eph[i].sat == sat && fabs(timediff(t, nav.eph[i].toe)) < 14400.0) return 1;
+    for (i = 0; i < nav.ng; i++) if (nav.geph[i].sat == sat && fabs(timediff(t, nav.geph[i].toe)) < 14400.0) return 1;
+    return 0;
+}
+
 int prtk_rover(int week, double tow, int n, const char *sys, const int *prn, const char *codes,
                const double *P, const double *L, const float *D, const float *snr, const int *lli,
                prtk_sol_t *sol)
@@ -416,7 +425,17 @@ int prtk_rover(int week, double tow, int n, const char *sys, const int *prn, con
     } else message[0] = '\0';
 
     sol->stat = rtk.sol.stat;
-    if (rtk.sol.stat == SOLQ_NONE) return PRTK_NONE;
+    if (rtk.sol.stat == SOLQ_NONE) {
+        /* RTKLIB says only "lack of valid sats" when the satellites have no broadcast ephemeris (a stream without
+           1019/1020/1042/1045/1046 and no ephemeris stream): say so, with the count */
+        int ne = 0;
+        for (i = 0; i < nr; i++) if (has_eph(rov[i].sat, t)) ne++;
+        if (ne < 4) {
+            snprintf(message, sizeof(message), "no broadcast ephemerides for %d of the %d satellites in view: the correction "
+                     "stream carries none (switch on the ephemeris stream, e.g. BCEP00BKG0)", nr - ne, nr);
+        }
+        return PRTK_NONE;
+    }
     sol->week = week;
     sol->tow = time2gpst(rtk.sol.time, &sol->week);
     for (i = 0; i < 3; i++) sol->xyz[i] = rtk.sol.rr[i];

@@ -174,6 +174,17 @@ object CasterProfiles {
             if (lat != null && lon != null && m.latitude != null && m.longitude != null) Geo.distance(lat, lon, m.latitude, m.longitude) else 1e12
         }, { it.name }))
 
+    /**
+     * Whether the sourcetable says the stream sends broadcast ephemerides (RTCM 1019 GPS, 1020 GLONASS, 1042 BeiDou,
+     * 1044 QZSS, 1045 / 1046 Galileo in its format details, e.g. "1004(1),1019(60)"); null when it gives no details.
+     */
+    fun carriesEphemerides(m: Mountpoint): Boolean? {
+        val types = Regex("\\b(\\d{4})\\b").findAll(m.formatDetails).map { it.groupValues[1].toInt() }.toList()
+        if (types.isEmpty()) return if (m.name.startsWith("BCEP")) true else null
+        return types.any { it in EPHEMERIS_TYPES }
+    }
+    private val EPHEMERIS_TYPES = setOf(1019, 1020, 1042, 1044, 1045, 1046)
+
     /** True when the stream is RTCM 3 (the only correction format u-blox F9 and RTKLIB phone RTK accept here). */
     fun isRtcm3(format: String) = format.trim().uppercase().replace(" ", "").startsWith("RTCM3")
 }

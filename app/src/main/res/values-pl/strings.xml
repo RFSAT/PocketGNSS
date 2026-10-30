@@ -109,6 +109,7 @@
     <string name="corr_intro">Poprawki docierają do odbiornika trzema drogami: przez jego własnego klienta NTRIP w sieci komórkowej (wersja LTE) lub przez Wi-Fi (obie wersje), ustawianego w Narzędzia &gt; Ustawienia odbiornika (sekcje 4 i 7); albo przez ten przekaźnik: telefon pobiera RTCM przez dane komórkowe i przekazuje je do odbiornika przez Bluetooth lub USB, wysyłając do castera GGA odbiornika. Przekaźnik obsługuje też inne odbiorniki RTCM 3 podłączone przez USB lub Bluetooth.</string>
     <string name="corr_last">Ostatnie dane</string>
     <string name="corr_messages">Odebrane komunikaty RTCM</string>
+    <string name="corr_mount_eph">efemerydy</string>
     <string name="corr_mount_help">Pobiera tabelę źródeł castera (caster i port z Ustawień). Najpierw strumienie sieciowe, potem pojedyncze stacje, najbliższe najpierw. Dotknij jednej, aby ją wybrać; ustawienie GGA wynika z tabeli. GGA = caster potrzebuje twojej pozycji (VRS, MAX, najbliższa baza).</string>
     <string name="corr_mount_network">sieć</string>
     <string name="corr_mount_not_rtcm3">nie RTCM 3: nieprzydatny</string>
