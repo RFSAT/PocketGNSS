@@ -136,6 +136,7 @@
     <string name="eph_mount">Mountpoint</string>
     <string name="eph_no_profile">Save the account first: Tools &gt; Corrections &gt; caster profile (e.g. the IGS-IP (BKG) preset with your BKG login).</string>
     <string name="eph_profile">Account (saved caster profile)</string>
+    <string name="eph_same_account">Not connected: this is the account of the main NTRIP stream, and casters such as Galileo HAS and Metrica allow one login per account (the main stream would stall). Galileo HAS sends its ephemerides in the main stream; otherwise use another account, e.g. BKG\'s BCEP00BKG0.</string>
     <string name="eph_status">Ephemeris stream: %1$s %2$s</string>
     <string name="eph_switch">Ephemeris stream</string>
     <string name="exit_idle">The receiver link, corrections and outputs are closed.</string>
@@ -376,6 +377,7 @@
     <string name="live_ppp_l1">No second frequency at the moment (too few satellites with L1 + L5 carrier phase): PPP uses the broadcast ionosphere model, about a metre.</string>
     <string name="live_ppp_noeph">No broadcast ephemerides yet: if the correction stream does not carry them, switch on the ephemeris stream (Setup &gt; Receiver connection).</string>
     <string name="live_ppp_nossr">No SSR corrections in this stream yet: PPP needs a Galileo HAS or IGS SSRA… mountpoint (Setup &gt; NTRIP relay).</string>
+    <string name="live_ppp_rtkstream">This stream sends base station data for RTK, which PPP does not use: set Corrections to RTK (base) in Setup &gt; Receiver connection, or choose a Galileo HAS / SSR stream.</string>
     <string name="live_ppp_ssr">SSR corrections</string>
     <string name="live_rec_off">Rec OFF</string>
     <string name="live_rec_on">Rec ON</string>
@@ -387,6 +389,7 @@
     <string name="live_rtk_no_solution">no solution at the moment</string>
     <string name="live_rtk_noeph">No broadcast ephemerides from the caster yet (RTCM 1019/1020/1045/1046/1042), and the phone needs them to compute satellite positions. Many network streams (VRS, nearest base) leave them out: switch on the ephemeris stream (Setup &gt; Receiver connection).</string>
     <string name="live_rtk_nophase">No carrier phase from this phone at the moment: RTK cannot fix (code-only phone, or power saving still on). The position stays at metre level.</string>
+    <string name="live_rtk_pppstream">This stream sends PPP corrections (SSR), not base station data: set Corrections to PPP (HAS / SSR) in Setup &gt; Receiver connection, or choose an RTK mountpoint.</string>
     <string name="live_rtk_reflected">Signals reach the phone by reflection (code residuals %1$s): the position can be off by metres or more, whatever accuracy RTK claims. Move to open sky, away from walls, cars and your body.</string>
     <string name="live_rtk_solution">RTK engine</string>
     <string name="live_rtk_station">station %1$d</string>
@@ -586,6 +589,9 @@
     <string name="route_lte">Three boards: ESP32, LTE modem with nano-SIM (and SD card slot), u-blox F9x. The receiver\'s own NTRIP client gets corrections over the mobile network (data-only SIM, 4G/LTE recommended) or, if set, over Wi-Fi. Power on the middle micro-USB. D3.5: ~60 s from power-up to RTK data, re-connects in 16–25 s.</string>
     <string name="route_unset">Choose the receiver version in Setup to see how it gets RTK corrections.</string>
     <string name="route_wifi" formatted="false">Two boards: ESP32 and u-blox F9x, no modem or SD slot. The receiver\'s own NTRIP client gets corrections only through a Wi-Fi access point (a field router, a mobile-broadband router or this phone\'s hotspot); anywhere with mobile coverage, the phone can also relay them over Bluetooth or USB (NTRIP relay). D3.5: fastest re-connection and ~99 % RTK availability over a fibre-fed router.</string>
+    <string name="save_done">Saved to Downloads/PocketGNSS: %1$s</string>
+    <string name="save_failed">Could not save the file</string>
+    <string name="save_to_phone">Save to phone</string>
     <string name="setup_autoreconnect">Reconnect automatically</string>
     <string name="setup_baud">Baud rate</string>
     <string name="setup_baud_auto">Automatic</string>

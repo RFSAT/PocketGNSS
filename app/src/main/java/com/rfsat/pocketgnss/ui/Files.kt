@@ -26,11 +26,18 @@ fun exportBytes(context: Context, name: String, bytes: ByteArray): File {
     return File(dir, name).apply { writeBytes(bytes) }
 }
 
+/**
+ * Share sheet for an exported file, with "Save to phone" (Downloads/PocketGNSS, [SaveToPhoneActivity]) as the first
+ * target beside the other apps.
+ */
 fun share(context: Context, file: File, mime: String) {
     try {
         val uri = FileProvider.getUriForFile(context, context.packageName + ".files", file)
+        val save = Intent(context, SaveToPhoneActivity::class.java).setAction(Intent.ACTION_SEND).setType(mime)
+            .putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, uri)
-            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), file.name))
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), file.name)
+            .putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(save)))
     } catch (_: Exception) {}
 }
 

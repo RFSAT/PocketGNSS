@@ -70,6 +70,15 @@
                 android:resource="@xml/device_filter" />
         </activity>
 
+        <!-- "Save to phone" in the app's share sheets: copies the file to Downloads/PocketGNSS. Exported for the system
+             share sheet; it accepts only this app's own FileProvider files (SaveToPhoneActivity). -->
+        <activity
+            android:name=".ui.SaveToPhoneActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:label="@string/save_to_phone"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <service
             android:name=".core.LinkService"
             android:exported="false"

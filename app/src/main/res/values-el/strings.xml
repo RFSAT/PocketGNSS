@@ -134,6 +134,7 @@
     <string name="eph_mount">Mountpoint</string>
     <string name="eph_no_profile">Αποθηκεύστε πρώτα τον λογαριασμό: Εργαλεία &gt; Διορθώσεις &gt; προφίλ caster (π.χ. το προκαθορισμένο IGS-IP (BKG) με τα στοιχεία σας στην BKG).</string>
     <string name="eph_profile">Λογαριασμός (αποθηκευμένο προφίλ caster)</string>
+    <string name="eph_same_account">Χωρίς σύνδεση: αυτός είναι ο λογαριασμός της κύριας ροής NTRIP, και caster όπως το Galileo HAS και η Metrica επιτρέπουν μία σύνδεση ανά λογαριασμό (η κύρια ροή θα σταματούσε). Το Galileo HAS στέλνει τις εφημερίδες στην κύρια ροή· αλλιώς χρησιμοποιήστε άλλον λογαριασμό, π.χ. το BCEP00BKG0 της BKG.</string>
     <string name="eph_status">Ροή εφημερίδων: %1$s %2$s</string>
     <string name="eph_switch">Ροή εφημερίδων</string>
     <string name="exit_idle">Η σύνδεση με τον δέκτη, οι διορθώσεις και οι έξοδοι κλείνουν.</string>
@@ -374,6 +375,7 @@
     <string name="live_ppp_l1">Προς το παρόν χωρίς δεύτερη συχνότητα (λίγοι δορυφόροι με φάση φέροντος L1 + L5): το PPP χρησιμοποιεί το εκπεμπόμενο μοντέλο ιονόσφαιρας, περίπου ένα μέτρο.</string>
     <string name="live_ppp_noeph">Δεν υπάρχουν ακόμη εφημερίδες: αν η ροή διορθώσεων δεν τις περιέχει, ενεργοποιήστε τη ροή εφημερίδων (Ρυθμίσεις &gt; Σύνδεση δέκτη).</string>
     <string name="live_ppp_nossr">Δεν υπάρχουν ακόμη διορθώσεις SSR σε αυτή τη ροή: το PPP χρειάζεται mountpoint Galileo HAS ή IGS SSRA… (Ρυθμίσεις &gt; Αναμετάδοση NTRIP).</string>
+    <string name="live_ppp_rtkstream">Αυτή η ροή στέλνει δεδομένα σταθμού βάσης για RTK, που το PPP δεν χρησιμοποιεί: ορίστε Διορθώσεις σε RTK (βάση) στις Ρυθμίσεις &gt; Σύνδεση δέκτη ή επιλέξτε ροή Galileo HAS / SSR.</string>
     <string name="live_ppp_ssr">Διορθώσεις SSR</string>
     <string name="live_rec_off">Rec OFF</string>
     <string name="live_rec_on">Rec ON</string>
@@ -385,6 +387,7 @@
     <string name="live_rtk_no_solution">καμία λύση προς το παρόν</string>
     <string name="live_rtk_noeph">Δεν έχουν φτάσει ακόμη εφημερίδες από τον caster (RTCM 1019/1020/1045/1046/1042) και το τηλέφωνο τις χρειάζεται για να υπολογίσει τις θέσεις των δορυφόρων. Πολλές ροές δικτύου (VRS, πλησιέστερος σταθμός) δεν τις περιλαμβάνουν: ενεργοποιήστε τη ροή εφημερίδων (Ρυθμίσεις &gt; Σύνδεση δέκτη).</string>
     <string name="live_rtk_nophase">Αυτή τη στιγμή δεν υπάρχει φάση φέροντος από το τηλέφωνο: το RTK δεν μπορεί να δώσει fixed (τηλέφωνο μόνο κώδικα ή ενεργή εξοικονόμηση ενέργειας). Η θέση μένει σε επίπεδο μέτρου.</string>
+    <string name="live_rtk_pppstream">Αυτή η ροή στέλνει διορθώσεις PPP (SSR), όχι δεδομένα σταθμού βάσης: ορίστε Διορθώσεις σε PPP (HAS / SSR) στις Ρυθμίσεις &gt; Σύνδεση δέκτη ή επιλέξτε mountpoint RTK.</string>
     <string name="live_rtk_reflected">Τα σήματα φτάνουν στο τηλέφωνο από ανάκλαση (υπόλοιπα κώδικα %1$s): η θέση μπορεί να απέχει μέτρα ή περισσότερο, όποια ακρίβεια κι αν δείχνει το RTK. Μετακινηθείτε σε ανοιχτό ουρανό, μακριά από τοίχους, αυτοκίνητα και το σώμα σας.</string>
     <string name="live_rtk_solution">Μηχανή RTK</string>
     <string name="live_rtk_station">σταθμός %1$d</string>
@@ -584,6 +587,9 @@
     <string name="route_lte">Τρεις πλακέτες: ESP32, μόντεμ LTE με nano-SIM (και υποδοχή κάρτας SD), u-blox F9x. Ο πελάτης NTRIP του δέκτη λαμβάνει διορθώσεις μέσω κινητού δικτύου (SIM μόνο δεδομένων, συνιστάται 4G/LTE) ή, αν έχει ρυθμιστεί, μέσω Wi-Fi. Τροφοδοσία στη μεσαία micro-USB. D3.5: ~60 s από την ενεργοποίηση ως τα δεδομένα RTK, επανασύνδεση σε 16–25 s.</string>
     <string name="route_unset">Επιλέξτε την έκδοση του δέκτη στις Ρυθμίσεις για να δείτε πώς λαμβάνει διορθώσεις RTK.</string>
     <string name="route_wifi" formatted="false">Δύο πλακέτες: ESP32 και u-blox F9x, χωρίς μόντεμ ή υποδοχή SD. Ο πελάτης NTRIP του δέκτη λαμβάνει διορθώσεις μόνο μέσω σημείου πρόσβασης Wi-Fi (δρομολογητής πεδίου, δρομολογητής κινητής ευρυζωνικότητας ή το hotspot αυτού του τηλεφώνου)· όπου υπάρχει κινητή κάλυψη, το τηλέφωνο μπορεί επίσης να τις αναμεταδίδει μέσω Bluetooth ή USB (αναμετάδοση NTRIP). D3.5: ταχύτερη επανασύνδεση και ~99 % διαθεσιμότητα RTK μέσω δρομολογητή με οπτική ίνα.</string>
+    <string name="save_done">Αποθηκεύτηκε στο Downloads/PocketGNSS: %1$s</string>
+    <string name="save_failed">Το αρχείο δεν αποθηκεύτηκε</string>
+    <string name="save_to_phone">Αποθήκευση στο τηλέφωνο</string>
     <string name="setup_autoreconnect">Αυτόματη επανασύνδεση</string>
     <string name="setup_baud">Ρυθμός baud</string>
     <string name="setup_baud_auto">Αυτόματα</string>

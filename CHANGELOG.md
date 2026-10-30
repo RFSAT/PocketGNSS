@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.12.17 (build 11217)
+Every Share button now offers "Save to phone" (Downloads/PocketGNSS). NTRIP: a stream can no longer run twice after quick setting changes, and the ephemeris stream no longer logs in with the main stream's account (casters allow one login per account, so the main stream stalled). Live warns when the stream does not match the mode, e.g. RTK base data in PPP mode.
+
 ## 1.12.16 (build 11216)
 Phone RTK and PPP no longer stay stuck without a solution: when the engine has corrections and plenty of carrier phase but no solution for a minute, it restarts its filter (noted in the app log). Live also says when PPP rejected the carrier phase of almost all satellites, and no longer shows a distance to an old solution.
 

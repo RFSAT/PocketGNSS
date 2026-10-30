@@ -141,6 +141,8 @@ measurements with them.
   with pauses of up to about 60 s, so a PPP stream is kept for 90 s without data (RTKLIB uses SSR corrections up to
   90 s old) before the app reconnects; RTK base streams reconnect after 30 s, the ephemeris stream after 5 minutes.
   Before 1.12.15 the 30 s limit applied to HAS too, and the reconnections left PPP without corrections.
+  HAS carries its own ephemerides, so it needs no ephemeris stream; the ephemeris stream is never opened with the main
+  stream's account (a second login stalled the main stream, October 2026), and neither stream can run twice.
 * **IGS real-time** `SSRA…` streams (free registration at igs-ip.net): profile "IGS products (PPP)"
   (`products.igs-ip.net:2101`), Get mountpoints, pick an `SSRA…` stream, and switch on the ephemeris stream
   (`BCEP00BKG0`), since SSR streams carry no orbits. `SSRC…` streams refer to the satellites' centre of mass and are

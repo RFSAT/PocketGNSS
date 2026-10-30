@@ -63,27 +63,40 @@ class NtripClient(private val scope: CoroutineScope, private val forward: (ByteA
     val ntrip: StateFlow<NtripState> = state.asStateFlow()
     private var job: Job? = null
     @Volatile private var socket: Socket? = null
+    /**
+     * Number of the current connection loop. start() and stop() are synchronized and each loop only touches the state
+     * and the socket while it is still the current one: before 1.12.17 two quick setting changes could leave an
+     * earlier loop running beside the new one (two logins to the caster, interleaved "Reconnecting" lines, an old
+     * mountpoint kept alive), and casters that allow one login per account then starved one of them.
+     */
+    @Volatile private var generation = 0L
 
     val running: Boolean get() = job?.isActive == true
 
-    fun start(cfg: NtripConfig) {
+    /** Updates the state only while the loop [gen] is the current one. */
+    private inline fun update(gen: Long, f: (NtripState) -> NtripState) {
+        synchronized(this) { if (gen == generation) state.value = f(state.value) }
+    }
+
+    @Synchronized fun start(cfg: NtripConfig) {
         stop()
         if (!cfg.usable) { state.value = NtripState(NtripStatus.ERROR, "Set caster, port and mountpoint in Setup"); return }
+        val gen = generation
         job = scope.launch(Dispatchers.IO) {
             var backoff = 5_000L
             var reconnects = 0
-            while (isActive) {
-                state.value = state.value.copy(status = NtripStatus.CONNECTING, message = "${cfg.host}:${cfg.port}", mountpoint = cfg.mountpoint,
-                    reconnects = reconnects)
+            while (isActive && gen == generation) {
+                update(gen) { it.copy(status = NtripStatus.CONNECTING, message = "${cfg.host}:${cfg.port}", mountpoint = cfg.mountpoint,
+                    reconnects = reconnects) }
                 try {
-                    stream(cfg)
+                    stream(cfg, gen)
                     backoff = 5_000L
                 } catch (e: Exception) {
-                    if (!isActive) break
-                    state.value = state.value.copy(status = NtripStatus.ERROR, message = e.message ?: e.javaClass.simpleName)
+                    if (!isActive || gen != generation) break
+                    update(gen) { it.copy(status = NtripStatus.ERROR, message = e.message ?: e.javaClass.simpleName) }
                 }
-                if (!isActive) break
-                state.value = state.value.copy(status = NtripStatus.WAITING)
+                if (!isActive || gen != generation) break
+                update(gen) { it.copy(status = NtripStatus.WAITING) }
                 delay(backoff)
                 backoff = (backoff * 2).coerceAtMost(30_000L)
                 reconnects++
@@ -91,7 +104,15 @@ class NtripClient(private val scope: CoroutineScope, private val forward: (ByteA
         }
     }
 
-    fun stop() {
+    /** Not connecting, with [message] as the reason (shown in Setup and the app log). */
+    @Synchronized fun refuse(message: String) {
+        if (job == null && state.value.status == NtripStatus.ERROR && state.value.message == message) return
+        stop()
+        state.value = NtripState(NtripStatus.ERROR, message)
+    }
+
+    @Synchronized fun stop() {
+        generation++
         job?.cancel(); job = null
         try { socket?.close() } catch (_: Exception) {}
         socket = null
@@ -118,9 +139,13 @@ class NtripClient(private val scope: CoroutineScope, private val forward: (ByteA
         return s
     }
 
-    private suspend fun stream(cfg: NtripConfig) = withContext(Dispatchers.IO) {
+    private suspend fun stream(cfg: NtripConfig, gen: Long) = withContext(Dispatchers.IO) {
         val s = open(cfg)
-        socket = s
+        synchronized(this@NtripClient) {
+            // stopped or restarted while connecting: this connection is not wanted any more
+            if (gen != generation) { try { s.close() } catch (_: Exception) {}; throw IOException("Stopped") }
+            socket = s
+        }
         try {
             s.getOutputStream().apply { write(Ntrip.request(cfg).toByteArray(Charsets.US_ASCII)); flush() }
             val input = s.getInputStream()
@@ -132,7 +157,7 @@ class NtripClient(private val scope: CoroutineScope, private val forward: (ByteA
                 Ntrip.Reply.NOT_FOUND -> throw IOException("Mountpoint '${cfg.mountpoint}' not found")
                 Ntrip.Reply.ERROR -> throw IOException("Caster replied: ${header.statusLine.ifEmpty { "nothing" }}")
             }
-            state.value = state.value.copy(status = NtripStatus.STREAMING, message = header.statusLine)
+            update(gen) { it.copy(status = NtripStatus.STREAMING, message = header.statusLine) }
             val types = HashMap(state.value.types)
             var base = state.value.base
             val checker = StreamSplitter(onNmea = {}, onRtcm = { f ->
@@ -153,7 +178,7 @@ class NtripClient(private val scope: CoroutineScope, private val forward: (ByteA
             var lastPublish = 0L
             var lastData = System.currentTimeMillis()
             sendGga(s, cfg)?.let { lastGga = it }
-            while (isActive) {
+            while (isActive && gen == generation) {
                 val n = try { input.read(buf) } catch (_: SocketTimeoutException) { 0 }
                 val now = System.currentTimeMillis()
                 if (n < 0) throw IOException("Caster closed the connection")
@@ -163,16 +188,16 @@ class NtripClient(private val scope: CoroutineScope, private val forward: (ByteA
                 if (cfg.ggaIntervalSec > 0 && now - lastGga >= cfg.ggaIntervalSec * 1000L) sendGga(s, cfg)?.let { lastGga = it } ?: run { lastGga = now }
                 if (now - lastPublish >= 500) {
                     val dt = (now - windowStart).coerceAtLeast(1)
-                    state.value = state.value.copy(bytes = total, bytesPerSec = windowBytes * 1000.0 / dt, lastDataMs = lastData,
+                    update(gen) { it.copy(bytes = total, bytesPerSec = windowBytes * 1000.0 / dt, lastDataMs = lastData,
                         frames = checker.rtcmFrames, badFrames = checker.badChecksums,
-                        types = HashMap(types), base = base, lastGgaSentMs = lastGga)
+                        types = HashMap(types), base = base, lastGgaSentMs = lastGga) }
                     if (dt > 5000) { windowBytes = 0; windowStart = now }
                     lastPublish = now
                 }
             }
         } finally {
             try { s.close() } catch (_: Exception) {}
-            socket = null
+            synchronized(this@NtripClient) { if (socket === s) socket = null }
         }
     }
 

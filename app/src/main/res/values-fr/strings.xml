@@ -134,6 +134,7 @@
     <string name="eph_mount">Point de montage</string>
     <string name="eph_no_profile">Enregistrez d’abord le compte : Outils &gt; Corrections &gt; profil de caster (par ex. le modèle IGS-IP (BKG) avec vos identifiants BKG).</string>
     <string name="eph_profile">Compte (profil de caster enregistré)</string>
+    <string name="eph_same_account">Non connecté : c’est le compte du flux NTRIP principal, et des casters comme Galileo HAS et Metrica n’acceptent qu’une connexion par compte (le flux principal se bloquerait). Galileo HAS envoie ses éphémérides dans le flux principal ; sinon, utilisez un autre compte, p. ex. BCEP00BKG0 de BKG.</string>
     <string name="eph_status">Flux d’éphémérides : %1$s %2$s</string>
     <string name="eph_switch">Flux d’éphémérides</string>
     <string name="exit_idle">La liaison avec le récepteur, les corrections et les sorties sont fermées.</string>
@@ -374,6 +375,7 @@
     <string name="live_ppp_l1">Pas de deuxième fréquence pour l\'instant (trop peu de satellites avec la phase L1 + L5) : le PPP utilise le modèle ionosphérique diffusé, environ un mètre.</string>
     <string name="live_ppp_noeph">Pas encore d’éphémérides radiodiffusées : si le flux de corrections n’en contient pas, activez le flux d’éphémérides (Réglages &gt; Connexion du récepteur).</string>
     <string name="live_ppp_nossr">Pas encore de corrections SSR dans ce flux : le PPP demande un point de montage Galileo HAS ou IGS SSRA… (Réglages &gt; Relais NTRIP).</string>
+    <string name="live_ppp_rtkstream">Ce flux envoie des données de station de base pour le RTK, que le PPP n’utilise pas : réglez Corrections sur RTK (base) dans Configuration &gt; Connexion au récepteur, ou choisissez un flux Galileo HAS / SSR.</string>
     <string name="live_ppp_ssr">Corrections SSR</string>
     <string name="live_rec_off">Enr. OFF</string>
     <string name="live_rec_on">Enr. ON</string>
@@ -385,6 +387,7 @@
     <string name="live_rtk_no_solution">pas de solution pour l\'instant</string>
     <string name="live_rtk_noeph">Aucune éphéméride radiodiffusée reçue du caster pour l’instant (RTCM 1019/1020/1045/1046/1042) ; le téléphone en a besoin pour calculer la position des satellites. Beaucoup de flux de réseau (VRS, station la plus proche) n’en contiennent pas : activez le flux d’éphémérides (Configuration &gt; Connexion au récepteur).</string>
     <string name="live_rtk_nophase">Pas de phase porteuse de ce téléphone pour l’instant : le RTK ne peut pas fixer (téléphone à code seul, ou économie d’énergie encore active). La position reste au niveau métrique.</string>
+    <string name="live_rtk_pppstream">Ce flux envoie des corrections PPP (SSR), pas des données de station de base : réglez Corrections sur PPP (HAS / SSR) dans Configuration &gt; Connexion au récepteur, ou choisissez un point de montage RTK.</string>
     <string name="live_rtk_reflected">Les signaux atteignent le téléphone par réflexion (résidus de code %1$s) : la position peut être fausse de plusieurs mètres ou plus, quelle que soit la précision annoncée par le RTK. Placez-vous en ciel dégagé, loin des murs, des voitures et de votre corps.</string>
     <string name="live_rtk_solution">Moteur RTK</string>
     <string name="live_rtk_station">station %1$d</string>
@@ -584,6 +587,9 @@
     <string name="route_lte">Trois cartes : ESP32, modem LTE avec nano-SIM (et lecteur de carte SD), u-blox F9x. Le client NTRIP du récepteur reçoit les corrections par le réseau mobile (SIM données seules, 4G/LTE recommandé) ou, si réglé, par Wi-Fi. Alimentation sur le micro-USB du milieu. D3.5 : ~60 s entre la mise sous tension et les données RTK, reconnexion en 16–25 s.</string>
     <string name="route_unset">Choisissez la version du récepteur dans Réglages pour voir comment il reçoit les corrections RTK.</string>
     <string name="route_wifi" formatted="false">Deux cartes : ESP32 et u-blox F9x, sans modem ni lecteur SD. Le client NTRIP du récepteur ne reçoit les corrections que par un point d’accès Wi-Fi (routeur de terrain, routeur mobile ou point d’accès de ce téléphone) ; partout où il y a du réseau mobile, le téléphone peut aussi les relayer par Bluetooth ou USB (relais NTRIP). D3.5 : reconnexion la plus rapide et ~99 % de disponibilité RTK via un routeur fibré.</string>
+    <string name="save_done">Enregistré dans Downloads/PocketGNSS : %1$s</string>
+    <string name="save_failed">Impossible d’enregistrer le fichier</string>
+    <string name="save_to_phone">Enregistrer sur le téléphone</string>
     <string name="setup_autoreconnect">Reconnexion automatique</string>
     <string name="setup_baud">Débit</string>
     <string name="setup_baud_auto">Automatique</string>

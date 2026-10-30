@@ -134,6 +134,7 @@
     <string name="eph_mount">Mountpoint</string>
     <string name="eph_no_profile">Najpierw zapisz konto: Narzędzia &gt; Poprawki &gt; profil castera (np. szablon IGS-IP (BKG) z twoim loginem BKG).</string>
     <string name="eph_profile">Konto (zapisany profil castera)</string>
+    <string name="eph_same_account">Nie połączono: to konto głównego strumienia NTRIP, a castery takie jak Galileo HAS i Metrica pozwalają na jedno logowanie na konto (główny strumień by się zatrzymał). Galileo HAS wysyła efemerydy w głównym strumieniu; w innym razie użyj innego konta, np. BCEP00BKG0 z BKG.</string>
     <string name="eph_status">Strumień efemeryd: %1$s %2$s</string>
     <string name="eph_switch">Strumień efemeryd</string>
     <string name="exit_idle">Połączenie z odbiornikiem, poprawki i wyjścia zostaną zamknięte.</string>
@@ -374,6 +375,7 @@
     <string name="live_ppp_l1">Obecnie brak drugiej częstotliwości (za mało satelitów z fazą nośnej L1 + L5): PPP używa nadawanego modelu jonosfery, około metra.</string>
     <string name="live_ppp_noeph">Nie ma jeszcze efemeryd rozgłoszeniowych: jeśli strumień poprawek ich nie zawiera, włącz strumień efemeryd (Ustawienia &gt; Połączenie z odbiornikiem).</string>
     <string name="live_ppp_nossr">W tym strumieniu nie ma jeszcze poprawek SSR: PPP potrzebuje mountpointu Galileo HAS albo IGS SSRA… (Ustawienia &gt; Przekaźnik NTRIP).</string>
+    <string name="live_ppp_rtkstream">Ten strumień wysyła dane stacji bazowej dla RTK, których PPP nie używa: ustaw Poprawki na RTK (baza) w Ustawienia &gt; Połączenie z odbiornikiem lub wybierz strumień Galileo HAS / SSR.</string>
     <string name="live_ppp_ssr">Poprawki SSR</string>
     <string name="live_rec_off">Nagr. OFF</string>
     <string name="live_rec_on">Nagr. ON</string>
@@ -385,6 +387,7 @@
     <string name="live_rtk_no_solution">obecnie brak rozwiązania</string>
     <string name="live_rtk_noeph">Z castera nie dotarły jeszcze efemerydy rozgłoszeniowe (RTCM 1019/1020/1045/1046/1042), a telefon potrzebuje ich do obliczenia pozycji satelitów. Wiele strumieni sieciowych (VRS, najbliższa stacja) ich nie zawiera: włącz strumień efemeryd (Ustawienia &gt; Połączenie z odbiornikiem).</string>
     <string name="live_rtk_nophase">Ten telefon nie podaje teraz fazy nośnej: RTK nie może uzyskać fixed (telefon tylko z kodem lub nadal włączone oszczędzanie energii). Pozycja pozostaje na poziomie metra.</string>
+    <string name="live_rtk_pppstream">Ten strumień wysyła poprawki PPP (SSR), a nie dane stacji bazowej: ustaw Poprawki na PPP (HAS / SSR) w Ustawienia &gt; Połączenie z odbiornikiem lub wybierz mountpoint RTK.</string>
     <string name="live_rtk_reflected">Sygnały docierają do telefonu po odbiciu (residua kodu %1$s): pozycja może być błędna o metry lub więcej, niezależnie od dokładności podawanej przez RTK. Przejdź pod otwarte niebo, z dala od ścian, samochodów i własnego ciała.</string>
     <string name="live_rtk_solution">Silnik RTK</string>
     <string name="live_rtk_station">stacja %1$d</string>
@@ -584,6 +587,9 @@
     <string name="route_lte">Trzy płytki: ESP32, modem LTE z nano-SIM (i gniazdem karty SD), u-blox F9x. Klient NTRIP odbiornika pobiera poprawki przez sieć komórkową (karta SIM tylko do danych, zalecane 4G/LTE) lub, jeśli ustawiono, przez Wi-Fi. Zasilanie przez środkowe micro-USB. D3.5: ~60 s od włączenia do danych RTK, ponowne połączenie w 16–25 s.</string>
     <string name="route_unset">Wybierz wersję odbiornika w Ustawieniach, aby zobaczyć, jak otrzymuje poprawki RTK.</string>
     <string name="route_wifi" formatted="false">Dwie płytki: ESP32 i u-blox F9x, bez modemu i gniazda SD. Klient NTRIP odbiornika otrzymuje poprawki tylko przez punkt dostępu Wi-Fi (router polowy, router komórkowy lub hotspot tego telefonu); wszędzie, gdzie jest zasięg komórkowy, telefon może je też przekazywać przez Bluetooth lub USB (przekaźnik NTRIP). D3.5: najszybsze ponowne połączenie i ~99 % dostępności RTK przez router światłowodowy.</string>
+    <string name="save_done">Zapisano w Downloads/PocketGNSS: %1$s</string>
+    <string name="save_failed">Nie udało się zapisać pliku</string>
+    <string name="save_to_phone">Zapisz w telefonie</string>
     <string name="setup_autoreconnect">Łącz ponownie automatycznie</string>
     <string name="setup_baud">Prędkość transmisji</string>
     <string name="setup_baud_auto">Automatycznie</string>

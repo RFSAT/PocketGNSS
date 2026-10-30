@@ -134,6 +134,7 @@
     <string name="eph_mount">Ponto de montagem</string>
     <string name="eph_no_profile">Guarde primeiro a conta: Ferramentas &gt; Correções &gt; perfil de caster (p. ex. o modelo IGS-IP (BKG) com o seu acesso BKG).</string>
     <string name="eph_profile">Conta (perfil de caster guardado)</string>
+    <string name="eph_same_account">Não ligado: é a conta do fluxo NTRIP principal, e casters como o Galileo HAS e a Metrica permitem um início de sessão por conta (o fluxo principal pararia). O Galileo HAS envia as efemérides no fluxo principal; caso contrário, use outra conta, p. ex. BCEP00BKG0 da BKG.</string>
     <string name="eph_status">Fluxo de efemérides: %1$s %2$s</string>
     <string name="eph_switch">Fluxo de efemérides</string>
     <string name="exit_idle">A ligação ao recetor, as correções e as saídas são fechadas.</string>
@@ -374,6 +375,7 @@
     <string name="live_ppp_l1">Sem segunda frequência de momento (poucos satélites com fase portadora L1 + L5): o PPP usa o modelo ionosférico difundido, cerca de um metro.</string>
     <string name="live_ppp_noeph">Ainda sem efemérides transmitidas: se o fluxo de correções não as tiver, ative o fluxo de efemérides (Configuração &gt; Ligação ao recetor).</string>
     <string name="live_ppp_nossr">Ainda sem correções SSR neste fluxo: o PPP precisa de um ponto de montagem Galileo HAS ou IGS SSRA… (Configuração &gt; Relé NTRIP).</string>
+    <string name="live_ppp_rtkstream">Este fluxo envia dados de estação base para RTK, que o PPP não usa: defina Correções como RTK (base) em Configuração &gt; Ligação ao recetor, ou escolha um fluxo Galileo HAS / SSR.</string>
     <string name="live_ppp_ssr">Correções SSR</string>
     <string name="live_rec_off">Grav. OFF</string>
     <string name="live_rec_on">Grav. ON</string>
@@ -385,6 +387,7 @@
     <string name="live_rtk_no_solution">sem solução de momento</string>
     <string name="live_rtk_noeph">Ainda não chegaram efemérides transmitidas do caster (RTCM 1019/1020/1045/1046/1042) e o telefone precisa delas para calcular as posições dos satélites. Muitos fluxos de rede (VRS, estação mais próxima) não as incluem: ative o fluxo de efemérides (Configuração &gt; Ligação ao recetor).</string>
     <string name="live_rtk_nophase">Este telefone não está a dar fase da portadora: o RTK não consegue fixar (telefone só de código ou poupança de energia ainda ativa). A posição fica ao nível do metro.</string>
+    <string name="live_rtk_pppstream">Este fluxo envia correções PPP (SSR), não dados de estação base: defina Correções como PPP (HAS / SSR) em Configuração &gt; Ligação ao recetor, ou escolha um mountpoint RTK.</string>
     <string name="live_rtk_reflected">Os sinais chegam ao telefone por reflexão (resíduos de código %1$s): a posição pode estar errada por metros ou mais, seja qual for a precisão indicada pelo RTK. Vá para céu aberto, longe de paredes, carros e do seu corpo.</string>
     <string name="live_rtk_solution">Motor RTK</string>
     <string name="live_rtk_station">estação %1$d</string>
@@ -584,6 +587,9 @@
     <string name="route_lte">Três placas: ESP32, modem LTE com nano-SIM (e ranhura para cartão SD), u-blox F9x. O cliente NTRIP do recetor recebe correções pela rede móvel (SIM só de dados, recomenda-se 4G/LTE) ou, se configurado, por Wi-Fi. Alimentação no micro-USB do meio. D3.5: ~60 s desde o arranque até aos dados RTK, nova ligação em 16–25 s.</string>
     <string name="route_unset">Escolha a versão do recetor em Configuração para ver como recebe as correções RTK.</string>
     <string name="route_wifi" formatted="false">Duas placas: ESP32 e u-blox F9x, sem modem nem ranhura SD. O cliente NTRIP do recetor só recebe correções através de um ponto de acesso Wi-Fi (router de campo, router de banda larga móvel ou o hotspot deste telefone); onde houver rede móvel, o telefone também as pode retransmitir por Bluetooth ou USB (relé NTRIP). D3.5: nova ligação mais rápida e ~99 % de disponibilidade RTK com um router de fibra.</string>
+    <string name="save_done">Guardado em Downloads/PocketGNSS: %1$s</string>
+    <string name="save_failed">Não foi possível guardar o ficheiro</string>
+    <string name="save_to_phone">Guardar no telemóvel</string>
     <string name="setup_autoreconnect">Voltar a ligar automaticamente</string>
     <string name="setup_baud">Velocidade (baud)</string>
     <string name="setup_baud_auto">Automática</string>

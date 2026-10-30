@@ -217,6 +217,15 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         val p = s.profiles.firstOrNull { it.name == s.ephProfile }
         if (want && p != null && s.ephMount.isNotBlank()) {
             val cfg = p.config.copy(mountpoint = s.ephMount.trim(), ggaIntervalSec = 0)
+            val main = s.ntrip
+            if (s.ntripEnabled && cfg.user.isNotBlank() && cfg.user == main.user && cfg.port == main.port &&
+                cfg.host.trim().equals(main.host.trim(), ignoreCase = true)) {
+                // A second login with the account of the main stream: casters allowing one login per account (Galileo
+                // HAS, Metrica) then feed only one of the two, and the main stream stalls (October 2026 logs).
+                ephConfig = null
+                ephClient.refuse(context.getString(com.rfsat.pocketgnss.R.string.eph_same_account))
+                return
+            }
             // restarted when the account changes too (a corrected password), not only the mountpoint
             if (!ephClient.running || ephConfig != cfg) { ephConfig = cfg; ephClient.start(cfg) }
         } else { ephConfig = null; if (ephClient.running) ephClient.stop() }

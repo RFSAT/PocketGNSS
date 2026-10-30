@@ -3,7 +3,6 @@ package com.rfsat.pocketgnss.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -30,10 +29,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.FileProvider
 import com.rfsat.pocketgnss.R
 import com.rfsat.pocketgnss.core.GnssEngine
-import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -99,13 +96,6 @@ private fun colourOf(type: String) = when (type) {
     else -> Color(0xFFBDBDBD)
 }
 
-private fun shareNmea(context: Context, lines: List<String>) {
-    try {
-        val dir = File(context.cacheDir, "exports").apply { mkdirs() }
-        val f = File(dir, "nmea_" + SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date()) + ".nmea")
-        f.writeText(lines.joinToString("\r\n", postfix = "\r\n"))
-        val uri = FileProvider.getUriForFile(context, context.packageName + ".files", f)
-        context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_STREAM, uri)
-            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), f.name))
-    } catch (_: Exception) {}
-}
+private fun shareNmea(context: Context, lines: List<String>) = share(context,
+    export(context, "nmea_" + SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date()) + ".nmea", lines.joinToString("\r\n", postfix = "\r\n")),
+    "text/plain")

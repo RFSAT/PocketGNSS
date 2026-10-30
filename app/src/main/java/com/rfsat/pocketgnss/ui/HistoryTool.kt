@@ -1,7 +1,6 @@
 package com.rfsat.pocketgnss.ui
 
 import android.content.Context
-import android.content.Intent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -41,13 +40,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.FileProvider
 import com.rfsat.pocketgnss.R
 import com.rfsat.pocketgnss.core.GnssEngine
 import com.rfsat.pocketgnss.core.SolutionHistory
 import com.rfsat.pocketgnss.core.SolutionRecord
 import kotlinx.coroutines.delay
-import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -203,12 +200,4 @@ private fun Scatter(list: List<SolutionRecord>, ref: Triple<Double, Double, Doub
     }
 }
 
-private fun shareText(context: Context, name: String, text: String) {
-    val dir = File(context.cacheDir, "exports").apply { mkdirs() }
-    val f = File(dir, name).apply { writeText(text) }
-    try {
-        val uri = FileProvider.getUriForFile(context, context.packageName + ".files", f)
-        context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/csv").putExtra(Intent.EXTRA_STREAM, uri)
-            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), name))
-    } catch (_: Exception) {}
-}
+private fun shareText(context: Context, name: String, text: String) = share(context, export(context, name, text), "text/csv")
