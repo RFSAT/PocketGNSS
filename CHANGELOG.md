@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.12.18 (build 11218)
+Setup: the ephemeris stream's mountpoint can be picked from the caster's list (Choose), as for the main stream, with broadcast ephemeris streams (BCEP…) at the top; typing it still works.
+
 ## 1.12.17 (build 11217)
 Every Share button now offers "Save to phone" (Downloads/PocketGNSS). NTRIP: a stream can no longer run twice after quick setting changes, and the ephemeris stream no longer logs in with the main stream's account (casters allow one login per account, so the main stream stalled). Live warns when the stream does not match the mode, e.g. RTK base data in PPP mode.
 

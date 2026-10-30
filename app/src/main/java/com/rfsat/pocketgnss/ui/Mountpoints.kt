@@ -35,11 +35,12 @@ import com.rfsat.pocketgnss.protocol.Mountpoint
  * not RTCM 3 are greyed out. [onPick] receives the chosen mountpoint.
  */
 @Composable
-fun MountpointList(list: List<Mountpoint>, lat: Double?, lon: Double?, selected: String, onPick: (Mountpoint) -> Unit, max: Int = 80) {
+fun MountpointList(list: List<Mountpoint>, lat: Double?, lon: Double?, selected: String, onPick: (Mountpoint) -> Unit, max: Int = 80,
+                   first: (Mountpoint) -> Boolean = { false }) {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val txtNetwork = stringResource(R.string.corr_mount_network)
     val txtNotRtcm3 = stringResource(R.string.corr_mount_not_rtcm3)
-    for (m in CasterProfiles.sortMountpoints(list, lat, lon).take(max)) {
+    for (m in CasterProfiles.sortMountpoints(list, lat, lon).sortedBy { !first(it) }.take(max)) {
         val d = if (lat != null && lon != null && m.latitude != null && m.longitude != null) Geo.distance(lat, lon, m.latitude, m.longitude) else null
         val rtcm3 = CasterProfiles.isRtcm3(m.format)
         Column(Modifier.fillMaxWidth().clickable { onPick(m) }.padding(vertical = 6.dp)) {
@@ -65,17 +66,31 @@ fun MountpointList(list: List<Mountpoint>, lat: Double?, lon: Double?, selected:
 @Composable
 fun MountpointDialog(engine: GnssEngine, onDismiss: () -> Unit, onPicked: (Mountpoint) -> Unit = {}) {
     val s by engine.store.settings.collectAsState()
+    MountpointDialog(engine, s.ntrip, s.ntrip.mountpoint, onDismiss) { m ->
+        engine.store.update { it.copy(ntrip = it.ntrip.copy(mountpoint = m.name, ggaIntervalSec = if (m.needsGga) 10 else 0)) }
+        onPicked(m)
+    }
+}
+
+/**
+ * The mountpoints of the caster [cfg] (host, port, TLS and account; its mountpoint is ignored), [selected] marked.
+ * [onPick] gets the chosen one, then the dialog closes. [first] lists matching mountpoints at the top (the ephemeris
+ * stream puts the broadcast ephemeris streams there).
+ */
+@Composable
+fun MountpointDialog(engine: GnssEngine, cfg: com.rfsat.pocketgnss.protocol.NtripConfig, selected: String, onDismiss: () -> Unit,
+                     first: (Mountpoint) -> Boolean = { false }, onPick: (Mountpoint) -> Unit) {
     val fix by engine.fix.collectAsState()
     var list by remember { mutableStateOf<List<Mountpoint>?>(null) }
     var err by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(s.ntrip.host, s.ntrip.port, s.ntrip.tls) {
+    LaunchedEffect(cfg.host, cfg.port, cfg.tls, cfg.user) {
         list = null; err = null
-        try { list = engine.ntripClient.sourcetable(s.ntrip.copy(mountpoint = "")) } catch (e: Exception) { err = e.message ?: e.javaClass.simpleName }
+        try { list = engine.ntripClient.sourcetable(cfg.copy(mountpoint = "")) } catch (e: Exception) { err = e.message ?: e.javaClass.simpleName }
     }
     val here = fix?.let { it.latitude to it.longitude } ?: engine.raw.location?.let { it.latitude to it.longitude }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.mount_dialog_title, s.ntrip.host, s.ntrip.port)) },
+        title = { Text(stringResource(R.string.mount_dialog_title, cfg.host, cfg.port)) },
         text = {
             Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState())) {
                 val l = list
@@ -86,10 +101,7 @@ fun MountpointDialog(engine: GnssEngine, onDismiss: () -> Unit, onPicked: (Mount
                     else -> {
                         Text(pluralStringResource(R.plurals.mount_dialog_help, l.size, l.size), style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        MountpointList(l, here?.first, here?.second, s.ntrip.mountpoint, { m ->
-                            engine.store.update { it.copy(ntrip = it.ntrip.copy(mountpoint = m.name, ggaIntervalSec = if (m.needsGga) 10 else 0)) }
-                            onDismiss(); onPicked(m)
-                        })
+                        MountpointList(l, here?.first, here?.second, selected, { m -> onDismiss(); onPick(m) }, first = first)
                     }
                 }
             }
