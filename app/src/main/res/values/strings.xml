@@ -133,11 +133,11 @@
     <string name="disp_utm_auto">Automatic (zone of the position)</string>
     <string name="disp_utm_zone">UTM zone</string>
     <string name="disp_utm_zone_n">Zone %1$d (central meridian %2$d°)</string>
-    <string name="eph_help">Some casters send satellite orbits (broadcast ephemerides) only every few minutes, so phone RTK waits. A second connection to an ephemeris stream (BKG\'s BCEP00BKG0 on igs-ip.net, free with BKG registration) gives them at once.</string>
+    <string name="eph_help">Some casters send satellite orbits (broadcast ephemerides) rarely or not at all, so phone RTK waits. A second connection to an IGS / EUREF station near you (e.g. DYNG00GRC0 near Athens on igs-ip.net, free with BKG registration) gives them at once.</string>
     <string name="eph_mount">Mountpoint</string>
     <string name="eph_no_profile">Save the account first: Tools &gt; Corrections &gt; caster profile (e.g. the IGS-IP (BKG) preset with your BKG login).</string>
     <string name="eph_profile">Account (saved caster profile)</string>
-    <string name="eph_same_account">Not connected: this is the account of the main NTRIP stream, and casters such as Galileo HAS and Metrica allow one login per account (the main stream would stall). Galileo HAS sends its ephemerides in the main stream; otherwise use another account, e.g. BKG\'s BCEP00BKG0.</string>
+    <string name="eph_same_account">Not connected: this is the account of the main NTRIP stream, and casters such as Galileo HAS and Metrica allow one login per account (the main stream would stall). Galileo HAS sends its ephemerides in the main stream; otherwise use another account, e.g. a BKG account with an IGS / EUREF station.</string>
     <string name="eph_status">Ephemeris stream: %1$s %2$s</string>
     <string name="eph_switch">Ephemeris stream</string>
     <string name="exit_idle">The receiver link, corrections and outputs are closed.</string>
@@ -437,6 +437,8 @@
     <string name="map_tap_point">Tap a point for its distance and bearing.</string>
     <string name="map_terrain">Terrain</string>
     <string name="map_to_point">%1$s at %2$.1f°</string>
+    <string name="map_zoom_in">Zoom in</string>
+    <string name="map_zoom_out">Zoom out</string>
     <string name="method_android">Android location</string>
     <string name="method_code_dgnss">Code DGNSS</string>
     <string name="method_ppp">PPP</string>
@@ -633,7 +635,7 @@
     <string name="setup_recommended">Recommended</string>
     <string name="setup_recommended_done">Set: %1$s</string>
     <string name="setup_recommended_eph">ephemeris stream %1$s / %2$s</string>
-    <string name="setup_recommended_help">One tap sets what worked best in tests: RTK with a base station (not PPP), moving mode, tuning to this phone, your Metrica account on MSM_VRS and the BCEP00BKG0 ephemeris stream with your BKG account. Saved accounts stay as they are.</string>
+    <string name="setup_recommended_help">One tap sets what worked best in tests: RTK with a base station (not PPP), moving mode, tuning to this phone, your Metrica account on MSM_VRS and an ephemeris stream from an IGS / EUREF station (DYNG00GRC0 near Athens) with your BKG account. Saved accounts stay as they are.</string>
     <string name="setup_recommended_main">main stream %1$s / %2$s</string>
     <string name="setup_recommended_no_eph">No saved BKG account (igs-ip.net or euref-ip.net, free registration) for the ephemeris stream: add one under NTRIP relay, then tap Recommended again.</string>
     <string name="setup_recommended_no_rtk">No saved RTK caster account (e.g. Metrica SmartNet): add one under NTRIP relay, then tap Recommended again.</string>
@@ -740,7 +742,7 @@
     <string name="tool_ttff_sum">Cold, warm and hot start to fix, float and RTK fixed</string>
     <string name="tool_web">Receiver settings</string>
     <string name="tool_web_sum">Open the receiver\'s own web server (ESPrtk) on its Wi-Fi hotspot</string>
-    <string name="tools_intro">Every tool also works with the simulator, so you can try it before using the receiver in the field.</string>
+    <string name="tools_intro">All tools also work with the simulator, for field trials.</string>
     <string name="tools_need_receiver">Connect a receiver or the simulator first.</string>
     <string name="top_allow_usb">Allow USB access to the receiver</string>
     <string name="top_no_fix">no fix</string>

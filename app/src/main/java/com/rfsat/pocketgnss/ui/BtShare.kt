@@ -71,8 +71,8 @@ fun rememberBtStarter(engine: GnssEngine): BtStarter {
 private fun statusText(st: BtServerState, sourceReady: Boolean): Pair<String, Color> = when (st.status) {
     BtServerStatus.OFF -> stringResource(R.string.bt_share_off) to Color.Unspecified
     BtServerStatus.LISTENING -> when {
-        st.clients.isNotEmpty() -> stringResource(R.string.bt_share_connected, st.clients.joinToString(", ")) to (if (sourceReady) SafeGreen else WarnAmber)
-        else -> stringResource(R.string.bt_share_waiting, st.phoneName ?: "") to WarnAmber
+        st.clients.isNotEmpty() -> stringResource(R.string.bt_share_connected, st.clients.joinToString(", ")) to (if (sourceReady) SafeGreen else AlarmRed)
+        else -> stringResource(R.string.bt_share_waiting, st.phoneName ?: "") to InfoViolet
     }
     BtServerStatus.NO_BLUETOOTH -> stringResource(R.string.bt_share_no_bt) to AlarmRed
     BtServerStatus.BLUETOOTH_OFF -> stringResource(R.string.bt_share_bt_off) to AlarmRed
@@ -102,8 +102,8 @@ fun BtShareCard(engine: GnssEngine, onConfigure: () -> Unit) {
         val (text, color) = statusText(st, conn is Connection.Ready)
         if (s.btServer || st.status != BtServerStatus.OFF) Text(text, style = MaterialTheme.typography.bodySmall, color = color)
         else Text(stringResource(if (s.btServerConfigured) R.string.bt_share_home_ready else R.string.bt_share_home_help), style = MaterialTheme.typography.bodySmall, color = muted)
-        if (on && conn !is Connection.Ready) Text(stringResource(R.string.bt_share_no_source), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
-        else if (on && fix == null) Text(stringResource(R.string.bt_share_no_fix), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+        if (on && conn !is Connection.Ready) Text(stringResource(R.string.bt_share_no_source), style = MaterialTheme.typography.bodySmall, color = AlarmRed)
+        else if (on && fix == null) Text(stringResource(R.string.bt_share_no_fix), style = MaterialTheme.typography.bodySmall, color = InfoViolet)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (s.btServerConfigured) {
                 ToggleButton(on = s.btServer, label = stringResource(if (s.btServer) R.string.bt_share_on else R.string.bt_share_off_btn),

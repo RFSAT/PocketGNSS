@@ -9,15 +9,20 @@ package com.rfsat.pocketgnss.data
  * - Moving (kinematic) mode and tuning to this phone (PhoneTuning).
  * - Main stream: the saved Metrica SmartNet account on MSM_VRS, a virtual base next to the rover (needs the GGA).
  *   Without a Metrica account the current RTK profile is kept.
- * - Ephemeris stream: BCEP00BKG0 with a saved BKG account (igs-ip.net, products.igs-ip.net or euref-ip.net), never the
- *   main stream's account: Metrica's MSM_NEAR in Athens sent no ephemerides at all (30 October 2026).
+ * - Ephemeris stream: a station stream that carries ephemerides, with a saved BKG account (igs-ip.net, euref-ip.net or
+ *   products.igs-ip.net), never the main stream's account: Metrica's MSM_NEAR in Athens sent no ephemerides at all
+ *   (30 October 2026). A mountpoint already chosen for that account is kept; otherwise DYNG00GRC0 (Dionysos, Athens),
+ *   or BCEP00BKG0 on products.igs-ip.net. BCEP00BKG0 is no longer listed on igs-ip.net / euref-ip.net (October 2026).
  */
 object RecommendedSetup {
     const val METRICA_HOST = "gr.nrtk.eu"
     const val METRICA_MOUNT = "MSM_VRS"
-    const val EPH_MOUNT = "BCEP00BKG0"
-    /** Casters of BKG that serve BCEP00BKG0, in order of preference. */
-    val EPH_HOSTS = listOf("igs-ip.net", "products.igs-ip.net", "euref-ip.net")
+    /** Station stream with broadcast ephemerides near Athens (IGS / EUREF, Dionysos). */
+    const val EPH_MOUNT = "DYNG00GRC0"
+    /** Ephemeris-only stream of the IGS products caster. */
+    const val EPH_MOUNT_PRODUCTS = "BCEP00BKG0"
+    /** Casters of BKG, in order of preference. */
+    val EPH_HOSTS = listOf("igs-ip.net", "euref-ip.net", "products.igs-ip.net")
 
     enum class Note { NO_RTK_PROFILE, NO_EPH_PROFILE }
 
@@ -54,7 +59,16 @@ object RecommendedSetup {
             s.profiles.firstOrNull { host(it.config) == h && it.config.user.isNotBlank() &&
                 !(host(it.config) == host(mainCfg) && it.config.user == mainCfg.user && it.config.port == mainCfg.port) }
         }
-        if (eph != null) out = out.copy(ephStream = true, ephProfile = eph.name, ephMount = EPH_MOUNT)
+        if (eph != null) {
+            val mount = when {
+                // the user's choice for this account, unless it is BCEP00BKG0 where that is no longer served
+                s.ephProfile == eph.name && s.ephMount.isNotBlank() &&
+                    !(s.ephMount == EPH_MOUNT_PRODUCTS && host(eph.config) != "products.igs-ip.net") -> s.ephMount
+                host(eph.config) == "products.igs-ip.net" -> EPH_MOUNT_PRODUCTS
+                else -> EPH_MOUNT
+            }
+            out = out.copy(ephStream = true, ephProfile = eph.name, ephMount = mount)
+        }
         else notes += Note.NO_EPH_PROFILE
         return Result(out, main?.name, eph?.name, notes)
     }

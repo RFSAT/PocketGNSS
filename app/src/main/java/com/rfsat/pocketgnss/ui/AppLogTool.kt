@@ -72,10 +72,10 @@ fun AppLogTool(engine: com.rfsat.pocketgnss.core.GnssEngine) {
     }
     LazyColumn(Modifier.fillMaxWidth()) {
         items(shown) { e ->
-            val color = when (e.level) { AppLog.Level.ERROR -> AlarmRed; AppLog.Level.WARN -> WarnAmber; AppLog.Level.INFO -> MaterialTheme.colorScheme.onSurface }
+            val color = when (e.level) { AppLog.Level.ERROR -> AlarmRed; AppLog.Level.WARN -> InfoViolet; AppLog.Level.INFO -> MaterialTheme.colorScheme.onSurface }
             Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
                 Text("${time.format(Date(e.timeMs))}  ${e.level.letter}  ${e.tag}", style = MaterialTheme.typography.labelSmall, color = color)
-                Text(e.message, style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), fontFamily = if (e.message.contains('\n')) FontFamily.Monospace else null,
+                Text(e.message, style = MaterialTheme.typography.bodySmall, fontFamily = if (e.message.contains('\n')) FontFamily.Monospace else null,
                     maxLines = 30)
             }
             HorizontalDivider()

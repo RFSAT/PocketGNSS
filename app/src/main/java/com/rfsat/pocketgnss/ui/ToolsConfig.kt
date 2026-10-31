@@ -75,7 +75,7 @@ fun NmeaConfigTool(engine: GnssEngine) {
                 info?.kind == com.rfsat.pocketgnss.link.LinkKind.PHONE -> R.string.ubx_phone
                 info?.ubxDirect == true -> R.string.ubx_direct
                 else -> R.string.ubx_via_esp32
-            }), style = MaterialTheme.typography.bodySmall, color = if (info?.ubxDirect == true) SafeGreen else WarnAmber)
+            }), style = MaterialTheme.typography.bodySmall, color = if (info?.ubxDirect == true) SafeGreen else InfoViolet)
             ActionButton(onClick = { scope.launch { busy = true; result = if (engine.pollVersion()) txtAck else txtNoVer; busy = false } }, enabled = ready && !busy) {
                 Text(stringResource(R.string.ubx_identify))
             }
@@ -87,7 +87,7 @@ fun NmeaConfigTool(engine: GnssEngine) {
                 ChoiceChip(msgs == PRESET_FULL, stringResource(R.string.ubx_preset_full), { msgs = PRESET_FULL })
             }
             for (m in NmeaMsg.entries) SwitchRow(m.name, m in msgs, { on -> msgs = if (on) msgs + m else msgs - m }, detail = m.help)
-            if (NmeaMsg.GGA !in msgs || NmeaMsg.RMC !in msgs) Text(stringResource(R.string.ubx_keep_gga_rmc), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+            if (NmeaMsg.GGA !in msgs || NmeaMsg.RMC !in msgs) Text(stringResource(R.string.ubx_keep_gga_rmc), style = MaterialTheme.typography.bodySmall, color = AlarmRed)
         }
         Section(stringResource(R.string.ubx_ports_rate)) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -119,7 +119,7 @@ fun NmeaConfigTool(engine: GnssEngine) {
                     }
                 }, enabled = ready && !busy && ports.isNotEmpty(), emphasis = true) { Text(stringResource(R.string.ubx_apply)) }
             }
-            result?.let { Text(it, fontWeight = FontWeight.SemiBold, color = if (it == txtAck || it == txtRead) SafeGreen else WarnAmber) }
+            result?.let { Text(it, fontWeight = FontWeight.SemiBold, color = if (it == txtAck || it == txtRead) SafeGreen else AlarmRed) }
             Text(stringResource(R.string.ubx_apply_help), style = MaterialTheme.typography.bodySmall, color = muted)
         }
     }
@@ -144,7 +144,7 @@ fun CorrectionsTool(engine: GnssEngine) {
             if (s.receiverVariant == com.rfsat.pocketgnss.link.ReceiverVariant.WIFI) HotspotButton()
             KeyValue(stringResource(R.string.corr_caster), if (s.ntrip.host.isBlank()) "—" else "${s.ntrip.host}:${s.ntrip.port}/${s.ntrip.mountpoint}")
             KeyValue(stringResource(R.string.corr_state), stringResource(ntripStatusLabel(n.status)) + (if (n.message.isNotEmpty()) " · ${n.message}" else ""), live = true,
-                valueColor = when (n.status) { NtripStatus.STREAMING -> SafeGreen; NtripStatus.ERROR -> AlarmRed; NtripStatus.OFF -> androidx.compose.ui.graphics.Color.Unspecified; else -> WarnAmber })
+                valueColor = when (n.status) { NtripStatus.STREAMING -> SafeGreen; NtripStatus.ERROR -> AlarmRed; NtripStatus.OFF -> androidx.compose.ui.graphics.Color.Unspecified; else -> InfoViolet })
             KeyValue(stringResource(R.string.corr_data), stringResource(R.string.corr_data_value, n.bytes / 1024.0, n.bytesPerSec) + " · " +
                 pluralStringResource(R.plurals.corr_frames, n.frames.toPlural(), n.frames) + " · " + pluralStringResource(R.plurals.corr_bad, n.badFrames.toPlural(), n.badFrames), live = true)
             if (n.lastDataMs > 0) KeyValue(stringResource(R.string.corr_last), "%.1f s".format(Locale.US, (System.currentTimeMillis() - n.lastDataMs) / 1000.0), live = true)
@@ -153,7 +153,7 @@ fun CorrectionsTool(engine: GnssEngine) {
                 val g = b.geodetic
                 val d = fix?.let { Geo.distance(it.latitude, it.longitude, g.latitude, g.longitude) }
                 KeyValue(stringResource(R.string.corr_base), "#${b.stationId} · %.6f, %.6f · %.1f m".format(Locale.US, g.latitude, g.longitude, g.height))
-                if (d != null) KeyValue(stringResource(R.string.corr_baseline), formatDistance(d), valueColor = if (d > 50_000) AlarmRed else if (d > 20_000) WarnAmber else SafeGreen)
+                if (d != null) KeyValue(stringResource(R.string.corr_baseline), formatDistance(d), valueColor = if (d > 50_000) AlarmRed else if (d > 20_000) InfoViolet else SafeGreen)
                 if (d != null && d > 50_000) Text(stringResource(R.string.corr_baseline_far), style = MaterialTheme.typography.bodySmall, color = AlarmRed)
             }
             var choose by remember { mutableStateOf(false) }

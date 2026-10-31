@@ -131,11 +131,11 @@
     <string name="disp_utm_auto">Automatique (fuseau de la position)</string>
     <string name="disp_utm_zone">Fuseau UTM</string>
     <string name="disp_utm_zone_n">Fuseau %1$d (méridien central %2$d°)</string>
-    <string name="eph_help">Certains casters n’envoient les orbites des satellites (éphémérides radiodiffusées) que toutes les quelques minutes, et Phone RTK attend. Une seconde connexion à un flux d’éphémérides (BCEP00BKG0 du BKG sur igs-ip.net, gratuit avec inscription au BKG) les fournit immédiatement.</string>
+    <string name="eph_help">Certains casters envoient les orbites des satellites (éphémérides) rarement ou jamais, et le RTK du téléphone attend. Une seconde connexion à une station IGS / EUREF proche (p. ex. DYNG00GRC0 près d’Athènes sur igs-ip.net, gratuite avec une inscription BKG) les fournit aussitôt.</string>
     <string name="eph_mount">Point de montage</string>
     <string name="eph_no_profile">Enregistrez d’abord le compte : Outils &gt; Corrections &gt; profil de caster (par ex. le modèle IGS-IP (BKG) avec vos identifiants BKG).</string>
     <string name="eph_profile">Compte (profil de caster enregistré)</string>
-    <string name="eph_same_account">Non connecté : c’est le compte du flux NTRIP principal, et des casters comme Galileo HAS et Metrica n’acceptent qu’une connexion par compte (le flux principal se bloquerait). Galileo HAS envoie ses éphémérides dans le flux principal ; sinon, utilisez un autre compte, p. ex. BCEP00BKG0 de BKG.</string>
+    <string name="eph_same_account">Non connecté : c’est le compte du flux NTRIP principal, et des casters comme Galileo HAS et Metrica n’acceptent qu’une connexion par compte (le flux principal se bloquerait). Galileo HAS envoie ses éphémérides dans le flux principal ; sinon, utilisez un autre compte, p. ex. un compte BKG avec une station IGS / EUREF.</string>
     <string name="eph_status">Flux d’éphémérides : %1$s %2$s</string>
     <string name="eph_switch">Flux d’éphémérides</string>
     <string name="exit_idle">La liaison avec le récepteur, les corrections et les sorties sont fermées.</string>
@@ -435,6 +435,8 @@
     <string name="map_tap_point">Touchez un point pour sa distance et son azimut.</string>
     <string name="map_terrain">Relief</string>
     <string name="map_to_point">%1$s à %2$.1f°</string>
+    <string name="map_zoom_in">Zoom avant</string>
+    <string name="map_zoom_out">Zoom arrière</string>
     <string name="method_android">Position Android</string>
     <string name="method_code_dgnss">DGNSS code</string>
     <string name="method_ppp">PPP</string>
@@ -631,7 +633,7 @@
     <string name="setup_recommended">Recommandé</string>
     <string name="setup_recommended_done">Appliqué : %1$s</string>
     <string name="setup_recommended_eph">flux d’éphémérides %1$s / %2$s</string>
-    <string name="setup_recommended_help">Un appui applique ce qui a le mieux fonctionné lors des essais : RTK avec station de base (pas PPP), mode en mouvement, réglage sur ce téléphone, votre compte Metrica sur MSM_VRS et le flux d’éphémérides BCEP00BKG0 avec votre compte BKG. Les comptes enregistrés ne changent pas.</string>
+    <string name="setup_recommended_help">Un appui applique ce qui a le mieux fonctionné lors des essais : RTK avec station de base (pas PPP), mode en mouvement, réglage sur ce téléphone, votre compte Metrica sur MSM_VRS et un flux d’éphémérides d’une station IGS / EUREF (DYNG00GRC0 près d’Athènes) avec votre compte BKG. Les comptes enregistrés ne changent pas.</string>
     <string name="setup_recommended_main">flux principal %1$s / %2$s</string>
     <string name="setup_recommended_no_eph">Aucun compte BKG enregistré (igs-ip.net ou euref-ip.net, inscription gratuite) pour le flux d’éphémérides : ajoutez-en un dans Relais NTRIP, puis appuyez de nouveau sur Recommandé.</string>
     <string name="setup_recommended_no_rtk">Aucun compte de caster RTK enregistré (p. ex. Metrica SmartNet) : ajoutez-en un dans Relais NTRIP, puis appuyez de nouveau sur Recommandé.</string>
@@ -738,7 +740,7 @@
     <string name="tool_ttff_sum">Démarrage à froid, tiède et à chaud jusqu’à la solution, flottante et RTK fixe</string>
     <string name="tool_web">Réglages du récepteur</string>
     <string name="tool_web_sum">Ouvrir le serveur web du récepteur (ESPrtk) sur son point d’accès Wi-Fi</string>
-    <string name="tools_intro">Chaque outil fonctionne aussi avec le simulateur : essayez-le avant d’utiliser le récepteur sur le terrain.</string>
+    <string name="tools_intro">Tous les outils marchent aussi avec le simulateur, pour les essais terrain.</string>
     <string name="tools_need_receiver">Connectez d’abord un récepteur ou le simulateur.</string>
     <string name="top_allow_usb">Autoriser l’accès USB au récepteur</string>
     <string name="top_no_fix">pas de solution</string>

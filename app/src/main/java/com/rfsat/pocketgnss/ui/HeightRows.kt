@@ -35,7 +35,7 @@ fun HeightModelSection(engine: GnssEngine) {
     val chosen = HeightModels.byId(s.heightModel)
     Picker(stringResource(R.string.height_model), HeightModels.all, chosen ?: suggested ?: HeightModels.all.first(), { it.label() },
         { m -> upd { it.copy(heightModel = m.id) } }, Modifier.fillMaxWidth())
-    if (chosen == null && suggested == null) Text(stringResource(R.string.height_model_choose), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+    if (chosen == null && suggested == null) Text(stringResource(R.string.height_model_choose), style = MaterialTheme.typography.bodySmall, color = InfoViolet)
     if (suggested != null && suggested != chosen)
         ActionButton(onClick = { upd { it.copy(heightModel = suggested.id) } }, compact = true) { Text(stringResource(R.string.height_model_use, suggested.label())) }
     val m = chosen ?: suggested
@@ -56,7 +56,7 @@ fun HeightModelSection(engine: GnssEngine) {
                 Text(stringResource(R.string.height_model_download, sizeLabel(m.sizeBytes)))
             }
         }
-        if (dl.error != null && dl.id == m.id) Text(stringResource(R.string.height_model_failed, dl.error ?: ""), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+        if (dl.error != null && dl.id == m.id) Text(stringResource(R.string.height_model_failed, dl.error ?: ""), style = MaterialTheme.typography.bodySmall, color = AlarmRed)
         Text(stringResource(R.string.height_model_credit, m.credit, m.licence, m.epsg), style = MaterialTheme.typography.bodySmall, color = muted)
         if (m.global) Text(stringResource(R.string.height_model_world), style = MaterialTheme.typography.bodySmall, color = muted)
     }
@@ -88,7 +88,7 @@ fun HeightRow(engine: GnssEngine, s: AppSettings, lat: Double, lon: Double, hEll
                 h == null && hEll != null -> stringResource(R.string.height_model_outside, m.label())
                 else -> null
             }
-            if (note != null) Text(note, style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+            if (note != null) Text(note, style = MaterialTheme.typography.bodySmall, color = InfoViolet)
             else KeyValue(stringResource(R.string.live_height_ell), formatHeight(hEll), live = true, valueColor = muted)
         }
     }

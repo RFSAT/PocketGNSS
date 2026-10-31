@@ -432,7 +432,7 @@ int prtk_rover(int week, double tow, int n, const char *sys, const int *prn, con
         for (i = 0; i < nr; i++) if (has_eph(rov[i].sat, t)) ne++;
         if (ne < 4) {
             snprintf(message, sizeof(message), "no broadcast ephemerides for %d of the %d satellites in view: the correction "
-                     "stream carries none (switch on the ephemeris stream, e.g. BCEP00BKG0)", nr - ne, nr);
+                     "stream carries none (switch on the ephemeris stream: an IGS / EUREF station near you)", nr - ne, nr);
         }
         return PRTK_NONE;
     }

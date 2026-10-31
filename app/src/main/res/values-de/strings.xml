@@ -131,11 +131,11 @@
     <string name="disp_utm_auto">Automatisch (Zone der Position)</string>
     <string name="disp_utm_zone">UTM-Zone</string>
     <string name="disp_utm_zone_n">Zone %1$d (Mittelmeridian %2$d°)</string>
-    <string name="eph_help">Manche Caster senden die Satellitenbahnen (Broadcast-Ephemeriden) nur alle paar Minuten, sodass Phone RTK wartet. Eine zweite Verbindung zu einem Ephemeridenstrom (BCEP00BKG0 des BKG auf igs-ip.net, kostenlos mit BKG-Registrierung) liefert sie sofort.</string>
+    <string name="eph_help">Manche Caster senden Satellitenbahnen (Broadcast-Ephemeriden) selten oder gar nicht, sodass Telefon-RTK wartet. Eine zweite Verbindung zu einer IGS-/EUREF-Station in Ihrer Nähe (z. B. DYNG00GRC0 bei Athen auf igs-ip.net, kostenlos mit BKG-Registrierung) liefert sie sofort.</string>
     <string name="eph_mount">Mountpoint</string>
     <string name="eph_no_profile">Zuerst das Konto speichern: Werkzeuge &gt; Korrekturen &gt; Caster-Profil (z. B. die Vorlage IGS-IP (BKG) mit Ihrem BKG-Login).</string>
     <string name="eph_profile">Konto (gespeichertes Caster-Profil)</string>
-    <string name="eph_same_account">Nicht verbunden: Das ist das Konto des Haupt-NTRIP-Streams, und Caster wie Galileo HAS und Metrica erlauben eine Anmeldung pro Konto (der Hauptstream würde stocken). Galileo HAS sendet seine Ephemeriden im Hauptstream; sonst ein anderes Konto verwenden, z. B. BCEP00BKG0 von BKG.</string>
+    <string name="eph_same_account">Nicht verbunden: Das ist das Konto des Haupt-NTRIP-Streams, und Caster wie Galileo HAS und Metrica erlauben eine Anmeldung pro Konto (der Hauptstream würde stocken). Galileo HAS sendet seine Ephemeriden im Hauptstream; sonst ein anderes Konto verwenden, z. B. ein BKG-Konto mit einer IGS-/EUREF-Station.</string>
     <string name="eph_status">Ephemeridenstrom: %1$s %2$s</string>
     <string name="eph_switch">Ephemeridenstrom</string>
     <string name="exit_idle">Empfängerverbindung, Korrekturen und Ausgaben werden geschlossen.</string>
@@ -435,6 +435,8 @@
     <string name="map_tap_point">Einen Punkt antippen für Entfernung und Richtung.</string>
     <string name="map_terrain">Gelände</string>
     <string name="map_to_point">%1$s bei %2$.1f°</string>
+    <string name="map_zoom_in">Vergrößern</string>
+    <string name="map_zoom_out">Verkleinern</string>
     <string name="method_android">Android-Standort</string>
     <string name="method_code_dgnss">Code-DGNSS</string>
     <string name="method_ppp">PPP</string>
@@ -631,7 +633,7 @@
     <string name="setup_recommended">Empfohlen</string>
     <string name="setup_recommended_done">Eingestellt: %1$s</string>
     <string name="setup_recommended_eph">Ephemeriden-Stream %1$s / %2$s</string>
-    <string name="setup_recommended_help">Ein Tippen stellt ein, was sich in Tests am besten bewährt hat: RTK mit Basisstation (nicht PPP), Bewegungsmodus, Abstimmung auf dieses Telefon, Ihr Metrica-Konto auf MSM_VRS und den Ephemeriden-Stream BCEP00BKG0 mit Ihrem BKG-Konto. Gespeicherte Konten bleiben unverändert.</string>
+    <string name="setup_recommended_help">Ein Tippen stellt ein, was sich in Tests am besten bewährt hat: RTK mit Basisstation (nicht PPP), Bewegungsmodus, Abstimmung auf dieses Telefon, Ihr Metrica-Konto auf MSM_VRS und einen Ephemeriden-Stream einer IGS-/EUREF-Station (DYNG00GRC0 bei Athen) mit Ihrem BKG-Konto. Gespeicherte Konten bleiben unverändert.</string>
     <string name="setup_recommended_main">Hauptstream %1$s / %2$s</string>
     <string name="setup_recommended_no_eph">Kein gespeichertes BKG-Konto (igs-ip.net oder euref-ip.net, kostenlose Registrierung) für den Ephemeriden-Stream: eines unter NTRIP-Relay anlegen, dann erneut auf Empfohlen tippen.</string>
     <string name="setup_recommended_no_rtk">Kein gespeichertes RTK-Caster-Konto (z. B. Metrica SmartNet): eines unter NTRIP-Relay anlegen, dann erneut auf Empfohlen tippen.</string>
@@ -738,7 +740,7 @@
     <string name="tool_ttff_sum">Kalt-, Warm- und Heißstart bis Lösung, Float und RTK fixed</string>
     <string name="tool_web">Empfängereinstellungen</string>
     <string name="tool_web_sum">Den Webserver des Empfängers (ESPrtk) über seinen WLAN-Hotspot öffnen</string>
-    <string name="tools_intro">Jedes Werkzeug funktioniert auch mit dem Simulator, sodass Sie es vor dem Feldeinsatz ausprobieren können.</string>
+    <string name="tools_intro">Alle Werkzeuge laufen auch mit dem Simulator, für Feldtests.</string>
     <string name="tools_need_receiver">Zuerst einen Empfänger oder den Simulator verbinden.</string>
     <string name="top_allow_usb">USB-Zugriff auf den Empfänger erlauben</string>
     <string name="top_no_fix">keine Lösung</string>

@@ -47,9 +47,11 @@ private fun verdictText(v: RawVerdict) = when (v) {
     RawVerdict.PHASE_DUAL -> R.string.raw_v_dual
 }
 
+@androidx.compose.runtime.Composable
 private fun verdictColor(v: RawVerdict) = when (v) {
     RawVerdict.PHASE_DUAL -> SafeGreen
-    RawVerdict.PHASE_L1, RawVerdict.CODE_ONLY -> WarnAmber
+    RawVerdict.PHASE_L1 -> InfoViolet
+    RawVerdict.CODE_ONLY -> AlarmRed
     RawVerdict.NO_RAW -> AlarmRed
     RawVerdict.WAITING -> Color.Unspecified
 }
@@ -107,7 +109,7 @@ fun RawTool(engine: GnssEngine) {
                 }
             }
             st.error?.let { Text(it, color = AlarmRed, style = MaterialTheme.typography.bodySmall) }
-            st.status?.let { Text(stringResource(R.string.raw_api_status, it), color = WarnAmber, style = MaterialTheme.typography.bodySmall) }
+            st.status?.let { Text(stringResource(R.string.raw_api_status, it), color = InfoViolet, style = MaterialTheme.typography.bodySmall) }
             st.report?.let { r -> Report(r, st.running, muted) }
         }
 
@@ -126,7 +128,7 @@ fun RawTool(engine: GnssEngine) {
                 KeyValue(stringResource(R.string.raw_epochs), "${st.rinexEpochs} · ${st.rawLines} raw", live = true)
                 if (st.recording && withRtcm && s.ntrip.usable) KeyValue(stringResource(R.string.raw_rtcm),
                     "%.1f kB · %s".format(Locale.US, st.rtcmBytes / 1024.0, n.status.name.lowercase()), live = true,
-                    valueColor = if (st.rtcmBytes > 0) SafeGreen else WarnAmber)
+                    valueColor = if (st.rtcmBytes > 0) SafeGreen else InfoViolet)
                 st.dir?.let { KeyValue(stringResource(R.string.raw_folder), it.name) }
                 if (!st.recording) Text(stringResource(R.string.raw_saved), style = MaterialTheme.typography.bodySmall, color = muted)
             }
@@ -142,7 +144,7 @@ fun RawTool(engine: GnssEngine) {
 private fun Report(r: RawReport, running: Boolean, muted: Color) {
     Text(stringResource(verdictText(r.verdict)), fontWeight = FontWeight.SemiBold, color = verdictColor(r.verdict))
     if (r.dutyCyclingSuspected && r.verdict != RawVerdict.WAITING && r.verdict != RawVerdict.NO_RAW)
-        Text(stringResource(R.string.raw_duty), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+        Text(stringResource(R.string.raw_duty), style = MaterialTheme.typography.bodySmall, color = AlarmRed)
     KeyValue(stringResource(R.string.raw_epochs), "${r.epochs} · %.0f s".format(Locale.US, r.seconds), live = running)
     r.interval?.let { KeyValue(stringResource(R.string.raw_interval), "%.2f s · gaps %.0f %%".format(Locale.US, it, r.gapShare * 100), live = running) }
     KeyValue(stringResource(R.string.raw_clock), if (r.hasFullBias) pluralStringResource(R.plurals.raw_clock_ok, r.clockDiscontinuities, r.clockDiscontinuities) else stringResource(R.string.raw_clock_missing),
@@ -154,7 +156,7 @@ private fun Report(r: RawReport, running: Boolean, muted: Color) {
                 Text(stringResource(h), Modifier.weight(w), style = MaterialTheme.typography.labelSmall, color = muted)
         }
         for (b in r.bands) Row(Modifier.fillMaxWidth()) {
-            val phaseColor = when { b.phaseOk >= 0.7 && b.slipsPerSatMin < 2 -> SafeGreen; b.phaseOk > 0.05 -> WarnAmber; else -> muted }
+            val phaseColor = when { b.phaseOk >= 0.7 && b.slipsPerSatMin < 2 -> SafeGreen; b.phaseOk > 0.05 -> InfoViolet; else -> muted }
             Text("${sysName(b.system)} ${b.band.label.substringBefore('/')}", Modifier.weight(0.34f), style = MaterialTheme.typography.bodySmall)
             Text("${b.satsNow}", Modifier.weight(0.13f), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
             Text("%.0f%%".format(Locale.US, b.codeOk * 100), Modifier.weight(0.17f), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)

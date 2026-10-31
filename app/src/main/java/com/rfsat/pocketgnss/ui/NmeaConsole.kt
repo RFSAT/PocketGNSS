@@ -80,7 +80,7 @@ fun NmeaConsole(engine: GnssEngine, rows: Int = 40) {
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         // Newest at the bottom, like a terminal; long sentences scroll sideways instead of wrapping.
         Column(Modifier.fillMaxWidth().background(Color(0xFF0E1012), RoundedCornerShape(8.dp)).horizontalScroll(rememberScrollState()).padding(8.dp)) {
-            if (shown.isEmpty()) Text(stringResource(R.string.nmea_empty), color = Color(0xFF9E9E9E), fontSize = 11.sp)
+            if (shown.isEmpty()) Text(stringResource(R.string.nmea_empty), color = Color(0xFF9E9E9E), fontSize = 14.sp)
             for (l in shown.takeLast(if (more) rows * 5 else rows)) Text(l, color = colourOf(typeOf(l)), fontFamily = FontFamily.Monospace, fontSize = 10.sp,
                 maxLines = 1, softWrap = false)
         }

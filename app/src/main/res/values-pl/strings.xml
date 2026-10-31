@@ -131,11 +131,11 @@
     <string name="disp_utm_auto">Automatycznie (strefa pozycji)</string>
     <string name="disp_utm_zone">Strefa UTM</string>
     <string name="disp_utm_zone_n">Strefa %1$d (południk osiowy %2$d°)</string>
-    <string name="eph_help">Niektóre castery wysyłają orbity satelitów (efemerydy rozgłoszeniowe) tylko co kilka minut, więc Phone RTK czeka. Drugie połączenie ze strumieniem efemeryd (BCEP00BKG0 z BKG na igs-ip.net, bezpłatny po rejestracji w BKG) daje je od razu.</string>
+    <string name="eph_help">Niektóre castery wysyłają orbity satelitów (efemerydy) rzadko lub wcale, więc RTK telefonu czeka. Drugie połączenie ze stacją IGS / EUREF w pobliżu (np. DYNG00GRC0 koło Aten na igs-ip.net, bezpłatnie po rejestracji w BKG) dostarcza je od razu.</string>
     <string name="eph_mount">Mountpoint</string>
     <string name="eph_no_profile">Najpierw zapisz konto: Narzędzia &gt; Poprawki &gt; profil castera (np. szablon IGS-IP (BKG) z twoim loginem BKG).</string>
     <string name="eph_profile">Konto (zapisany profil castera)</string>
-    <string name="eph_same_account">Nie połączono: to konto głównego strumienia NTRIP, a castery takie jak Galileo HAS i Metrica pozwalają na jedno logowanie na konto (główny strumień by się zatrzymał). Galileo HAS wysyła efemerydy w głównym strumieniu; w innym razie użyj innego konta, np. BCEP00BKG0 z BKG.</string>
+    <string name="eph_same_account">Nie połączono: to konto głównego strumienia NTRIP, a castery takie jak Galileo HAS i Metrica pozwalają na jedno logowanie na konto (główny strumień by się zatrzymał). Galileo HAS wysyła efemerydy w głównym strumieniu; w innym razie użyj innego konta, np. konta BKG ze stacją IGS / EUREF.</string>
     <string name="eph_status">Strumień efemeryd: %1$s %2$s</string>
     <string name="eph_switch">Strumień efemeryd</string>
     <string name="exit_idle">Połączenie z odbiornikiem, poprawki i wyjścia zostaną zamknięte.</string>
@@ -435,6 +435,8 @@
     <string name="map_tap_point">Dotknij punktu, aby zobaczyć odległość i azymut.</string>
     <string name="map_terrain">Teren</string>
     <string name="map_to_point">%1$s pod azymutem %2$.1f°</string>
+    <string name="map_zoom_in">Powiększ</string>
+    <string name="map_zoom_out">Pomniejsz</string>
     <string name="method_android">Lokalizacja Androida</string>
     <string name="method_code_dgnss">DGNSS kodowy</string>
     <string name="method_ppp">PPP</string>
@@ -631,7 +633,7 @@
     <string name="setup_recommended">Zalecane</string>
     <string name="setup_recommended_done">Ustawiono: %1$s</string>
     <string name="setup_recommended_eph">strumień efemeryd %1$s / %2$s</string>
-    <string name="setup_recommended_help">Jedno dotknięcie ustawia to, co sprawdziło się najlepiej w testach: RTK ze stacją bazową (nie PPP), tryb ruchu, dostrojenie do tego telefonu, konto Metrica na MSM_VRS i strumień efemeryd BCEP00BKG0 z kontem BKG. Zapisane konta pozostają bez zmian.</string>
+    <string name="setup_recommended_help">Jedno dotknięcie ustawia to, co sprawdziło się najlepiej w testach: RTK ze stacją bazową (nie PPP), tryb ruchu, dostrojenie do tego telefonu, konto Metrica na MSM_VRS i strumień efemeryd ze stacji IGS / EUREF (DYNG00GRC0 koło Aten) z kontem BKG. Zapisane konta pozostają bez zmian.</string>
     <string name="setup_recommended_main">strumień główny %1$s / %2$s</string>
     <string name="setup_recommended_no_eph">Brak zapisanego konta BKG (igs-ip.net lub euref-ip.net, bezpłatna rejestracja) dla strumienia efemeryd: dodaj je w Przekaźnik NTRIP i ponownie dotknij Zalecane.</string>
     <string name="setup_recommended_no_rtk">Brak zapisanego konta castera RTK (np. Metrica SmartNet): dodaj je w Przekaźnik NTRIP i ponownie dotknij Zalecane.</string>
@@ -738,7 +740,7 @@
     <string name="tool_ttff_sum">Zimny, ciepły i gorący start do rozwiązania, float i RTK fixed</string>
     <string name="tool_web">Ustawienia odbiornika</string>
     <string name="tool_web_sum">Otwórz serwer WWW odbiornika (ESPrtk) w jego hotspocie Wi-Fi</string>
-    <string name="tools_intro">Każde narzędzie działa też z symulatorem, więc możesz je wypróbować przed użyciem odbiornika w polu.</string>
+    <string name="tools_intro">Wszystkie narzędzia działają też z symulatorem, do prób w terenie.</string>
     <string name="tools_need_receiver">Najpierw podłącz odbiornik lub symulator.</string>
     <string name="top_allow_usb">Zezwól na dostęp USB do odbiornika</string>
     <string name="top_no_fix">brak rozwiązania</string>

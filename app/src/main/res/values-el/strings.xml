@@ -131,11 +131,11 @@
     <string name="disp_utm_auto">Αυτόματα (ζώνη της θέσης)</string>
     <string name="disp_utm_zone">Ζώνη UTM</string>
     <string name="disp_utm_zone_n">Ζώνη %1$d (κεντρικός μεσημβρινός %2$d°)</string>
-    <string name="eph_help">Ορισμένοι casters στέλνουν τις τροχιές των δορυφόρων (εφημερίδες) μόνο κάθε λίγα λεπτά, οπότε το Phone RTK περιμένει. Μια δεύτερη σύνδεση σε ροή εφημερίδων (BCEP00BKG0 της BKG στο igs-ip.net, δωρεάν με εγγραφή στην BKG) τις δίνει αμέσως.</string>
+    <string name="eph_help">Ορισμένοι caster στέλνουν τις τροχιές των δορυφόρων (εφημερίδες) σπάνια ή καθόλου, οπότε το RTK του τηλεφώνου περιμένει. Μια δεύτερη σύνδεση σε σταθμό IGS / EUREF κοντά σας (π.χ. DYNG00GRC0 κοντά στην Αθήνα, στο igs-ip.net, δωρεάν με εγγραφή στο BKG) τις δίνει αμέσως.</string>
     <string name="eph_mount">Mountpoint</string>
     <string name="eph_no_profile">Αποθηκεύστε πρώτα τον λογαριασμό: Εργαλεία &gt; Διορθώσεις &gt; προφίλ caster (π.χ. το προκαθορισμένο IGS-IP (BKG) με τα στοιχεία σας στην BKG).</string>
     <string name="eph_profile">Λογαριασμός (αποθηκευμένο προφίλ caster)</string>
-    <string name="eph_same_account">Χωρίς σύνδεση: αυτός είναι ο λογαριασμός της κύριας ροής NTRIP, και caster όπως το Galileo HAS και η Metrica επιτρέπουν μία σύνδεση ανά λογαριασμό (η κύρια ροή θα σταματούσε). Το Galileo HAS στέλνει τις εφημερίδες στην κύρια ροή· αλλιώς χρησιμοποιήστε άλλον λογαριασμό, π.χ. το BCEP00BKG0 της BKG.</string>
+    <string name="eph_same_account">Χωρίς σύνδεση: αυτός είναι ο λογαριασμός της κύριας ροής NTRIP, και caster όπως το Galileo HAS και η Metrica επιτρέπουν μία σύνδεση ανά λογαριασμό (η κύρια ροή θα σταματούσε). Το Galileo HAS στέλνει τις εφημερίδες στην κύρια ροή· αλλιώς χρησιμοποιήστε άλλον λογαριασμό, π.χ. λογαριασμό BKG με σταθμό IGS / EUREF.</string>
     <string name="eph_status">Ροή εφημερίδων: %1$s %2$s</string>
     <string name="eph_switch">Ροή εφημερίδων</string>
     <string name="exit_idle">Η σύνδεση με τον δέκτη, οι διορθώσεις και οι έξοδοι κλείνουν.</string>
@@ -435,6 +435,8 @@
     <string name="map_tap_point">Πατήστε ένα σημείο για απόσταση και αζιμούθιο.</string>
     <string name="map_terrain">Ανάγλυφο</string>
     <string name="map_to_point">%1$s στις %2$.1f°</string>
+    <string name="map_zoom_in">Μεγέθυνση</string>
+    <string name="map_zoom_out">Σμίκρυνση</string>
     <string name="method_android">Θέση Android</string>
     <string name="method_code_dgnss">DGNSS κώδικα</string>
     <string name="method_ppp">PPP</string>
@@ -631,7 +633,7 @@
     <string name="setup_recommended">Προτεινόμενες</string>
     <string name="setup_recommended_done">Ορίστηκαν: %1$s</string>
     <string name="setup_recommended_eph">ροή εφημερίδων %1$s / %2$s</string>
-    <string name="setup_recommended_help">Ένα πάτημα ορίζει ό,τι λειτούργησε καλύτερα στις δοκιμές: RTK με σταθμό βάσης (όχι PPP), λειτουργία κίνησης, προσαρμογή σε αυτό το τηλέφωνο, τον λογαριασμό Metrica στο MSM_VRS και τη ροή εφημερίδων BCEP00BKG0 με τον λογαριασμό BKG. Οι αποθηκευμένοι λογαριασμοί δεν αλλάζουν.</string>
+    <string name="setup_recommended_help">Ένα πάτημα ορίζει ό,τι λειτούργησε καλύτερα στις δοκιμές: RTK με σταθμό βάσης (όχι PPP), λειτουργία κίνησης, προσαρμογή σε αυτό το τηλέφωνο, τον λογαριασμό Metrica στο MSM_VRS και ροή εφημερίδων από σταθμό IGS / EUREF (DYNG00GRC0 κοντά στην Αθήνα) με τον λογαριασμό BKG. Οι αποθηκευμένοι λογαριασμοί δεν αλλάζουν.</string>
     <string name="setup_recommended_main">κύρια ροή %1$s / %2$s</string>
     <string name="setup_recommended_no_eph">Δεν υπάρχει αποθηκευμένος λογαριασμός BKG (igs-ip.net ή euref-ip.net, δωρεάν εγγραφή) για τη ροή εφημερίδων: προσθέστε έναν στο NTRIP relay και πατήστε ξανά Προτεινόμενες.</string>
     <string name="setup_recommended_no_rtk">Δεν υπάρχει αποθηκευμένος λογαριασμός caster RTK (π.χ. Metrica SmartNet): προσθέστε έναν στο NTRIP relay και πατήστε ξανά Προτεινόμενες.</string>
@@ -738,7 +740,7 @@
     <string name="tool_ttff_sum">Ψυχρή, θερμή και ζεστή εκκίνηση έως λύση, float και RTK fixed</string>
     <string name="tool_web">Ρυθμίσεις δέκτη</string>
     <string name="tool_web_sum">Άνοιγμα του web server του δέκτη (ESPrtk) στο hotspot Wi-Fi του</string>
-    <string name="tools_intro">Κάθε εργαλείο λειτουργεί και με τον προσομοιωτή, ώστε να το δοκιμάσετε πριν χρησιμοποιήσετε τον δέκτη στο χωράφι.</string>
+    <string name="tools_intro">Όλα τα εργαλεία λειτουργούν και με τον προσομοιωτή, για δοκιμές πεδίου.</string>
     <string name="tools_need_receiver">Συνδέστε πρώτα έναν δέκτη ή τον προσομοιωτή.</string>
     <string name="top_allow_usb">Επιτρέψτε την πρόσβαση USB στον δέκτη</string>
     <string name="top_no_fix">χωρίς λύση</string>

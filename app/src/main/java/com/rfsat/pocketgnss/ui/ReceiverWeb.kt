@@ -120,7 +120,7 @@ fun ReceiverWebTool(engine: GnssEngine) {
                 ActionButton(onClick = { webView?.reload() }, compact = true) { Text(stringResource(R.string.web_reload)) }
                 ActionButton(onClick = { webView?.destroy(); webView = null; release(); phase = WebPhase.GUIDE }, compact = true) { Text(stringResource(R.string.web_close)) }
             }
-            Text(stringResource(R.string.web_logout_reminder), Modifier.padding(horizontal = 12.dp), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+            Text(stringResource(R.string.web_logout_reminder), Modifier.padding(horizontal = 12.dp), style = MaterialTheme.typography.bodySmall, color = InfoViolet)
             AndroidView(factory = { ctx ->
                 WebView(ctx).apply {
                     settings.javaScriptEnabled = true
@@ -146,7 +146,7 @@ fun ReceiverWebTool(engine: GnssEngine) {
             Text(stringResource(R.string.web_step1), style = MaterialTheme.typography.bodyMedium)
             Text(stringResource(R.string.web_step2, if (s.receiverId.isBlank()) "<ID>" else s.receiverId), style = MaterialTheme.typography.bodyMedium)
             Text(stringResource(R.string.web_step3), style = MaterialTheme.typography.bodyMedium)
-            if (s.ntripEnabled) Text(stringResource(R.string.web_ntrip_pause), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+            if (s.ntripEnabled) Text(stringResource(R.string.web_ntrip_pause), style = MaterialTheme.typography.bodySmall, color = InfoViolet)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton(onClick = { if (s.ntripEnabled) engine.ntripClient.stop(); join() }, emphasis = true, enabled = phase != WebPhase.JOINING) {
                     Text(stringResource(if (phase == WebPhase.JOINING) R.string.web_joining else R.string.web_join))

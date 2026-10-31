@@ -117,7 +117,7 @@ private fun CoverageRows(engine: GnssEngine) {
     SwitchRow(stringResource(R.string.guide_record), st.recording, { engine.guidance.setRecording(it) }, stringResource(R.string.guide_record_help))
     KeyValue(stringResource(R.string.guide_worked), formatArea(st.worked), live = true)
     KeyValue(stringResource(R.string.guide_overlap), formatArea(st.overlap) + if (st.worked > 0) " (%.1f %%)".format(Locale.US, 100 * st.overlap / st.worked) else "",
-        live = true, valueColor = if (st.worked > 0 && st.overlap / st.worked > 0.05) WarnAmber else Color.Unspecified)
+        live = true, valueColor = if (st.worked > 0 && st.overlap / st.worked > 0.05) InfoViolet else Color.Unspecified)
     val share = st.fieldShare
     if (st.field != null && share != null)
         KeyValue(st.field ?: "", stringResource(R.string.guide_field_cov, 100 * share, formatArea(st.gaps ?: 0.0)), live = true)
@@ -182,7 +182,7 @@ private fun GuidanceSetup(engine: GnssEngine) {
         NumberField(stringResource(R.string.guide_bearing), bearing ?: 0.0, { v -> bearing = v; bLat = null; bLon = null }, decimals = 1, min = 0.0, max = 360.0, suffix = "°")
         val la = aLat; val lo = aLon
         val tooShort = la != null && lo != null && bLat != null && com.rfsat.pocketgnss.protocol.Geo.distance(la, lo, bLat!!, bLon!!) < 5
-        if (tooShort) Text(stringResource(R.string.guide_short), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+        if (tooShort) Text(stringResource(R.string.guide_short), style = MaterialTheme.typography.bodySmall, color = AlarmRed)
         val ready = la != null && lo != null && (bLat != null || bearing != null) && !tooShort
         ActionButton(onClick = {
             if (la != null && lo != null) {

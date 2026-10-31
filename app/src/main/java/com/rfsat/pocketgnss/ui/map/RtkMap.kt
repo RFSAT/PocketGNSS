@@ -81,6 +81,8 @@ private const val VIEW_ZOOM = 17.0
 private const val TRACK_SRC = "r-track"; private const val TRACK_LYR = "r-track-l"
 private const val PTS_SRC = "r-pts"; private const val PTS_LYR = "r-pts-l"; private const val PTS_LBL = "r-pts-t"
 private const val POS_SRC = "r-pos"; private const val POS_LYR = "r-pos-l"
+/** Own position: blue while known, grey (the last known one) while there is none. The track keeps the fix colours. */
+private const val POS_KNOWN = "#1E88E5"; private const val POS_UNKNOWN = "#9E9E9E"
 private const val BASE_SRC = "r-base"; private const val BASE_LYR = "r-base-l"
 private const val TGT_SRC = "r-tgt"; private const val TGT_LYR = "r-tgt-l"
 private const val FLD_SRC = "r-fld"; private const val FLD_FILL = "r-fld-f"; private const val FLD_LINE = "r-fld-l"; private const val FLD_LBL = "r-fld-t"
@@ -112,6 +114,9 @@ fun RtkMap(
     guide: List<List<Pair<Double, Double>>> = emptyList(),
     ownMap: String? = null,
     coverage: com.rfsat.pocketgnss.core.CoverageShapes? = null,
+    /** Bumped by the zoom buttons: one step in / out each time. */
+    zoomInKey: Int = 0,
+    zoomOutKey: Int = 0,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -132,6 +137,13 @@ fun RtkMap(
     val lastFit = remember { mutableStateOf(fitKey) }
     val lastRecenter = remember { mutableStateOf(recenterKey) }
     val drawnCoverage = remember { mutableStateOf<Long?>(null) }
+    val lastZoomIn = remember { mutableStateOf(zoomInKey) }
+    val lastZoomOut = remember { mutableStateOf(zoomOutKey) }
+    // Own position: blue while known, the last known one grey while there is none (no fix, signal lost).
+    val lastPosition = remember { mutableStateOf(position) }
+    if (position != null && position.quality != com.rfsat.pocketgnss.protocol.FixQuality.NONE) lastPosition.value = position
+    val known = position != null && position.quality != com.rfsat.pocketgnss.protocol.FixQuality.NONE
+    val shownPosition = if (known) position else lastPosition.value
     val currentPoints = remember { mutableStateOf(points) }
     val currentTap = remember { mutableStateOf(onPointTap) }
     currentPoints.value = points; currentTap.value = onPointTap
@@ -173,7 +185,7 @@ fun RtkMap(
                 }
                 m.setStyle(Style.Builder().fromJson(MapStyles.styleFor(layer, ownMap))) { style ->
                     styleHolder.value = style; loadedLayer.value = layer
-                    ensureLayers(style); updateData(style, track, points, position, base, target); updateFields(style, fields, capture, guide)
+                    ensureLayers(style); updateData(style, track, points, shownPosition, known, base, target); updateFields(style, fields, capture, guide)
                     updateCoverage(style, coverage); drawnCoverage.value = coverage?.version
                     if (!didInitial.value) {
                         fitCamera(m, track, points, position, false, fields); didInitial.value = true
@@ -186,11 +198,11 @@ fun RtkMap(
                 loadedOwn.value = ownMap
                 map.setStyle(Style.Builder().fromJson(MapStyles.styleFor(layer, ownMap))) { style ->
                     styleHolder.value = style; loadedLayer.value = layer
-                    ensureLayers(style); updateData(style, track, points, position, base, target); updateFields(style, fields, capture, guide)
+                    ensureLayers(style); updateData(style, track, points, shownPosition, known, base, target); updateFields(style, fields, capture, guide)
                     updateCoverage(style, coverage); drawnCoverage.value = coverage?.version
                 }
             } else styleHolder.value?.let {
-                updateData(it, track, points, position, base, target); updateFields(it, fields, capture, guide)
+                updateData(it, track, points, shownPosition, known, base, target); updateFields(it, fields, capture, guide)
                 if (drawnCoverage.value != coverage?.version) { updateCoverage(it, coverage); drawnCoverage.value = coverage?.version }
             }
             if (!placed.value && didInitial.value && position != null) {
@@ -198,6 +210,8 @@ fun RtkMap(
                 placed.value = true
             }
             if (fitKey != lastFit.value) { fitCamera(map, track, points, position, true, fields); lastFit.value = fitKey }
+            if (zoomInKey != lastZoomIn.value) { map.animateCamera(CameraUpdateFactory.zoomIn()); lastZoomIn.value = zoomInKey }
+            if (zoomOutKey != lastZoomOut.value) { map.animateCamera(CameraUpdateFactory.zoomOut()); lastZoomOut.value = zoomOutKey }
             if (recenterKey != lastRecenter.value) {
                 position?.let { map.animateCamera(CameraUpdateFactory.newCameraPosition(CameraPosition.Builder()
                     .target(LatLng(it.latitude, it.longitude)).zoom(VIEW_ZOOM).build())) }
@@ -246,7 +260,7 @@ private fun ensureLayers(style: Style) {
         PropertyFactory.circleStrokeColor("#FFFFFF"), PropertyFactory.circleStrokeWidth(3f)))
 }
 
-private fun updateData(style: Style, track: List<TrackPoint>, points: List<SurveyPoint>, pos: GnssFix?, base: Geodetic?, target: SurveyPoint?) {
+private fun updateData(style: Style, track: List<TrackPoint>, points: List<SurveyPoint>, pos: GnssFix?, known: Boolean, base: Geodetic?, target: SurveyPoint?) {
     // One line feature per run of the same fix type, so the track shows where RTK was fixed, float or lost.
     val segs = ArrayList<Feature>()
     var i = 0
@@ -264,7 +278,7 @@ private fun updateData(style: Style, track: List<TrackPoint>, points: List<Surve
         Feature.fromGeometry(Point.fromLngLat(p.longitude, p.latitude)).also { it.addNumberProperty("i", k); it.addStringProperty("n", p.name) }
     }))
     style.getSourceAs<GeoJsonSource>(POS_SRC)?.setGeoJson(FeatureCollection.fromFeatures(listOfNotNull(pos?.let {
-        Feature.fromGeometry(Point.fromLngLat(it.longitude, it.latitude)).also { f -> f.addStringProperty("c", fixColorHex(it.quality)) }
+        Feature.fromGeometry(Point.fromLngLat(it.longitude, it.latitude)).also { f -> f.addStringProperty("c", if (known) POS_KNOWN else POS_UNKNOWN) }
     })))
     style.getSourceAs<GeoJsonSource>(BASE_SRC)?.setGeoJson(FeatureCollection.fromFeatures(listOfNotNull(base?.let {
         Feature.fromGeometry(Point.fromLngLat(it.longitude, it.latitude)) })))

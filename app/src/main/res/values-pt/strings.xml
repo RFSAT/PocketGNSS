@@ -131,11 +131,11 @@
     <string name="disp_utm_auto">Automático (fuso da posição)</string>
     <string name="disp_utm_zone">Fuso UTM</string>
     <string name="disp_utm_zone_n">Fuso %1$d (meridiano central %2$d°)</string>
-    <string name="eph_help">Alguns casters só enviam as órbitas dos satélites (efemérides transmitidas) de poucos em poucos minutos, por isso o Phone RTK espera. Uma segunda ligação a um fluxo de efemérides (BCEP00BKG0 do BKG em igs-ip.net, gratuito com registo no BKG) dá-as de imediato.</string>
+    <string name="eph_help">Alguns casters enviam as órbitas dos satélites (efemérides) raramente ou nunca, e o RTK do telemóvel espera. Uma segunda ligação a uma estação IGS / EUREF próxima (p. ex. DYNG00GRC0 perto de Atenas em igs-ip.net, grátis com registo no BKG) dá-as de imediato.</string>
     <string name="eph_mount">Ponto de montagem</string>
     <string name="eph_no_profile">Guarde primeiro a conta: Ferramentas &gt; Correções &gt; perfil de caster (p. ex. o modelo IGS-IP (BKG) com o seu acesso BKG).</string>
     <string name="eph_profile">Conta (perfil de caster guardado)</string>
-    <string name="eph_same_account">Não ligado: é a conta do fluxo NTRIP principal, e casters como o Galileo HAS e a Metrica permitem um início de sessão por conta (o fluxo principal pararia). O Galileo HAS envia as efemérides no fluxo principal; caso contrário, use outra conta, p. ex. BCEP00BKG0 da BKG.</string>
+    <string name="eph_same_account">Não ligado: é a conta do fluxo NTRIP principal, e casters como o Galileo HAS e a Metrica permitem um início de sessão por conta (o fluxo principal pararia). O Galileo HAS envia as efemérides no fluxo principal; caso contrário, use outra conta, p. ex. uma conta BKG com uma estação IGS / EUREF.</string>
     <string name="eph_status">Fluxo de efemérides: %1$s %2$s</string>
     <string name="eph_switch">Fluxo de efemérides</string>
     <string name="exit_idle">A ligação ao recetor, as correções e as saídas são fechadas.</string>
@@ -435,6 +435,8 @@
     <string name="map_tap_point">Toque num ponto para ver a distância e o rumo.</string>
     <string name="map_terrain">Relevo</string>
     <string name="map_to_point">%1$s a %2$.1f°</string>
+    <string name="map_zoom_in">Aproximar</string>
+    <string name="map_zoom_out">Afastar</string>
     <string name="method_android">Localização Android</string>
     <string name="method_code_dgnss">DGNSS de código</string>
     <string name="method_ppp">PPP</string>
@@ -631,7 +633,7 @@
     <string name="setup_recommended">Recomendado</string>
     <string name="setup_recommended_done">Definido: %1$s</string>
     <string name="setup_recommended_eph">fluxo de efemérides %1$s / %2$s</string>
-    <string name="setup_recommended_help">Um toque define o que funcionou melhor nos testes: RTK com estação base (não PPP), modo em movimento, ajuste a este telemóvel, a sua conta Metrica no MSM_VRS e o fluxo de efemérides BCEP00BKG0 com a sua conta BKG. As contas guardadas não mudam.</string>
+    <string name="setup_recommended_help">Um toque define o que funcionou melhor nos testes: RTK com estação base (não PPP), modo em movimento, ajuste a este telemóvel, a sua conta Metrica no MSM_VRS e um fluxo de efemérides de uma estação IGS / EUREF (DYNG00GRC0 perto de Atenas) com a sua conta BKG. As contas guardadas não mudam.</string>
     <string name="setup_recommended_main">fluxo principal %1$s / %2$s</string>
     <string name="setup_recommended_no_eph">Nenhuma conta BKG guardada (igs-ip.net ou euref-ip.net, registo gratuito) para o fluxo de efemérides: adicione uma em Relé NTRIP e toque de novo em Recomendado.</string>
     <string name="setup_recommended_no_rtk">Nenhuma conta de caster RTK guardada (p. ex. Metrica SmartNet): adicione uma em Relé NTRIP e toque de novo em Recomendado.</string>
@@ -738,7 +740,7 @@
     <string name="tool_ttff_sum">Arranque a frio, morno e a quente até solução, flutuante e RTK fixa</string>
     <string name="tool_web">Definições do recetor</string>
     <string name="tool_web_sum">Abrir o servidor web do recetor (ESPrtk) no seu hotspot Wi-Fi</string>
-    <string name="tools_intro">Todas as ferramentas funcionam também com o simulador, para as experimentar antes de usar o recetor no campo.</string>
+    <string name="tools_intro">Todas as ferramentas funcionam também com o simulador, para testes de campo.</string>
     <string name="tools_need_receiver">Ligue primeiro um recetor ou o simulador.</string>
     <string name="top_allow_usb">Permitir o acesso USB ao recetor</string>
     <string name="top_no_fix">sem solução</string>

@@ -25,5 +25,5 @@ fun GridRows(s: AppSettings, lat: Double, lon: Double, h: Double?) {
         s.gridSystem.metreLevel -> stringResource(R.string.grid_metre, s.gridSystem.label)
         else -> null
     }
-    if (warn != null) Text(warn, style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+    if (warn != null) Text(warn, style = MaterialTheme.typography.bodySmall, color = InfoViolet)
 }

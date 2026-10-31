@@ -14,6 +14,8 @@ import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
@@ -62,6 +64,8 @@ fun MapScreen(engine: GnssEngine) {
     }
     var fitKey by remember { mutableIntStateOf(0) }
     var recenterKey by remember { mutableIntStateOf(0) }
+    var zoomInKey by remember { mutableIntStateOf(0) }
+    var zoomOutKey by remember { mutableIntStateOf(0) }
     // Following the position is a setting: it stays on between visits and app runs until switched off.
     val follow = s.mapFollow
     fun setFollow(on: Boolean) { if (s.mapFollow != on) engine.store.update { it.copy(mapFollow = on) } }
@@ -78,7 +82,7 @@ fun MapScreen(engine: GnssEngine) {
     Box(Modifier.fillMaxSize()) {
         RtkMap(s.mapLayer, track, points, fix, ntrip.base?.geodetic, selected, follow, fitKey, recenterKey,
             onPointTap = { selected = it }, modifier = Modifier.fillMaxSize(), fields = fields, capture = cap.vertices, guide = guideLines, coverage = coverage,
-            ownMap = s.ownMap.takeIf { s.ownMapOn && it.isNotBlank() && java.io.File(it).isFile })
+            ownMap = s.ownMap.takeIf { s.ownMapOn && it.isNotBlank() && java.io.File(it).isFile }, zoomInKey = zoomInKey, zoomOutKey = zoomOutKey)
 
         Row(Modifier.align(Alignment.TopStart).padding(8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             for (l in MapLayer.entries) ChoiceChip(s.mapLayer == l, stringResource(l.label), { engine.store.update { it.copy(mapLayer = l) } },
@@ -91,6 +95,8 @@ fun MapScreen(engine: GnssEngine) {
                 style = MaterialTheme.typography.labelMedium)
         }
         Column(Modifier.align(Alignment.CenterEnd).padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SmallFloatingActionButton(onClick = { zoomInKey++ }) { Icon(Icons.Filled.ZoomIn, stringResource(R.string.map_zoom_in)) }
+            SmallFloatingActionButton(onClick = { zoomOutKey++ }) { Icon(Icons.Filled.ZoomOut, stringResource(R.string.map_zoom_out)) }
             SmallFloatingActionButton(onClick = { recenterKey++ }) { Icon(Icons.Filled.MyLocation, stringResource(R.string.map_recenter)) }
             SmallFloatingActionButton(onClick = { setFollow(!follow) },
                 containerColor = if (follow) OnGreen else MaterialTheme.colorScheme.primaryContainer) { Icon(Icons.Filled.Navigation, stringResource(R.string.map_follow)) }

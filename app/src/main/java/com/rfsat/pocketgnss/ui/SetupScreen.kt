@@ -81,7 +81,7 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
                     val devices = remember(btRefresh) {
                         try { context.getSystemService(BluetoothManager::class.java)?.adapter?.bondedDevices?.toList() ?: emptyList() } catch (_: SecurityException) { null }
                     }
-                    if (devices == null) Text(stringResource(R.string.setup_bt_allow), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+                    if (devices == null) Text(stringResource(R.string.setup_bt_allow), style = MaterialTheme.typography.bodySmall, color = AlarmRed)
                     else if (devices.isEmpty()) Text(stringResource(R.string.setup_bt_none), style = MaterialTheme.typography.bodySmall, color = muted)
                     else for (d in devices.sortedByDescending { BluetoothSppLink.looksLikeReceiver(it.name) }) {
                         val sel = d.address == s.btAddress
@@ -119,7 +119,7 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
                             if (s.phonePpp) {
                                 Text(stringResource(R.string.setup_ppp_help), style = MaterialTheme.typography.bodySmall, color = muted)
                                 if (s.ntrip.mountpoint.uppercase().startsWith("SSRC"))
-                                    Text(stringResource(R.string.setup_ppp_ssrc), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+                                    Text(stringResource(R.string.setup_ppp_ssrc), style = MaterialTheme.typography.bodySmall, color = AlarmRed)
                             }
                         }
                         if (s.phoneRtk) PhoneProfileRows(engine)
@@ -285,15 +285,16 @@ private fun PhoneProfileRows(engine: GnssEngine) {
 
 /**
  * One tap to the set-up that worked best in the tests (RecommendedSetup): RTK with a base, Metrica on MSM_VRS, the
- * BCEP00BKG0 ephemeris stream with a BKG account. Says what it chose and which account is missing.
+ * ephemeris stream from a station with a BKG account. Says what it chose and which account is missing.
  */
 @Composable
 private fun RecommendedRows(engine: GnssEngine, onReconnect: () -> Unit) {
     val conn by engine.connection.collectAsState()
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     var result by remember { mutableStateOf<com.rfsat.pocketgnss.data.RecommendedSetup.Result?>(null) }
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringResource(R.string.setup_recommended_help), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = muted)
+    // The explanation across the full width, the button below it (beside it the text became a narrow column).
+    Text(stringResource(R.string.setup_recommended_help), style = MaterialTheme.typography.bodySmall, color = muted)
+    run {
         ActionButton(onClick = {
             val r = com.rfsat.pocketgnss.data.RecommendedSetup.apply(engine.store.value)
             engine.store.update { r.settings }
@@ -311,11 +312,11 @@ private fun RecommendedRows(engine: GnssEngine, onReconnect: () -> Unit) {
         for (n in r.notes) Text(stringResource(when (n) {
             com.rfsat.pocketgnss.data.RecommendedSetup.Note.NO_RTK_PROFILE -> R.string.setup_recommended_no_rtk
             com.rfsat.pocketgnss.data.RecommendedSetup.Note.NO_EPH_PROFILE -> R.string.setup_recommended_no_eph
-        }), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+        }), style = MaterialTheme.typography.bodySmall, color = InfoViolet)
     }
 }
 
-/** Phone RTK: broadcast ephemerides from a second caster stream (BKG's BCEP00BKG0 by default). */
+/** Phone RTK: broadcast ephemerides from a second caster stream (an IGS / EUREF station, DYNG00GRC0 by default). */
 @Composable
 private fun EphStreamRows(engine: GnssEngine) {
     val s by engine.store.settings.collectAsState()
@@ -324,7 +325,7 @@ private fun EphStreamRows(engine: GnssEngine) {
     SwitchRow(stringResource(R.string.eph_switch), s.ephStream, { v -> engine.store.update { it.copy(ephStream = v) } }, stringResource(R.string.eph_help))
     if (s.ephStream) {
         val names = s.profiles.map { it.name }
-        if (names.isEmpty()) Text(stringResource(R.string.eph_no_profile), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+        if (names.isEmpty()) Text(stringResource(R.string.eph_no_profile), style = MaterialTheme.typography.bodySmall, color = InfoViolet)
         else Picker(stringResource(R.string.eph_profile), listOf("") + names, s.ephProfile.takeIf { it in names } ?: "", { it.ifEmpty { "—" } },
             { v -> engine.store.update { it.copy(ephProfile = v) }; engine.updateEphStream() })
         // Pick the mountpoint from the chosen caster's sourcetable (streams whose sourcetable lists ephemeris messages first), or type it.
@@ -364,10 +365,10 @@ private fun CasterSection(engine: GnssEngine) {
                 style = MaterialTheme.typography.bodySmall)
             Text(pluralStringResource(R.plurals.caster_clients, st.clients.size, st.clients.size, st.clients.joinToString(", "), st.bytes / 1024.0), style = MaterialTheme.typography.bodySmall, color = muted)
             val ntrip by engine.ntripClient.ntrip.collectAsState()
-            if (ntrip.status != com.rfsat.pocketgnss.core.NtripStatus.STREAMING) Text(stringResource(R.string.caster_no_source), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+            if (ntrip.status != com.rfsat.pocketgnss.core.NtripStatus.STREAMING) Text(stringResource(R.string.caster_no_source), style = MaterialTheme.typography.bodySmall, color = InfoViolet)
         }
         st.error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = AlarmRed) }
-        Text(stringResource(R.string.caster_terms), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+        Text(stringResource(R.string.caster_terms), style = MaterialTheme.typography.bodySmall, color = InfoViolet)
     }
 }
 

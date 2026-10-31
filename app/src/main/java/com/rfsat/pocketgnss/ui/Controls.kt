@@ -59,12 +59,38 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun Section(title: String, content: @Composable () -> Unit) {
+    // The label column of the section's rows is as wide as its longest label (each KeyValue / ChoiceRow reports its
+    // own), so values sit right next to their labels instead of after a fixed gap.
+    val fit = remember { KeyWidths() }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val width = fit.widths.values.maxOrNull()?.let { (with(density) { it.toDp() } + 10.dp).coerceIn(48.dp, MAX_KEY_WIDTH) }
     Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.primary)
-            content()
+            androidx.compose.runtime.CompositionLocalProvider(LocalKeyFit provides fit, LocalKeyWidth provides (width ?: KEY_WIDTH)) {
+                content()
+            }
         }
+    }
+}
+
+/** Label widths (px) of the rows of one [Section], reported by the rows themselves. */
+class KeyWidths { val widths = androidx.compose.runtime.mutableStateMapOf<Any, Int>() }
+val LocalKeyFit = androidx.compose.runtime.staticCompositionLocalOf<KeyWidths?> { null }
+/** Longest label column; labels longer than this wrap. */
+val MAX_KEY_WIDTH = 150.dp
+
+/** Reports this row's label width to the enclosing [Section] (if any), for its fitted label column. */
+@Composable
+private fun ReportKeyWidth(label: String, style: androidx.compose.ui.text.TextStyle) {
+    val fit = LocalKeyFit.current ?: return
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    val px = remember(label, style) { measurer.measure(label, style, maxLines = 1).size.width }
+    val id = remember { Any() }
+    androidx.compose.runtime.DisposableEffect(fit, px) {
+        fit.widths[id] = px
+        onDispose { fit.widths.remove(id) }
     }
 }
 
@@ -167,18 +193,19 @@ fun <T> Picker(label: String, options: List<T>, selected: T, text: (T) -> String
     }
 }
 
-/** Key (left column, muted) and value (right column); live = true keeps a changing value on one line so rows below never jump. */
+/** Key (left column, muted) and value (right column). [live] marks values that change with the data (kept for callers). */
 @Composable
 fun KeyValue(key: String, value: String, live: Boolean = false, valueColor: Color = Color.Unspecified) {
     val keyWidth = LocalKeyWidth.current
+    ReportKeyWidth(key, MaterialTheme.typography.bodySmall)
     Row(Modifier.fillMaxWidth()) {
         val keyMod = if (keyWidth != null) Modifier.width(keyWidth).padding(end = 8.dp) else Modifier.weight(0.42f)
         val valMod = if (keyWidth != null) Modifier.weight(1f) else Modifier.weight(0.58f)
         Text(key, keyMod, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         // label muted on the left, value in the normal text colour and a heavier weight on the right
         val vc = if (valueColor != Color.Unspecified) valueColor else MaterialTheme.colorScheme.onSurface
-        if (live) FitText(value, valMod, MaterialTheme.typography.bodySmall, color = vc, fontWeight = FontWeight.Medium)
-        else Text(value, valMod, style = MaterialTheme.typography.bodySmall, color = vc, fontWeight = FontWeight.Medium)
+        // Full size always (shrunk values were unreadable while driving): a value too long for the line wraps instead.
+        Text(value, valMod, style = MaterialTheme.typography.bodySmall, color = vc, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -208,6 +235,7 @@ fun fittedKeyWidth(labels: List<String>, max: androidx.compose.ui.unit.Dp = 150.
 /** A labelled single-choice row: the label in the label column, the options as chips beside it (one line). */
 @Composable
 fun <T> ChoiceRow(label: String, options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit) {
+    ReportKeyWidth(label, MaterialTheme.typography.bodyMedium)
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(label, Modifier.width(LocalKeyWidth.current ?: KEY_WIDTH).padding(end = 8.dp), style = MaterialTheme.typography.bodyMedium)
         // Chips that do not fit go to the next line whole, rather than squeezing their text (long translations).

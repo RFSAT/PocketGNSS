@@ -84,12 +84,12 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
                 Column(horizontalAlignment = Alignment.End) {
                     Text(if (f != null) formatAccuracy(f.horizontalAccuracy) else "—", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 26.sp)
                     if (f != null) Text(stringResource(if (f.measuredAccuracy) R.string.acc_measured else R.string.acc_estimated),
-                        color = Color.White.copy(alpha = 0.9f), fontSize = 12.sp, maxLines = 1)
+                        color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp, maxLines = 1)
                 }
             }
             Box(Modifier.padding(vertical = 6.dp).fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.35f)))
             Text(stringResource(if (phoneRtk && rtkState.source.isNotEmpty()) phoneMethodHint(rtkState.source) else fixHint(q)),
-                color = Color.White.copy(alpha = 0.9f), fontSize = 13.sp)
+                color = Color.White.copy(alpha = 0.9f), fontSize = 15.sp)
         }
 
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -123,7 +123,7 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
             KeyValue(stringResource(R.string.live_age), ageText, live = true)
             if (!phoneChip) KeyValue(stringResource(R.string.live_route), stringResource(variantName(s.receiverVariant)), live = true)
             if (!phoneChip && f != null && f.diffAgeSec == null && f.quality.rank < FixQuality.RTK_FLOAT.rank && !s.ntripEnabled)
-                Text(stringResource(variantTroubleshoot(s.receiverVariant)), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+                Text(stringResource(variantTroubleshoot(s.receiverVariant)), style = MaterialTheme.typography.bodySmall, color = AlarmRed)
             f?.modes?.takeIf { it.length >= 4 }?.let { m ->
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     listOf(Constellation.GPS, Constellation.GLONASS, Constellation.GALILEO, Constellation.BEIDOU, Constellation.QZSS, Constellation.NAVIC)
@@ -164,7 +164,7 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
             if (phoneRtk) {
                 val b = rtkState.base
                 KeyValue(stringResource(R.string.live_rtk_engine), pluralStringResource(R.plurals.live_rtk_engine_value, rtkState.signals, rtkState.signals, rtkState.withPhase,
-                    rtkState.solution?.ratio ?: 0.0), live = true, valueColor = if (rtkState.noPhase && rtkState.epochs > 5) WarnAmber else Color.Unspecified)
+                    rtkState.solution?.ratio ?: 0.0), live = true, valueColor = if (rtkState.noPhase && rtkState.epochs > 5) AlarmRed else Color.Unspecified)
                 val small = MaterialTheme.typography.bodySmall
                 // The engine's own solution and the phone's own fix, one per line, whichever of them is shown above.
                 // Without a solution for 3 s the row says so, and the engine's own message below tells why
@@ -172,7 +172,7 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
                 val eng = rtkState.solution?.takeIf { it.status != com.rfsat.pocketgnss.rtk.RtkStatus.NONE && rtkState.epochsWithoutSolution < 3 }
                 KeyValue(stringResource(R.string.live_rtk_solution), eng?.let {
                     methodText(com.rfsat.pocketgnss.link.PhoneRtkLink.methodName(it.status)) + " " + formatAccuracy(kotlin.math.hypot(it.stdEast, it.stdNorth))
-                } ?: stringResource(R.string.live_rtk_no_solution), live = true, valueColor = if (eng == null) WarnAmber else Color.Unspecified)
+                } ?: stringResource(R.string.live_rtk_no_solution), live = true, valueColor = if (eng == null) AlarmRed else Color.Unspecified)
                 if (eng == null && rtkState.epochs > 3 && rtkState.message.isNotBlank())
                     Text(rtkState.message.replace(Regex("^\\d{1,2}:\\d\\d:\\d\\d(\\.\\d+)?:\\s*"), ""), style = small, color = muted)
                 // Indoors / among buildings the engine lowers its C/N0 mask rather than stay without a position.
@@ -182,7 +182,7 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
                 rtkState.phoneAcc?.let { pa ->
                     KeyValue(stringResource(R.string.live_phone_fix), formatAccuracy(pa) +
                         (if (rtkState.phoneFrozen) " · " + stringResource(R.string.live_phone_fix_frozen) else ""), live = true,
-                        valueColor = if (rtkState.phoneFrozen) WarnAmber else Color.Unspecified)
+                        valueColor = if (rtkState.phoneFrozen) InfoViolet else Color.Unspecified)
                 }
                 rtkState.phoneDistance?.let { d -> KeyValue(stringResource(R.string.live_fix_gap), formatDistance(d), live = true) }
                 if (s.phonePpp) {
@@ -192,14 +192,14 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
                     if (b != null && b.frames > 0 && b.ssrSatellites > 0) KeyValue(stringResource(R.string.live_ppp_ssr), pluralStringResource(R.plurals.live_ppp_ssr_value,
                         b.ssrSatellites, b.ssrSatellites, b.codeBiasSatellites, ssrAge), live = true,
                         // RTKLIB drops SSR corrections older than 90 s: then PPP has no solution
-                        valueColor = if (ssrAge > 60) WarnAmber else Color.Unspecified)
+                        valueColor = if (ssrAge > 60) AlarmRed else Color.Unspecified)
                     when {
-                        rtkState.noPhase && rtkState.epochs > 5 -> Text(stringResource(R.string.live_rtk_nophase), style = small, color = WarnAmber)
+                        rtkState.noPhase && rtkState.epochs > 5 -> Text(stringResource(R.string.live_rtk_nophase), style = small, color = AlarmRed)
                         !s.ntripEnabled && !replaying -> Text(stringResource(R.string.live_ppp_hint), style = small, color = muted)
                         // base station observations arrive, which PPP does not use: the stream is meant for RTK
-                        b != null && b.frames > 20 && b.satellites > 0 -> Text(stringResource(R.string.live_ppp_rtkstream), style = small, color = WarnAmber)
-                        b != null && b.frames > 20 && b.ephemerides == 0 -> Text(stringResource(R.string.live_ppp_noeph), style = small, color = WarnAmber)
-                        b != null && b.frames > 20 && b.ssrSatellites == 0 -> Text(stringResource(R.string.live_ppp_nossr), style = small, color = WarnAmber)
+                        b != null && b.frames > 20 && b.satellites > 0 -> Text(stringResource(R.string.live_ppp_rtkstream), style = small, color = AlarmRed)
+                        b != null && b.frames > 20 && b.ephemerides == 0 -> Text(stringResource(R.string.live_ppp_noeph), style = small, color = AlarmRed)
+                        b != null && b.frames > 20 && b.ssrSatellites == 0 -> Text(stringResource(R.string.live_ppp_nossr), style = small, color = AlarmRed)
                         !rtkState.ionoFree -> Text(stringResource(R.string.live_ppp_l1), style = small, color = muted)
                     }
                     if (sol?.status == com.rfsat.pocketgnss.rtk.RtkStatus.PPP) Text(stringResource(
@@ -208,14 +208,14 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
                 } else {
                     if (b != null && b.frames > 0) KeyValue(stringResource(R.string.live_rtk_base), stringResource(R.string.live_rtk_station, b.stationId) + " · " + pluralStringResource(R.plurals.n_satellites, b.satellites, b.satellites) + " · " +
                         (b.ephemerides + b.glonassEphemerides).let { pluralStringResource(R.plurals.n_ephemerides, it, it) } + if (!b.hasPosition) " · " + stringResource(R.string.live_rtk_no_basepos) else "", live = true)
-                    if (rtkState.noPhase && rtkState.epochs > 5) Text(stringResource(R.string.live_rtk_nophase), style = small, color = WarnAmber)
+                    if (rtkState.noPhase && rtkState.epochs > 5) Text(stringResource(R.string.live_rtk_nophase), style = small, color = AlarmRed)
                     else if (!s.ntripEnabled && !replaying) Text(stringResource(R.string.live_rtk_hint), style = small, color = muted)
                     // SSR corrections without base observations: the stream is meant for PPP
-                    else if (b != null && b.frames > 20 && b.satellites == 0 && b.ssrSatellites > 0) Text(stringResource(R.string.live_rtk_pppstream), style = small, color = WarnAmber)
-                    else if (b != null && b.frames > 120 && b.ephemerides == 0) Text(stringResource(R.string.live_rtk_noeph), style = small, color = WarnAmber)
+                    else if (b != null && b.frames > 20 && b.satellites == 0 && b.ssrSatellites > 0) Text(stringResource(R.string.live_rtk_pppstream), style = small, color = AlarmRed)
+                    else if (b != null && b.frames > 120 && b.ephemerides == 0) Text(stringResource(R.string.live_rtk_noeph), style = small, color = AlarmRed)
                 }
                 rtkState.solution?.takeIf { it.codeRms > com.rfsat.pocketgnss.rtk.HonestAccuracy.REFLECTED_RMS && it.codeResiduals >= 4 }?.let { sol ->
-                    Text(stringResource(R.string.live_rtk_reflected, formatDistance(sol.codeRms)), style = small, color = WarnAmber)
+                    Text(stringResource(R.string.live_rtk_reflected, formatDistance(sol.codeRms)), style = small, color = AlarmRed)
                 }
                 if (rtkState.rejected > 0) Text(pluralStringResource(R.plurals.live_rtk_rejected, rtkState.rejected, rtkState.rejected, rtkState.resets),
                     style = small, color = muted)

@@ -140,7 +140,7 @@ fun HistoryTool(engine: GnssEngine) {
                     Text(formatAccuracy(s.rmsDist), Modifier.weight(0.15f), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
                     Text(formatAccuracy(s.rmsOwn), Modifier.weight(0.14f), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
                     Text("%.0f%%".format(Locale.US, s.within2Sigma * 100), Modifier.weight(0.14f), style = MaterialTheme.typography.bodySmall,
-                        fontFamily = FontFamily.Monospace, color = if (bad) WarnAmber else SafeGreen)
+                        fontFamily = FontFamily.Monospace, color = if (bad) AlarmRed else SafeGreen)
                 }
             }
             Section(stringResource(R.string.hist_latest)) {

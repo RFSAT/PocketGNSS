@@ -92,9 +92,9 @@ fun FieldTool(engine: GnssEngine) {
                 if (f != null) KeyValue(stringResource(R.string.live_fix), stringResource(fixLabel(f)) + " " + formatAccuracy(f.horizontalAccuracy), live = true,
                     valueColor = if (f.quality.rank >= cap.minQuality.rank) fixColor(f.quality) else AlarmRed)
                 if (cap.rejected > 0) Text(pluralStringResource(R.plurals.field_rejected, cap.rejected, cap.rejected, stringResource(fixLabel(cap.minQuality))),
-                    style = MaterialTheme.typography.bodySmall, color = WarnAmber)
-                cap.averaging?.let { Text(pluralStringResource(R.plurals.field_averaging, it, it), color = WarnAmber, fontWeight = FontWeight.SemiBold) }
-                if (cap.paused) Text(stringResource(R.string.field_paused_note), color = WarnAmber)
+                    style = MaterialTheme.typography.bodySmall, color = InfoViolet)
+                cap.averaging?.let { Text(pluralStringResource(R.plurals.field_averaging, it, it), color = InfoViolet, fontWeight = FontWeight.SemiBold) }
+                if (cap.paused) Text(stringResource(R.string.field_paused_note), color = InfoViolet)
                 Preview(cap.vertices, f?.let { Vertex(it.latitude, it.longitude) }, Modifier.fillMaxWidth().aspectRatio(1.4f))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     ActionButton(onClick = { if (!engine.fieldCapture.addCorner(System.currentTimeMillis())) engine.toast(noFix) }, emphasis = true,
@@ -146,7 +146,7 @@ private fun FieldList(engine: GnssEngine) {
             Text(f.name, fontWeight = FontWeight.SemiBold)
             Text(pluralStringResource(R.plurals.field_row, f.vertices.size, formatArea(g.area), formatDistance(g.perimeter), f.vertices.size,
                 if (f.quality == FixQuality.NONE) f.note else stringResource(fixLabel(f.quality))), style = MaterialTheme.typography.bodySmall, color = muted)
-            if (g.selfIntersecting) Text(stringResource(R.string.field_crosses), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
+            if (g.selfIntersecting) Text(stringResource(R.string.field_crosses), style = MaterialTheme.typography.bodySmall, color = AlarmRed)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton(onClick = { renaming = f }, compact = true) { Text(stringResource(R.string.field_rename)) }
                 ActionButton(onClick = { confirm = f }, compact = true) { Text(stringResource(R.string.action_delete)) }

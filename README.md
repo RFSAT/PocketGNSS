@@ -260,10 +260,13 @@ MapLibre's MBTiles source).
 
 ### Ephemeris stream (phone RTK)
 
-Some casters send broadcast ephemerides only every few minutes, so phone RTK waits for orbits. Setup > Phone >
-Ephemeris stream opens a second NTRIP connection with the account of a saved caster profile (default mountpoint
-`BCEP00BKG0` on `igs-ip.net`, free with BKG registration) and feeds only its navigation messages to the engine
-(`prtk_input_rtcm_nav`), never base observations.
+Some casters send broadcast ephemerides rarely or not at all (Metrica's MSM_NEAR in Athens sent none, October 2026),
+so phone RTK waits for orbits. Setup > Phone > Ephemeris stream opens a second NTRIP connection with the account of a
+saved caster profile and feeds only its navigation messages to the engine (`prtk_input_rtcm_nav`), never base
+observations. Use an IGS / EUREF station near you on `igs-ip.net` or `euref-ip.net` (free with BKG registration; the
+default is `DYNG00GRC0`, Dionysos near Athens); Choose lists the caster's streams with ephemerides first.
+`BCEP00BKG0`, the ephemeris-only stream, is no longer listed on those casters (October 2026); it remains on
+`products.igs-ip.net`. The ephemeris stream never uses the main stream's account (one login per account).
 
 ### Phone PPP with Galileo HAS
 

@@ -42,7 +42,7 @@ data class AppSettings(
     /** Phone RTK: broadcast ephemerides from a second stream, with the account of the saved profile [ephProfile]. */
     val ephStream: Boolean = false,
     val ephProfile: String = "",
-    val ephMount: String = "BCEP00BKG0",
+    val ephMount: String = "DYNG00GRC0",
     /** Saved caster accounts; [activeProfile] is the one last loaded into [ntrip] ("" = none). */
     val profiles: List<CasterProfile> = emptyList(),
     val activeProfile: String = "",

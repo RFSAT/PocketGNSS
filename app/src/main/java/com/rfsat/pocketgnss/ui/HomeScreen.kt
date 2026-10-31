@@ -134,7 +134,7 @@ fun HomeScreen(engine: GnssEngine, onOpenTab: (Tab) -> Unit, onReconnect: () -> 
         KeyValue(stringResource(R.string.home_licence), "MIT © 2026 RFSAT Limited")
         KeyValue(stringResource(R.string.home_credits), stringResource(R.string.home_credits_value))
         }
-        Text(stringResource(R.string.home_not_affiliated), style = MaterialTheme.typography.bodySmall, color = muted.copy(alpha = 0.7f), fontSize = 11.sp)
+        Text(stringResource(R.string.home_not_affiliated), style = MaterialTheme.typography.bodySmall, color = muted)
         HorizontalDivider()
         Text(stringResource(R.string.home_ai_ack), Modifier.fillMaxWidth(), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall, color = muted)
     }

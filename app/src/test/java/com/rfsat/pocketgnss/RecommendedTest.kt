@@ -24,8 +24,15 @@ class RecommendedTest {
         assertEquals(10, r.settings.ntrip.ggaIntervalSec)
         assertEquals("p1", r.settings.ntrip.password)
         assertEquals("MSM_VRS", r.settings.profiles.first { it.name == "Metrica" }.config.mountpoint)
-        assertTrue(r.settings.ephStream); assertEquals("BKG", r.settings.ephProfile); assertEquals("BCEP00BKG0", r.settings.ephMount)
+        assertTrue(r.settings.ephStream); assertEquals("BKG", r.settings.ephProfile); assertEquals("DYNG00GRC0", r.settings.ephMount)
         assertTrue(r.notes.isEmpty())
+    }
+
+    @Test fun theUsersEphemerisMountpointIsKept() {
+        val s = AppSettings(profiles = listOf(metrica, bkg), ephProfile = "BKG", ephMount = "NOA100GRC0")
+        assertEquals("NOA100GRC0", RecommendedSetup.apply(s).settings.ephMount)
+        // BCEP00BKG0 is no longer served on igs-ip.net: replaced by the station stream
+        assertEquals("DYNG00GRC0", RecommendedSetup.apply(s.copy(ephMount = "BCEP00BKG0")).settings.ephMount)
     }
 
     @Test fun missingAccountsAreReported() {

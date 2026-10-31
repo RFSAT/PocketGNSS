@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.12.21 (build 11221)
+Easier to read: notes and comments in normal text size, in red when critical and violet when informative (orange was too faint), and values right next to their labels on every screen. Map: zoom buttons, and your position blue while known, grey while it is not. The ephemeris stream defaults to an IGS / EUREF station (DYNG00GRC0 near Athens), as BCEP00BKG0 is no longer listed.
+
 ## 1.12.20 (build 11220)
 Swipe left or right to move between tabs (not on the Map, where dragging moves the map). Setup > Phone: a Recommended button sets what worked best in tests: RTK with a base, Metrica on MSM_VRS and the BCEP00BKG0 ephemeris stream with your BKG account, and says which account is missing. Home: values now sit right next to their labels.
 

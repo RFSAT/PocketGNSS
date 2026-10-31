@@ -308,7 +308,7 @@ private fun StakeoutTool(engine: GnssEngine) = NeedsReceiver(engine) {
             Icon(Icons.Filled.Navigation, null, Modifier.padding(8.dp).fillMaxWidth(0.4f).aspectRatio(1f).rotate(arrow.toFloat()),
                 tint = if (onTarget) Color.White else MaterialTheme.colorScheme.primary)
             Text(formatDistance(dist), fontSize = 40.sp, fontWeight = FontWeight.Bold, color = if (onTarget) Color.White else MaterialTheme.colorScheme.onSurface)
-            Text(stringResource(if (moving) R.string.stake_heading_up else R.string.stake_north_up), color = if (onTarget) Color.White else muted, fontSize = 12.sp)
+            Text(stringResource(if (moving) R.string.stake_heading_up else R.string.stake_north_up), color = if (onTarget) Color.White else muted, fontSize = 14.sp)
         }
         Section(stringResource(R.string.stake_offsets)) {
             KeyValue(stringResource(R.string.stake_east), formatOffset(enu[0]), live = true)
