@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.12.20 (build 11220)
+Swipe left or right to move between tabs (not on the Map, where dragging moves the map). Setup > Phone: a Recommended button sets what worked best in tests: RTK with a base, Metrica on MSM_VRS and the BCEP00BKG0 ephemeris stream with your BKG account, and says which account is missing. Home: values now sit right next to their labels.
+
 ## 1.12.19 (build 11219)
 Fixed a crash when the sky view was read while satellite data arrived. When the engine has no position because the satellites have no broadcast ephemerides, it now says so instead of "lack of valid sats". Mountpoint lists mark the streams that send ephemerides and put them first when choosing the ephemeris stream.
 

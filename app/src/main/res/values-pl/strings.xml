@@ -628,6 +628,13 @@
     <string name="setup_receiver">Ustawienia web odbiornika</string>
     <string name="setup_receiver_help">Służy do znalezienia hotspotu odbiornika (ESPrtk : &lt;ID&gt;, ID na jego wyświetlaczu LCD) i pokazania danych logowania (RTKrover + numer urządzenia).</string>
     <string name="setup_receiver_id">ID odbiornika (np. AJG03)</string>
+    <string name="setup_recommended">Zalecane</string>
+    <string name="setup_recommended_done">Ustawiono: %1$s</string>
+    <string name="setup_recommended_eph">strumień efemeryd %1$s / %2$s</string>
+    <string name="setup_recommended_help">Jedno dotknięcie ustawia to, co sprawdziło się najlepiej w testach: RTK ze stacją bazową (nie PPP), tryb ruchu, dostrojenie do tego telefonu, konto Metrica na MSM_VRS i strumień efemeryd BCEP00BKG0 z kontem BKG. Zapisane konta pozostają bez zmian.</string>
+    <string name="setup_recommended_main">strumień główny %1$s / %2$s</string>
+    <string name="setup_recommended_no_eph">Brak zapisanego konta BKG (igs-ip.net lub euref-ip.net, bezpłatna rejestracja) dla strumienia efemeryd: dodaj je w Przekaźnik NTRIP i ponownie dotknij Zalecane.</string>
+    <string name="setup_recommended_no_rtk">Brak zapisanego konta castera RTK (np. Metrica SmartNet): dodaj je w Przekaźnik NTRIP i ponownie dotknij Zalecane.</string>
     <string name="setup_refresh">Odśwież</string>
     <string name="setup_source">Połączenie z odbiornikiem</string>
     <string name="setup_tcp_host">Host</string>

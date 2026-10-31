@@ -628,6 +628,13 @@
     <string name="setup_receiver">Definições web do recetor</string>
     <string name="setup_receiver_help">Serve para encontrar o hotspot do recetor (ESPrtk : &lt;ID&gt;, ID mostrado no LCD) e mostrar o acesso (RTKrover + número do dispositivo).</string>
     <string name="setup_receiver_id">ID do recetor (p. ex. AJG03)</string>
+    <string name="setup_recommended">Recomendado</string>
+    <string name="setup_recommended_done">Definido: %1$s</string>
+    <string name="setup_recommended_eph">fluxo de efemérides %1$s / %2$s</string>
+    <string name="setup_recommended_help">Um toque define o que funcionou melhor nos testes: RTK com estação base (não PPP), modo em movimento, ajuste a este telemóvel, a sua conta Metrica no MSM_VRS e o fluxo de efemérides BCEP00BKG0 com a sua conta BKG. As contas guardadas não mudam.</string>
+    <string name="setup_recommended_main">fluxo principal %1$s / %2$s</string>
+    <string name="setup_recommended_no_eph">Nenhuma conta BKG guardada (igs-ip.net ou euref-ip.net, registo gratuito) para o fluxo de efemérides: adicione uma em Relé NTRIP e toque de novo em Recomendado.</string>
+    <string name="setup_recommended_no_rtk">Nenhuma conta de caster RTK guardada (p. ex. Metrica SmartNet): adicione uma em Relé NTRIP e toque de novo em Recomendado.</string>
     <string name="setup_refresh">Atualizar</string>
     <string name="setup_source">Ligação ao recetor</string>
     <string name="setup_tcp_host">Anfitrião</string>

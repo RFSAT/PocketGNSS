@@ -628,6 +628,13 @@
     <string name="setup_receiver">Réglages web du récepteur</string>
     <string name="setup_receiver_help">Sert à trouver le point d’accès du récepteur (ESPrtk : &lt;ID&gt;, ID affiché sur son écran LCD) et à afficher ses identifiants (RTKrover + numéro de l’appareil).</string>
     <string name="setup_receiver_id">ID du récepteur (par ex. AJG03)</string>
+    <string name="setup_recommended">Recommandé</string>
+    <string name="setup_recommended_done">Appliqué : %1$s</string>
+    <string name="setup_recommended_eph">flux d’éphémérides %1$s / %2$s</string>
+    <string name="setup_recommended_help">Un appui applique ce qui a le mieux fonctionné lors des essais : RTK avec station de base (pas PPP), mode en mouvement, réglage sur ce téléphone, votre compte Metrica sur MSM_VRS et le flux d’éphémérides BCEP00BKG0 avec votre compte BKG. Les comptes enregistrés ne changent pas.</string>
+    <string name="setup_recommended_main">flux principal %1$s / %2$s</string>
+    <string name="setup_recommended_no_eph">Aucun compte BKG enregistré (igs-ip.net ou euref-ip.net, inscription gratuite) pour le flux d’éphémérides : ajoutez-en un dans Relais NTRIP, puis appuyez de nouveau sur Recommandé.</string>
+    <string name="setup_recommended_no_rtk">Aucun compte de caster RTK enregistré (p. ex. Metrica SmartNet) : ajoutez-en un dans Relais NTRIP, puis appuyez de nouveau sur Recommandé.</string>
     <string name="setup_refresh">Actualiser</string>
     <string name="setup_source">Connexion du récepteur</string>
     <string name="setup_tcp_host">Hôte</string>

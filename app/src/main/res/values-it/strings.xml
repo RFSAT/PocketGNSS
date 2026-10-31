@@ -628,6 +628,13 @@
     <string name="setup_receiver">Impostazioni web del ricevitore</string>
     <string name="setup_receiver_help">Serve a trovare l’hotspot del ricevitore (ESPrtk : &lt;ID&gt;, ID mostrato sul suo LCD) e a mostrare le sue credenziali (RTKrover + numero del dispositivo).</string>
     <string name="setup_receiver_id">ID del ricevitore (ad es. AJG03)</string>
+    <string name="setup_recommended">Consigliate</string>
+    <string name="setup_recommended_done">Impostato: %1$s</string>
+    <string name="setup_recommended_eph">flusso effemeridi %1$s / %2$s</string>
+    <string name="setup_recommended_help">Un tocco imposta ciò che ha funzionato meglio nei test: RTK con stazione base (non PPP), modalità in movimento, adattamento a questo telefono, il tuo account Metrica su MSM_VRS e il flusso di effemeridi BCEP00BKG0 con il tuo account BKG. Gli account salvati non cambiano.</string>
+    <string name="setup_recommended_main">flusso principale %1$s / %2$s</string>
+    <string name="setup_recommended_no_eph">Nessun account BKG salvato (igs-ip.net o euref-ip.net, registrazione gratuita) per il flusso di effemeridi: aggiungine uno in Relay NTRIP, poi tocca di nuovo Consigliate.</string>
+    <string name="setup_recommended_no_rtk">Nessun account di caster RTK salvato (ad es. Metrica SmartNet): aggiungine uno in Relay NTRIP, poi tocca di nuovo Consigliate.</string>
     <string name="setup_refresh">Aggiorna</string>
     <string name="setup_source">Connessione del ricevitore</string>
     <string name="setup_tcp_host">Host</string>

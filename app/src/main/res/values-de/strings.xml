@@ -628,6 +628,13 @@
     <string name="setup_receiver">Web-Einstellungen des Empfängers</string>
     <string name="setup_receiver_help">Dient zum Finden des Empfänger-Hotspots (ESPrtk : &lt;ID&gt;, ID auf seinem LCD) und zum Anzeigen seiner Anmeldung (RTKrover + Gerätenummer).</string>
     <string name="setup_receiver_id">Empfänger-ID (z. B. AJG03)</string>
+    <string name="setup_recommended">Empfohlen</string>
+    <string name="setup_recommended_done">Eingestellt: %1$s</string>
+    <string name="setup_recommended_eph">Ephemeriden-Stream %1$s / %2$s</string>
+    <string name="setup_recommended_help">Ein Tippen stellt ein, was sich in Tests am besten bewährt hat: RTK mit Basisstation (nicht PPP), Bewegungsmodus, Abstimmung auf dieses Telefon, Ihr Metrica-Konto auf MSM_VRS und den Ephemeriden-Stream BCEP00BKG0 mit Ihrem BKG-Konto. Gespeicherte Konten bleiben unverändert.</string>
+    <string name="setup_recommended_main">Hauptstream %1$s / %2$s</string>
+    <string name="setup_recommended_no_eph">Kein gespeichertes BKG-Konto (igs-ip.net oder euref-ip.net, kostenlose Registrierung) für den Ephemeriden-Stream: eines unter NTRIP-Relay anlegen, dann erneut auf Empfohlen tippen.</string>
+    <string name="setup_recommended_no_rtk">Kein gespeichertes RTK-Caster-Konto (z. B. Metrica SmartNet): eines unter NTRIP-Relay anlegen, dann erneut auf Empfohlen tippen.</string>
     <string name="setup_refresh">Aktualisieren</string>
     <string name="setup_source">Empfängerverbindung</string>
     <string name="setup_tcp_host">Host</string>

@@ -106,6 +106,7 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
                 LinkKind.PHONE -> {
                     if (!engine.phoneHasGnss) NoGnssWarning()
                     else {
+                        RecommendedRows(engine, onReconnect)
                         SwitchRow(stringResource(R.string.setup_phone_rtk), s.phoneRtk, { v -> upd { it.copy(phoneRtk = v) } },
                             stringResource(if (com.rfsat.pocketgnss.link.PhoneRtkLink.engineAvailable) R.string.setup_phone_rtk_help else R.string.setup_phone_rtk_missing),
                             enabled = com.rfsat.pocketgnss.link.PhoneRtkLink.engineAvailable)
@@ -279,6 +280,38 @@ private fun PhoneProfileRows(engine: GnssEngine) {
         KeyValue(stringResource(R.string.setup_phone_learned), stringResource(R.string.setup_phone_learned_value, p.epochs / 60.0, p.meanPhaseSats,
             p.fixableShare * 100, p.slipsPerSatMin))
         ActionButton(onClick = { engine.store.update { it.copy(phoneProfile = "") } }, compact = true) { Text(stringResource(R.string.setup_phone_forget)) }
+    }
+}
+
+/**
+ * One tap to the set-up that worked best in the tests (RecommendedSetup): RTK with a base, Metrica on MSM_VRS, the
+ * BCEP00BKG0 ephemeris stream with a BKG account. Says what it chose and which account is missing.
+ */
+@Composable
+private fun RecommendedRows(engine: GnssEngine, onReconnect: () -> Unit) {
+    val conn by engine.connection.collectAsState()
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    var result by remember { mutableStateOf<com.rfsat.pocketgnss.data.RecommendedSetup.Result?>(null) }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(stringResource(R.string.setup_recommended_help), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = muted)
+        ActionButton(onClick = {
+            val r = com.rfsat.pocketgnss.data.RecommendedSetup.apply(engine.store.value)
+            engine.store.update { r.settings }
+            result = r
+            engine.updateEphStream()
+            if (engine.ntripClient.running) engine.ntripClient.start(r.settings.ntrip)
+            if (conn is Connection.Ready) onReconnect()   // engine options take effect on (re)connecting
+        }, compact = true) { Text(stringResource(R.string.setup_recommended)) }
+    }
+    result?.let { r ->
+        val parts = listOfNotNull(
+            r.mainProfile?.let { stringResource(R.string.setup_recommended_main, it, r.settings.ntrip.mountpoint) },
+            r.ephProfile?.let { stringResource(R.string.setup_recommended_eph, it, r.settings.ephMount) })
+        Text(stringResource(R.string.setup_recommended_done, parts.joinToString("; ").ifEmpty { "—" }), style = MaterialTheme.typography.bodySmall, color = SafeGreen)
+        for (n in r.notes) Text(stringResource(when (n) {
+            com.rfsat.pocketgnss.data.RecommendedSetup.Note.NO_RTK_PROFILE -> R.string.setup_recommended_no_rtk
+            com.rfsat.pocketgnss.data.RecommendedSetup.Note.NO_EPH_PROFILE -> R.string.setup_recommended_no_eph
+        }), style = MaterialTheme.typography.bodySmall, color = WarnAmber)
     }
 }
 

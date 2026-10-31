@@ -628,6 +628,13 @@
     <string name="setup_receiver">Ρυθμίσεις web δέκτη</string>
     <string name="setup_receiver_help">Χρησιμοποιείται για την εύρεση του hotspot του δέκτη (ESPrtk : &lt;ID&gt;, το ID φαίνεται στην οθόνη LCD) και για την εμφάνιση των στοιχείων σύνδεσης (RTKrover + αριθμός συσκευής).</string>
     <string name="setup_receiver_id">ID δέκτη (π.χ. AJG03)</string>
+    <string name="setup_recommended">Προτεινόμενες</string>
+    <string name="setup_recommended_done">Ορίστηκαν: %1$s</string>
+    <string name="setup_recommended_eph">ροή εφημερίδων %1$s / %2$s</string>
+    <string name="setup_recommended_help">Ένα πάτημα ορίζει ό,τι λειτούργησε καλύτερα στις δοκιμές: RTK με σταθμό βάσης (όχι PPP), λειτουργία κίνησης, προσαρμογή σε αυτό το τηλέφωνο, τον λογαριασμό Metrica στο MSM_VRS και τη ροή εφημερίδων BCEP00BKG0 με τον λογαριασμό BKG. Οι αποθηκευμένοι λογαριασμοί δεν αλλάζουν.</string>
+    <string name="setup_recommended_main">κύρια ροή %1$s / %2$s</string>
+    <string name="setup_recommended_no_eph">Δεν υπάρχει αποθηκευμένος λογαριασμός BKG (igs-ip.net ή euref-ip.net, δωρεάν εγγραφή) για τη ροή εφημερίδων: προσθέστε έναν στο NTRIP relay και πατήστε ξανά Προτεινόμενες.</string>
+    <string name="setup_recommended_no_rtk">Δεν υπάρχει αποθηκευμένος λογαριασμός caster RTK (π.χ. Metrica SmartNet): προσθέστε έναν στο NTRIP relay και πατήστε ξανά Προτεινόμενες.</string>
     <string name="setup_refresh">Ανανέωση</string>
     <string name="setup_source">Σύνδεση δέκτη</string>
     <string name="setup_tcp_host">Διεύθυνση</string>

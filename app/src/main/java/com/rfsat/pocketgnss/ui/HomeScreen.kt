@@ -48,8 +48,14 @@ fun HomeScreen(engine: GnssEngine, onOpenTab: (Tab) -> Unit, onReconnect: () -> 
     fun openUrl(url: String) = try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } catch (_: Exception) {}
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
 
-    // Short labels: a fixed label column (fits "Receiver version") instead of 42 % of the width.
-    androidx.compose.runtime.CompositionLocalProvider(LocalKeyWidth provides HOME_KEY_WIDTH) {
+    // Label columns as wide as their longest label, so the values sit right next to the labels (status card and the
+    // about rows each fitted to their own labels).
+    val statusKeys = fittedKeyWidth(listOf(stringResource(R.string.home_variant), stringResource(R.string.home_link),
+        stringResource(R.string.home_module), stringResource(R.string.live_fix), stringResource(R.string.home_state)))
+    val aboutKeys = fittedKeyWidth(listOf(stringResource(R.string.home_developer), stringResource(R.string.home_project),
+        stringResource(R.string.home_hardware), stringResource(R.string.home_interfaces), stringResource(R.string.home_licence),
+        stringResource(R.string.home_credits)))
+    androidx.compose.runtime.CompositionLocalProvider(LocalKeyWidth provides statusKeys) {
     Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(stringResource(R.string.app_name), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 28.sp)
@@ -119,6 +125,7 @@ fun HomeScreen(engine: GnssEngine, onOpenTab: (Tab) -> Unit, onReconnect: () -> 
         Text(stringResource(R.string.home_about_2), textAlign = TextAlign.Justify, style = MaterialTheme.typography.bodyMedium)
 
         HorizontalDivider()
+        androidx.compose.runtime.CompositionLocalProvider(LocalKeyWidth provides aboutKeys) {
         LinkRow(stringResource(R.string.home_developer), "RFSAT Limited", "www.rfsat.com") { openUrl("https://www.rfsat.com") }
         Text(stringResource(R.string.home_rfsat), textAlign = TextAlign.Justify, style = MaterialTheme.typography.bodySmall, color = muted)
         KeyValue(stringResource(R.string.home_project), stringResource(R.string.home_project_value))
@@ -126,14 +133,13 @@ fun HomeScreen(engine: GnssEngine, onOpenTab: (Tab) -> Unit, onReconnect: () -> 
         KeyValue(stringResource(R.string.home_interfaces), stringResource(R.string.home_interfaces_value))
         KeyValue(stringResource(R.string.home_licence), "MIT © 2026 RFSAT Limited")
         KeyValue(stringResource(R.string.home_credits), stringResource(R.string.home_credits_value))
+        }
         Text(stringResource(R.string.home_not_affiliated), style = MaterialTheme.typography.bodySmall, color = muted.copy(alpha = 0.7f), fontSize = 11.sp)
         HorizontalDivider()
         Text(stringResource(R.string.home_ai_ack), Modifier.fillMaxWidth(), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall, color = muted)
     }
     }
 }
-
-private val HOME_KEY_WIDTH = KEY_WIDTH
 
 fun sourceHelp(s: AppSettings) = when (s.source) {
     LinkKind.USB -> R.string.help_usb
@@ -146,7 +152,7 @@ fun sourceHelp(s: AppSettings) = when (s.source) {
 @Composable
 private fun LinkRow(label: String, value: String, url: String, onOpen: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable(onClick = onOpen)) {
-        Text(label, Modifier.width(HOME_KEY_WIDTH).padding(end = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, Modifier.width(LocalKeyWidth.current ?: KEY_WIDTH).padding(end = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Column(Modifier.weight(1f)) {
             Text(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
             Text(url, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)

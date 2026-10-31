@@ -628,6 +628,13 @@
     <string name="setup_receiver">Ajustes web del receptor</string>
     <string name="setup_receiver_help">Sirve para encontrar el punto de acceso del receptor (ESPrtk : &lt;ID&gt;, ID en su pantalla LCD) y mostrar su acceso (RTKrover + número de dispositivo).</string>
     <string name="setup_receiver_id">ID del receptor (p. ej. AJG03)</string>
+    <string name="setup_recommended">Recomendado</string>
+    <string name="setup_recommended_done">Aplicado: %1$s</string>
+    <string name="setup_recommended_eph">flujo de efemérides %1$s / %2$s</string>
+    <string name="setup_recommended_help">Un toque aplica lo que mejor funcionó en las pruebas: RTK con estación base (no PPP), modo en movimiento, ajuste a este teléfono, su cuenta de Metrica en MSM_VRS y el flujo de efemérides BCEP00BKG0 con su cuenta de BKG. Las cuentas guardadas no cambian.</string>
+    <string name="setup_recommended_main">flujo principal %1$s / %2$s</string>
+    <string name="setup_recommended_no_eph">No hay ninguna cuenta de BKG guardada (igs-ip.net o euref-ip.net, registro gratuito) para el flujo de efemérides: añada una en Relé NTRIP y vuelva a tocar Recomendado.</string>
+    <string name="setup_recommended_no_rtk">No hay ninguna cuenta de caster RTK guardada (p. ej. Metrica SmartNet): añada una en Relé NTRIP y vuelva a tocar Recomendado.</string>
     <string name="setup_refresh">Actualizar</string>
     <string name="setup_source">Conexión del receptor</string>
     <string name="setup_tcp_host">Host</string>

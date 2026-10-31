@@ -191,6 +191,20 @@ val LocalKeyWidth = androidx.compose.runtime.compositionLocalOf<androidx.compose
 /** Label column width used app-wide: fits labels such as "Receiver version"; longer ones wrap. */
 val KEY_WIDTH = 112.dp
 
+/**
+ * Label column just wide enough for the longest of [labels] (as [KeyValue] draws them) plus the gap, so values sit
+ * close to their labels; at most [max], longer labels wrap.
+ */
+@Composable
+fun fittedKeyWidth(labels: List<String>, max: androidx.compose.ui.unit.Dp = 150.dp): androidx.compose.ui.unit.Dp {
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    val style = MaterialTheme.typography.bodySmall
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val px = remember(labels, style, density) { labels.maxOfOrNull { measurer.measure(it, style, maxLines = 1).size.width } ?: 0 }
+    // + the 8 dp gap KeyValue keeps after the label, + 2 dp so rounding never wraps a label
+    return (with(density) { px.toDp() } + 10.dp).coerceAtMost(max)
+}
+
 /** A labelled single-choice row: the label in the label column, the options as chips beside it (one line). */
 @Composable
 fun <T> ChoiceRow(label: String, options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit) {

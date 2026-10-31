@@ -630,6 +630,13 @@
     <string name="setup_receiver">Receiver web settings</string>
     <string name="setup_receiver_help">Used to find the receiver\'s hotspot (ESPrtk : &lt;ID&gt;, ID shown on its LCD) and to show its login (RTKrover + device number).</string>
     <string name="setup_receiver_id">Receiver ID (e.g. AJG03)</string>
+    <string name="setup_recommended">Recommended</string>
+    <string name="setup_recommended_done">Set: %1$s</string>
+    <string name="setup_recommended_eph">ephemeris stream %1$s / %2$s</string>
+    <string name="setup_recommended_help">One tap sets what worked best in tests: RTK with a base station (not PPP), moving mode, tuning to this phone, your Metrica account on MSM_VRS and the BCEP00BKG0 ephemeris stream with your BKG account. Saved accounts stay as they are.</string>
+    <string name="setup_recommended_main">main stream %1$s / %2$s</string>
+    <string name="setup_recommended_no_eph">No saved BKG account (igs-ip.net or euref-ip.net, free registration) for the ephemeris stream: add one under NTRIP relay, then tap Recommended again.</string>
+    <string name="setup_recommended_no_rtk">No saved RTK caster account (e.g. Metrica SmartNet): add one under NTRIP relay, then tap Recommended again.</string>
     <string name="setup_refresh">Refresh</string>
     <string name="setup_source">Receiver connection</string>
     <string name="setup_tcp_host">Host</string>

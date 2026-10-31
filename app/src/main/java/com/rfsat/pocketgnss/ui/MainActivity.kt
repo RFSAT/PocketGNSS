@@ -53,6 +53,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -222,6 +224,9 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/** Share of the screen width a horizontal swipe must cover to change the tab. */
+private const val SWIPE_FRACTION = 0.25f
+
 enum class Tab(@StringRes val label: Int, val icon: ImageVector) {
     HOME(R.string.tab_home, Icons.Filled.Home),
     LIVE(R.string.tab_live, Icons.Filled.GpsFixed),
@@ -304,7 +309,23 @@ internal fun AppRoot(
                 dismissButton = { ActionButton(onClick = { confirmExit = false }) { Text(stringResource(R.string.action_cancel)) } },
             )
         }
-        Box(Modifier.fillMaxSize().padding(pad).consumeWindowInsets(pad).imePadding()) {
+        // Swipe left / right to the next / previous tab. Not on the map, where dragging pans it, and the map is left out of
+        // the order (Home, Live, Tools, Log, Setup); controls that use horizontal drags themselves (sliders, canvases, a
+        // map inside a tool) consume them first, so they keep working.
+        val swipeOrder = Tab.entries.filter { it != Tab.MAP }
+        val swipe = if (tab == Tab.MAP) Modifier else Modifier.pointerInput(tab) {
+            var total = 0f
+            detectHorizontalDragGestures(
+                onDragStart = { total = 0f },
+                onDragEnd = {
+                    if (kotlin.math.abs(total) > size.width * SWIPE_FRACTION) {
+                        val i = swipeOrder.indexOf(tab)
+                        swipeOrder.getOrNull(if (total < 0) i + 1 else i - 1)?.let { tabName = it.name }
+                    }
+                },
+                onHorizontalDrag = { change, dx -> total += dx; change.consume() })
+        }
+        Box(Modifier.fillMaxSize().padding(pad).consumeWindowInsets(pad).imePadding().then(swipe)) {
             when (tab) {
                 Tab.HOME -> HomeScreen(engine, onOpenTab = { tabName = it.name }, onReconnect = onReconnect,
                     onConfigureBt = { setupFocusBt = true; tabName = Tab.SETUP.name })
