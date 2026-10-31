@@ -111,6 +111,11 @@ fun RawTool(engine: GnssEngine) {
             st.error?.let { Text(it, color = AlarmRed, style = MaterialTheme.typography.bodySmall) }
             st.status?.let { Text(stringResource(R.string.raw_api_status, it), color = InfoViolet, style = MaterialTheme.typography.bodySmall) }
             st.report?.let { r -> Report(r, st.running, muted) }
+            if (st.running || st.report != null) {
+                KeyValue(stringResource(R.string.raw_nav_received), st.navMessages.entries.joinToString(" · ") { "${it.key} ${it.value}" }
+                    .ifBlank { stringResource(R.string.raw_nav_none) }, live = st.running)
+                Text(stringResource(R.string.raw_nav_help), style = MaterialTheme.typography.bodySmall, color = muted)
+            }
         }
 
         Section(stringResource(R.string.raw_record)) {

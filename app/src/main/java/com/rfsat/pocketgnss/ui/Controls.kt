@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -193,19 +194,27 @@ fun <T> Picker(label: String, options: List<T>, selected: T, text: (T) -> String
     }
 }
 
-/** Key (left column, muted) and value (right column). [live] marks values that change with the data (kept for callers). */
+/**
+ * Key (left column, muted) and value (right column). [live] marks values that change with the data (kept for callers).
+ * [inline]: the value follows its own label (a short gap) instead of starting at the shared label column.
+ */
 @Composable
-fun KeyValue(key: String, value: String, live: Boolean = false, valueColor: Color = Color.Unspecified) {
+fun KeyValue(key: String, value: String, live: Boolean = false, valueColor: Color = Color.Unspecified, inline: Boolean = false) {
     val keyWidth = LocalKeyWidth.current
-    ReportKeyWidth(key, MaterialTheme.typography.bodySmall)
+    if (!inline) ReportKeyWidth(key, MaterialTheme.typography.bodySmall)
+    val style = MaterialTheme.typography.bodySmall.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Start)
     Row(Modifier.fillMaxWidth()) {
-        val keyMod = if (keyWidth != null) Modifier.width(keyWidth).padding(end = 8.dp) else Modifier.weight(0.42f)
-        val valMod = if (keyWidth != null) Modifier.weight(1f) else Modifier.weight(0.58f)
-        Text(key, keyMod, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        val keyMod = when {
+            inline -> Modifier.widthIn(max = MAX_KEY_WIDTH).padding(end = 10.dp)
+            keyWidth != null -> Modifier.width(keyWidth).padding(end = 8.dp)
+            else -> Modifier.weight(0.42f)
+        }
+        val valMod = if (inline || keyWidth != null) Modifier.weight(1f) else Modifier.weight(0.58f)
+        Text(key, keyMod, style = style, color = MaterialTheme.colorScheme.onSurfaceVariant)
         // label muted on the left, value in the normal text colour and a heavier weight on the right
         val vc = if (valueColor != Color.Unspecified) valueColor else MaterialTheme.colorScheme.onSurface
         // Full size always (shrunk values were unreadable while driving): a value too long for the line wraps instead.
-        Text(value, valMod, style = MaterialTheme.typography.bodySmall, color = vc, fontWeight = FontWeight.Medium)
+        Text(value, valMod, style = style, color = vc, fontWeight = FontWeight.Medium)
     }
 }
 

@@ -184,7 +184,10 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
                         (if (rtkState.phoneFrozen) " · " + stringResource(R.string.live_phone_fix_frozen) else ""), live = true,
                         valueColor = if (rtkState.phoneFrozen) InfoViolet else Color.Unspecified)
                 }
-                rtkState.phoneDistance?.let { d -> KeyValue(stringResource(R.string.live_fix_gap), formatDistance(d), live = true) }
+                // Always shown: the distance, or why there is none (no engine solution this epoch, no phone fix).
+                KeyValue(stringResource(R.string.live_fix_gap), rtkState.phoneDistance?.let { formatDistance(it) } ?: stringResource(
+                    if (rtkState.phoneAcc == null) R.string.live_fix_gap_no_phone else R.string.live_fix_gap_no_rtk), live = true,
+                    valueColor = if (rtkState.phoneDistance == null) muted else Color.Unspecified)
                 if (s.phonePpp) {
                     // PPP: SSR corrections instead of a base station
                     val sol = rtkState.solution
@@ -198,7 +201,7 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
                         !s.ntripEnabled && !replaying -> Text(stringResource(R.string.live_ppp_hint), style = small, color = muted)
                         // base station observations arrive, which PPP does not use: the stream is meant for RTK
                         b != null && b.frames > 20 && b.satellites > 0 -> Text(stringResource(R.string.live_ppp_rtkstream), style = small, color = AlarmRed)
-                        b != null && b.frames > 20 && b.ephemerides == 0 -> Text(stringResource(R.string.live_ppp_noeph), style = small, color = AlarmRed)
+                        b != null && b.frames > 20 && b.ephemerides == 0 && b.navMessages == 0L -> Text(stringResource(R.string.live_ppp_noeph), style = small, color = AlarmRed)
                         b != null && b.frames > 20 && b.ssrSatellites == 0 -> Text(stringResource(R.string.live_ppp_nossr), style = small, color = AlarmRed)
                         !rtkState.ionoFree -> Text(stringResource(R.string.live_ppp_l1), style = small, color = muted)
                     }
@@ -207,12 +210,14 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
                         style = small, color = muted)
                 } else {
                     if (b != null && b.frames > 0) KeyValue(stringResource(R.string.live_rtk_base), stringResource(R.string.live_rtk_station, b.stationId) + " · " + pluralStringResource(R.plurals.n_satellites, b.satellites, b.satellites) + " · " +
-                        (b.ephemerides + b.glonassEphemerides).let { pluralStringResource(R.plurals.n_ephemerides, it, it) } + if (!b.hasPosition) " · " + stringResource(R.string.live_rtk_no_basepos) else "", live = true)
+                        (b.ephemerides + b.glonassEphemerides).let { pluralStringResource(R.plurals.n_ephemerides, it, it) } +
+                        (if (b.phoneEphemerides > 0) " (" + stringResource(R.string.live_eph_phone, b.phoneEphemerides) + ")" else "") +
+                        if (!b.hasPosition) " · " + stringResource(R.string.live_rtk_no_basepos) else "", live = true)
                     if (rtkState.noPhase && rtkState.epochs > 5) Text(stringResource(R.string.live_rtk_nophase), style = small, color = AlarmRed)
                     else if (!s.ntripEnabled && !replaying) Text(stringResource(R.string.live_rtk_hint), style = small, color = muted)
                     // SSR corrections without base observations: the stream is meant for PPP
                     else if (b != null && b.frames > 20 && b.satellites == 0 && b.ssrSatellites > 0) Text(stringResource(R.string.live_rtk_pppstream), style = small, color = AlarmRed)
-                    else if (b != null && b.frames > 120 && b.ephemerides == 0) Text(stringResource(R.string.live_rtk_noeph), style = small, color = AlarmRed)
+                    else if (b != null && b.frames > 120 && b.ephemerides == 0 && b.navMessages == 0L) Text(stringResource(R.string.live_rtk_noeph), style = small, color = AlarmRed)
                 }
                 rtkState.solution?.takeIf { it.codeRms > com.rfsat.pocketgnss.rtk.HonestAccuracy.REFLECTED_RMS && it.codeResiduals >= 4 }?.let { sol ->
                     Text(stringResource(R.string.live_rtk_reflected, formatDistance(sol.codeRms)), style = small, color = AlarmRed)

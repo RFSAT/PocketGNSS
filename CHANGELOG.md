@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.12.22 (build 11222)
+Phone RTK reads satellite orbits from the phone's own navigation messages where the phone delivers them, so RTK also works on streams without ephemerides (e.g. Metrica MSM_NEAR), with no ephemeris stream. Orbits are kept for the next start, so a position comes at once after a restart. The map zooms while following your position, Live always shows the phone fix to RTK distance, and notes fill the screen width.
+
 ## 1.12.21 (build 11221)
 Easier to read: notes and comments in normal text size, in red when critical and violet when informative (orange was too faint), and values right next to their labels on every screen. Map: zoom buttons, and your position blue while known, grey while it is not. The ephemeris stream defaults to an IGS / EUREF station (DYNG00GRC0 near Athens), as BCEP00BKG0 is no longer listed.
 

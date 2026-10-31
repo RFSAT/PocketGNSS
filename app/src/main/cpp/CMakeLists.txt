@@ -5,7 +5,7 @@ project(pocketgnss_rtk C)
 set(RTKLIB_SRC
     rtklib/rtkcmn.c rtklib/rtkpos.c rtklib/lambda.c rtklib/ephemeris.c rtklib/preceph.c rtklib/sbas.c
     rtklib/ionex.c rtklib/pntpos.c rtklib/ppp.c rtklib/ppp_ar.c rtklib/rtcm.c rtklib/rtcm2.c rtklib/rtcm3.c
-    rtklib/rtcm3e.c rtklib/tides.c rtklib/geoid.c rtklib/trace.c)
+    rtklib/rtcm3e.c rtklib/tides.c rtklib/geoid.c rtklib/trace.c rtklib/rcvraw.c)
 
 add_library(prtk SHARED prtk.c prtk_jni.c ${RTKLIB_SRC})
 target_include_directories(prtk PRIVATE rtklib .)

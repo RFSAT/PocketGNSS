@@ -133,7 +133,7 @@
     <string name="disp_utm_auto">Automatic (zone of the position)</string>
     <string name="disp_utm_zone">UTM zone</string>
     <string name="disp_utm_zone_n">Zone %1$d (central meridian %2$d°)</string>
-    <string name="eph_help">Some casters send satellite orbits (broadcast ephemerides) rarely or not at all, so phone RTK waits. A second connection to an IGS / EUREF station near you (e.g. DYNG00GRC0 near Athens on igs-ip.net, free with BKG registration) gives them at once.</string>
+    <string name="eph_help">Phone RTK reads the satellite orbits (broadcast ephemerides) from the satellites\' own messages when the phone delivers them (Tools &gt; Phone raw GNSS shows it). Otherwise, and as a backup, a second connection to an IGS / EUREF station near you (e.g. DYNG00GRC0 near Athens on igs-ip.net, free with BKG registration) gives them at once.</string>
     <string name="eph_mount">Mountpoint</string>
     <string name="eph_no_profile">Save the account first: Tools &gt; Corrections &gt; caster profile (e.g. the IGS-IP (BKG) preset with your BKG login).</string>
     <string name="eph_profile">Account (saved caster profile)</string>
@@ -351,8 +351,11 @@
     <string name="live_base_value">#%1$d at %2$s</string>
     <string name="live_corrections">Corrections</string>
     <string name="live_dop">DOP</string>
+    <string name="live_eph_phone">%1$d from the phone</string>
     <string name="live_fix">Fix</string>
     <string name="live_fix_gap">Phone fix to RTK</string>
+    <string name="live_fix_gap_no_phone">– (no phone fix now)</string>
+    <string name="live_fix_gap_no_rtk">– (no RTK solution now)</string>
     <string name="live_height_ell">Height (ellipsoid)</string>
     <string name="live_height_msl">Height (MSL)</string>
     <string name="live_lat">Latitude</string>
@@ -388,7 +391,7 @@
     <string name="live_rtk_hint">Switch the NTRIP relay on (caster and mountpoint in Setup) for RTK; until then the phone gives a standalone position.</string>
     <string name="live_rtk_no_basepos">no station position (1005/1006) yet</string>
     <string name="live_rtk_no_solution">no solution at the moment</string>
-    <string name="live_rtk_noeph">No broadcast ephemerides from the caster yet (RTCM 1019/1020/1045/1046/1042), and the phone needs them to compute satellite positions. Many network streams (VRS, nearest base) leave them out: switch on the ephemeris stream (Setup &gt; Receiver connection).</string>
+    <string name="live_rtk_noeph">No broadcast ephemerides yet: this caster sends none (RTCM 1019/1020/1045/1046/1042) and the phone delivers no navigation messages, so the satellite positions are unknown. Switch on the ephemeris stream (Setup &gt; Receiver connection).</string>
     <string name="live_rtk_nophase">No carrier phase from this phone at the moment: RTK cannot fix (code-only phone, or power saving still on). The position stays at metre level.</string>
     <string name="live_rtk_pppstream">This stream sends PPP corrections (SSR), not base station data: set Corrections to PPP (HAS / SSR) in Setup &gt; Receiver connection, or choose an RTK mountpoint.</string>
     <string name="live_rtk_reflected">Signals reach the phone by reflection (code residuals %1$s): the position can be off by metres or more, whatever accuracy RTK claims. Move to open sky, away from walls, cars and your body.</string>
@@ -565,6 +568,9 @@
     <string name="raw_interval">Interval</string>
     <string name="raw_intro">Phone RTK needs raw measurements with carrier phase, ideally on two bands (L1 + L5/E5a). Phones differ widely, so test each model outdoors under open sky.</string>
     <string name="raw_marker">Marker name</string>
+    <string name="raw_nav_help">Phone RTK reads the satellites\' ephemerides from these messages, so it needs no ephemeris stream. If none arrive, this phone does not deliver them.</string>
+    <string name="raw_nav_none">none so far</string>
+    <string name="raw_nav_received">Nav messages received</string>
     <string name="raw_no">no</string>
     <string name="raw_phone">This phone</string>
     <string name="raw_post">Post-processing</string>

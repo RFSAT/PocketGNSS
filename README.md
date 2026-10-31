@@ -258,10 +258,27 @@ area" button; instead you can load your own raster MBTiles file (drone orthophot
 map exported from QGIS or `gdal_translate`), shown over the base map and fully offline (`ui/map/OwnMap.kt`,
 MapLibre's MBTiles source).
 
+### Ephemerides from the phone (phone RTK)
+
+Phone RTK decodes broadcast ephemerides from the satellites' own navigation messages when the phone delivers them
+(Android `GnssNavigationMessage`; Tools > Phone raw GNSS counts them per system), so it needs no ephemerides from the
+caster. `prtk_input_navmsg` (`app/src/main/cpp/prtk.c`) collects GPS / QZSS L1 C/A subframes 1-3, Galileo I/NAV word
+types 1-5 (E1-B pages, CRC-24Q checked), BeiDou D1 subframes 1-3 (BCH checked; interleaved as transmitted or already
+de-interleaved) and GLONASS strings 1-4 (Hamming checked; the frequency channel from the measured carrier) and decodes
+them with RTKLIB's decoders (`rtklib/rcvraw.c`). GPS words are checked against their parity, both as transmitted
+(inverted after D30* = 1) and with the data bits already corrected; for chips whose parity bits are meaningless (an
+Android phone of 2017 in the test data) a subframe is used only once the same data has come twice. Each orbit must be
+plausible (semi-major axis, eccentricity, reference time within hours of now) before it is used. Raw recordings write
+the messages as GnssLogger "Nav," lines, and replays feed them to the engine (`GnssLogReader.navTimeline`).
+
+The engine's ephemerides are kept between starts in the app's storage (`ephemerides.bin`, `prtk_nav_save` on stop and
+every 5 minutes, `prtk_nav_load` after the start); those no longer valid at the first epoch (GPS 2 h, Galileo 4 h,
+BeiDou 6 h, GLONASS 30 min) are dropped, so after a restart the first position does not wait for the orbits.
+
 ### Ephemeris stream (phone RTK)
 
 Some casters send broadcast ephemerides rarely or not at all (Metrica's MSM_NEAR in Athens sent none, October 2026),
-so phone RTK waits for orbits. Setup > Phone > Ephemeris stream opens a second NTRIP connection with the account of a
+so a phone that delivers no navigation messages waits for orbits. Setup > Phone > Ephemeris stream opens a second NTRIP connection with the account of a
 saved caster profile and feeds only its navigation messages to the engine (`prtk_input_rtcm_nav`), never base
 observations. Use an IGS / EUREF station near you on `igs-ip.net` or `euref-ip.net` (free with BKG registration; the
 default is `DYNG00GRC0`, Dionysos near Athens); Choose lists the caster's streams with ephemerides first.

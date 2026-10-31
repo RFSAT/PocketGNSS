@@ -146,11 +146,16 @@ data class RtkBase(
     /** GPS week and time of week of the latest SSR clock correction (0 when none). */
     val ssrWeek: Int = 0,
     val ssrTow: Double = 0.0,
+    /** Ephemerides held that the phone decoded from the satellites' own messages, and the phone's messages accepted / rejected. */
+    val phoneEphemerides: Int = 0,
+    val navMessages: Long = 0,
+    val navRejected: Long = 0,
 ) {
     companion object {
-        const val SIZE = 18
+        const val SIZE = 21
         fun from(v: DoubleArray) = RtkBase(v[0] != 0.0, v[4], v[5], v[6], v[7].toInt(), v[8].toInt(), v[9].toInt(), v[10],
-            v[11].toInt(), v[12].toInt(), v[13].toLong(), v[14].toInt(), v[17].toInt(), v[15].toInt(), v[16])
+            v[11].toInt(), v[12].toInt(), v[13].toLong(), v[14].toInt(), v[17].toInt(), v[15].toInt(), v[16], v[18].toInt(), v[19].toLong(),
+            v[20].toLong())
     }
 }
 

@@ -3,11 +3,14 @@ package com.rfsat.pocketgnss.raw
 import java.io.BufferedReader
 
 /**
- * Reads a GnssLogger text file ("Raw," and "Fix," lines), as PocketGNSS writes it (gnss_log.txt) and as Google's
+ * Reads a GnssLogger text file ("Raw," "Fix," and "Nav," lines), as PocketGNSS writes it (gnss_log.txt) and as Google's
  * GnssLogger app does. Columns are found by name from the "# Raw,..." header line, so files of other GnssLogger
  * versions read too; without a header the PocketGNSS column order ([GnssLog.RAW_FIELDS]) is assumed. Measurements are
  * grouped into epochs by TimeNanos and converted with [RawConvert], as the live engine does.
  */
+/** A navigation message with the GPS time (s since 1980) of the epoch it came after and the GLONASS channel (or -99). */
+class TimedNav(val time: Double, val message: NavMessage, val gloChannel: Int)
+
 class GnssLogReader(private val r: BufferedReader) {
     /** The phone's own position at one moment (a "Fix," line). */
     data class Fix(val timeMs: Long, val latitude: Double, val longitude: Double, val altitude: Double?, val accuracy: Double?, val provider: String)
@@ -18,6 +21,12 @@ class GnssLogReader(private val r: BufferedReader) {
     private var lastDisc: Int? = null
     /** The phone's own fixes read so far. */
     val fixes = ArrayList<Fix>()
+    private val navs = ArrayList<NavMessage>()
+    /** GLONASS frequency channel per svid, from the carrier frequencies read so far (-99 = not known). */
+    val gloChannels = IntArray(128) { -99 }
+
+    /** Navigation messages read since the last call: they came after the epoch [next] returned last, before the next one. */
+    fun takeNav(): List<NavMessage> = ArrayList(navs).also { navs.clear() }
 
     private fun col(f: List<String>, name: String): String? = rawCols[name]?.let { f.getOrNull(it) }?.takeIf { it.isNotEmpty() }
     private fun d(f: List<String>, name: String) = col(f, name)?.toDoubleOrNull()
@@ -40,15 +49,17 @@ class GnssLogReader(private val r: BufferedReader) {
             snrDb = d(f, "SnrInDb"), agcDb = d(f, "AgcDb"), basebandCn0DbHz = d(f, "BasebandCn0DbHz"), fullIsbNanos = d(f, "FullInterSignalBiasNanos"),
             fullIsbUncertaintyNanos = d(f, "FullInterSignalBiasUncertaintyNanos"), satelliteIsbNanos = d(f, "SatelliteInterSignalBiasNanos"),
             satelliteIsbUncertaintyNanos = d(f, "SatelliteInterSignalBiasUncertaintyNanos"))
+        if (m.constellation == 3 && m.svid in 1..127) NavMessage.glonassChannel(m.carrierHz).takeIf { it != -99 }?.let { gloChannels[m.svid] = it }
         return clock to m
     }
 
     private fun parseFix(f: List<String>) {
-        fun c(n: String) = fixCols[n]?.let { f.getOrNull(it) }?.takeIf { it.isNotEmpty() }
-        val la = c("LatitudeDegrees")?.toDoubleOrNull() ?: return
-        val lo = c("LongitudeDegrees")?.toDoubleOrNull() ?: return
-        fixes.add(Fix(c("UnixTimeMillis")?.toLongOrNull() ?: 0, la, lo, c("AltitudeMeters")?.toDoubleOrNull(), c("AccuracyMeters")?.toDoubleOrNull(),
-            c("Provider") ?: ""))
+        // column names of current GnssLogger versions, then of the early ones (2016-2017)
+        fun c(vararg n: String) = n.firstNotNullOfOrNull { k -> fixCols[k]?.let { f.getOrNull(it) }?.takeIf { it.isNotEmpty() } }
+        val la = c("LatitudeDegrees", "Latitude")?.toDoubleOrNull() ?: return
+        val lo = c("LongitudeDegrees", "Longitude")?.toDoubleOrNull() ?: return
+        fixes.add(Fix(c("UnixTimeMillis", "(UTC)TimeInMs")?.toLongOrNull() ?: 0, la, lo, c("AltitudeMeters", "Altitude")?.toDoubleOrNull(),
+            c("AccuracyMeters", "Accuracy")?.toDoubleOrNull(), c("Provider") ?: ""))
     }
 
     /** The next epoch's clock and measurements, or null at the end of the file. */
@@ -61,6 +72,7 @@ class GnssLogReader(private val r: BufferedReader) {
             if (line.startsWith("# Raw,")) { rawCols = line.removePrefix("# ").split(',').withIndex().associate { it.value.trim() to it.index }; continue }
             if (line.startsWith("# Fix,")) { fixCols = line.removePrefix("# ").split(',').withIndex().associate { it.value.trim() to it.index }; continue }
             if (line.startsWith("Fix,")) { parseFix(line.split(',')); continue }
+            if (line.startsWith("Nav,")) { NavMessage.parse(line)?.let { navs.add(it) }; continue }
             if (!line.startsWith("Raw,")) continue
             val p = parseRaw(line.split(',')) ?: continue
             if (clock == null) { clock = p.first; ms.add(p.second); continue }
@@ -80,5 +92,31 @@ class GnssLogReader(private val r: BufferedReader) {
     }
 
     fun epochs(): Sequence<RawEpoch> = generateSequence { next() }
+
+    /** The GLONASS frequency channel for a navigation message (-99 when not GLONASS or not known). */
+    fun channel(m: NavMessage): Int = if (m.type == NavMessage.GLO_L1CA && m.svid in 1..127) gloChannels[m.svid] else -99
     fun close() = r.close()
+
+    companion object {
+        /**
+         * The navigation messages of a GnssLogger file, each with the GPS time (s since 1980) of the epoch they came
+         * after and, for GLONASS, the satellite's frequency channel (else -99), for a replay that reads its epochs
+         * elsewhere (RINEX). Empty when the file has none.
+         */
+        fun navTimeline(file: java.io.File): List<TimedNav> {
+            if (!file.isFile || file.useLines { s -> s.none { it.startsWith("Nav,") } }) return emptyList()
+            val out = ArrayList<TimedNav>()
+            val r = GnssLogReader(file.bufferedReader())
+            try {
+                // the messages read with an epoch came after its first measurement line
+                while (true) {
+                    val e = r.next() ?: break
+                    val t = e.gpsWeek * 604_800.0 + e.towSeconds
+                    r.takeNav().forEach { out.add(TimedNav(t, it, r.channel(it))) }
+                }
+                out.lastOrNull()?.time?.let { t -> r.takeNav().forEach { out.add(TimedNav(t, it, r.channel(it))) } }
+            } finally { r.close() }
+            return out
+        }
+    }
 }

@@ -31,6 +31,11 @@ static double l1_ema = -1.0;                              /* smoothed L1 code re
 static int l1_down = 0;                                   /* L1 code down-weighted now */
 static double snr_cfg = 0.0, snr_cur = 0.0;               /* configured and current C/N0 mask (dB-Hz), see prtk.h */
 static int snr_adapt = 1, snr_up = 0;                     /* adaptive mask on; epochs with enough signals one step up */
+static gtime_t now_t;        /* GPS time of the latest rover epoch (or prtk_set_time) */
+static int nav_prune = 0;    /* ephemerides were loaded from a file: drop those not valid at the first rover epoch */
+static long navmsgs = 0, navbad = 0;
+static uint8_t phone_eph[MAXSAT * 4], phone_geph[NSATGLO * 2]; /* that nav entry came from the phone's messages */
+static void navmsg_clear(void);
 extern int ppp_ssr_absbias;  /* ppp.c */
 extern int pntpos_iflc;      /* pntpos.c */
 extern double glo_code_fact; /* rtkpos.c */
@@ -86,6 +91,7 @@ void prtk_free(void)
     free_rtcm(&rtcm_nav);
     free_nav();
     nbase = 0; frames = 0;
+    navmsg_clear();
     initialised = 0;
 }
 
@@ -168,7 +174,33 @@ int prtk_init(const prtk_opt_t *o)
     rtkinit(&rtk, &opt);
     if (!init_rtcm(&rtcm) || !init_rtcm(&rtcm_nav)) { strcpy(message, "out of memory"); return 0; }
     nbase = 0; frames = 0; message[0] = '\0';
+    navmsg_clear(); nav_prune = 0;
     initialised = 1;
+    return 1;
+}
+
+/* Puts an ephemeris into the positioning nav (current set; the one it replaces becomes the previous set). Returns 1
+   when it is new to the engine. */
+static int store_eph(const eph_t *in, int set, int from_phone)
+{
+    int sat = in->sat, i = sat - 1 + MAXSAT * set;
+    eph_t *cur = nav.eph + i, *prev = nav.eph + sat - 1 + MAXSAT * (2 + set);
+    if (sat <= 0 || sat > MAXSAT || set < 0 || set > 1) return 0;
+    if (cur->sat == sat && cur->ttr.time != 0 && in->iode == cur->iode && timediff(in->toe, cur->toe) == 0.0) return 0;
+    *prev = *cur; phone_eph[i + MAXSAT * 2] = phone_eph[i];
+    *cur = *in; phone_eph[i] = (uint8_t)from_phone;
+    return 1;
+}
+
+static int store_geph(const geph_t *in, int from_phone)
+{
+    int prn;
+    geph_t *cur, *prev;
+    if (satsys(in->sat, &prn) != SYS_GLO || prn < 1 || prn > NSATGLO) return 0;
+    cur = nav.geph + prn - 1; prev = nav.geph + prn - 1 + NSATGLO;
+    if (cur->sat == in->sat && cur->tof.time != 0 && in->iode == cur->iode && timediff(in->toe, cur->toe) == 0.0) return 0;
+    *prev = *cur; phone_geph[prn - 1 + NSATGLO] = phone_geph[prn - 1];
+    *cur = *in; phone_geph[prn - 1] = (uint8_t)from_phone;
     return 1;
 }
 
@@ -177,23 +209,8 @@ static void update_eph(rtcm_t *r)
 {
     int prn, sat = r->ephsat, set = r->ephset;
     if (sat <= 0) return;
-    if (satsys(sat, &prn) != SYS_GLO) {
-        eph_t *in = r->nav.eph + sat - 1 + MAXSAT * set;
-        eph_t *cur = nav.eph + sat - 1 + MAXSAT * set;
-        eph_t *prev = nav.eph + sat - 1 + MAXSAT * (2 + set);
-        if (cur->ttr.time == 0 || (in->iode != cur->iode) || timediff(in->toe, cur->toe) != 0.0) {
-            *prev = *cur;
-            *cur = *in;
-        }
-    } else if (prn >= 1 && prn <= NSATGLO) {
-        geph_t *in = r->nav.geph + prn - 1;
-        geph_t *cur = nav.geph + prn - 1;
-        geph_t *prev = nav.geph + prn - 1 + NSATGLO;
-        if (cur->tof.time == 0 || in->iode != cur->iode) {
-            *prev = *cur;
-            *cur = *in;
-        }
-    }
+    if (satsys(sat, &prn) != SYS_GLO) store_eph(r->nav.eph + sat - 1 + MAXSAT * set, set, 0);
+    else if (prn >= 1 && prn <= NSATGLO) store_geph(r->nav.geph + prn - 1, 0);
 }
 
 static int input(rtcm_t *r, const uint8_t *data, int n, int use_obs)
@@ -252,6 +269,7 @@ static int input(rtcm_t *r, const uint8_t *data, int n, int use_obs)
  */
 static void set_time(gtime_t t)
 {
+    now_t = t;
     /* RTKLIB's "current time" (week roll-over of ephemerides, RTCM): corrected from GNSS time as rtksvr does */
     if (fabs(timediff(utc2gpst(timeget()), t)) > 60.0) timeset(gpst2utc(t));
     if (rtcm.time.time == 0 || fabs(timediff(rtcm.time, t)) > 600.0) rtcm.time = t;
@@ -353,6 +371,29 @@ static void adapt_snr_mask(const obsd_t *o, int n)
     } else snr_up = 0;
 }
 
+/* After prtk_nav_load: ephemerides of an earlier session that are no longer valid now are dropped (RTKLIB would not
+   use them, but they would count as held, and an SSR correction could match an old IODE). */
+static void prune_nav(gtime_t t)
+{
+    eph_t eph0 = {0, -1, -1};
+    geph_t geph0 = {0, -1};
+    int i;
+    nav_prune = 0;
+    for (i = 0; i < nav.n; i++) {
+        double tmax;
+        if (nav.eph[i].sat <= 0) continue;
+        switch (satsys(nav.eph[i].sat, NULL)) {
+            case SYS_GAL: tmax = MAXDTOE_GAL; break;
+            case SYS_CMP: tmax = MAXDTOE_CMP; break;
+            case SYS_QZS: tmax = MAXDTOE_QZS; break;
+            default: tmax = MAXDTOE; break;
+        }
+        if (fabs(timediff(t, nav.eph[i].toe)) > tmax) { nav.eph[i] = eph0; phone_eph[i] = 0; }
+    }
+    for (i = 0; i < nav.ng; i++)
+        if (nav.geph[i].sat > 0 && fabs(timediff(t, nav.geph[i].toe)) > MAXDTOE_GLO) { nav.geph[i] = geph0; phone_geph[i] = 0; }
+}
+
 /* an ephemeris for satellite sat near time t (4 h: wider than every system's validity, so only a missing one counts) */
 static int has_eph(int sat, gtime_t t)
 {
@@ -376,6 +417,7 @@ int prtk_rover(int week, double tow, int n, const char *sys, const int *prn, con
     memset(sol, 0, sizeof(*sol));
     if (!initialised) { strcpy(message, "engine not initialised"); return PRTK_NONE; }
     set_time(t);
+    if (nav_prune) prune_nav(t);
 
     for (i = 0; i < n; i++) {
         if (!(s = sys_of(sys[i])) || !(s & rtk.opt.navsys)) continue;
@@ -430,7 +472,11 @@ int prtk_rover(int week, double tow, int n, const char *sys, const int *prn, con
            1019/1020/1042/1045/1046 and no ephemeris stream): say so, with the count */
         int ne = 0;
         for (i = 0; i < nr; i++) if (has_eph(rov[i].sat, t)) ne++;
-        if (ne < 4) {
+        /* only when missing ephemerides are the reason (not 3 satellites in view, all with one, in a tunnel) */
+        if (ne < 4 && ne < nr && navmsgs > 0) {
+            snprintf(message, sizeof(message), "no broadcast ephemerides yet for %d of the %d satellites in view: they are "
+                     "being read from the satellites' own messages (about 30 s each)", nr - ne, nr);
+        } else if (ne < 4 && ne < nr) {
             snprintf(message, sizeof(message), "no broadcast ephemerides for %d of the %d satellites in view: the correction "
                      "stream carries none (switch on the ephemeris stream: an IGS / EUREF station near you)", nr - ne, nr);
         }
@@ -535,6 +581,9 @@ void prtk_base(prtk_base_t *b)
     for (i = 0; i < MAXSAT * 2; i++) if (nav.eph[i].sat > 0) n++;
     for (i = 0; i < NSATGLO; i++) if (nav.geph[i].sat > 0) ng++;
     b->neph = n; b->ngeph = ng;
+    for (i = 0; i < MAXSAT * 2; i++) if (nav.eph[i].sat > 0 && phone_eph[i]) b->neph_phone++;
+    for (i = 0; i < NSATGLO; i++) if (nav.geph[i].sat > 0 && phone_geph[i]) b->neph_phone++;
+    b->navmsgs = navmsgs; b->navbad = navbad;
     b->frames = frames;
     {
         gtime_t last = {0};
@@ -602,4 +651,325 @@ int prtk_dd_code(const double *rr, int f, int *sats, double *res, double *elev, 
     }
     free(rs); free(dts); free(var);
     return n;
+}
+
+/* ---- Ephemerides kept between engine starts ------------------------------------------------------------------------ */
+
+#define NAVFILE_MAGIC 0x564E4750u   /* "PGNV" */
+#define NAVFILE_VERSION 1
+
+typedef struct { uint32_t magic, version, eph_size, geph_size, n, ng; double ion_gps[8]; } navfile_t;
+
+int prtk_nav_save(const char *path)
+{
+    FILE *fp;
+    navfile_t h;
+    int i, k = 0;
+    char tmp[1024];
+    if (!initialised || !path || strlen(path) > sizeof(tmp) - 5) return -1;
+    memset(&h, 0, sizeof(h));
+    h.magic = NAVFILE_MAGIC; h.version = NAVFILE_VERSION; h.eph_size = sizeof(eph_t); h.geph_size = sizeof(geph_t);
+    for (i = 0; i < nav.n; i++) if (nav.eph[i].sat > 0) h.n++;
+    for (i = 0; i < nav.ng; i++) if (nav.geph[i].sat > 0) h.ng++;
+    if (h.n + h.ng == 0) return 0;            /* nothing yet: keep the previous file */
+    memcpy(h.ion_gps, nav.ion_gps, sizeof(h.ion_gps));
+    /* written next to the file and renamed, so an app killed while writing leaves the previous file */
+    snprintf(tmp, sizeof(tmp), "%s.tmp", path);
+    if (!(fp = fopen(tmp, "wb"))) return -1;
+    fwrite(&h, sizeof(h), 1, fp);
+    for (i = 0; i < nav.n; i++) if (nav.eph[i].sat > 0) {
+        int32_t idx = i; uint8_t ph = phone_eph[i];
+        fwrite(&idx, sizeof(idx), 1, fp); fwrite(&ph, 1, 1, fp); fwrite(nav.eph + i, sizeof(eph_t), 1, fp); k++;
+    }
+    for (i = 0; i < nav.ng; i++) if (nav.geph[i].sat > 0) {
+        int32_t idx = i; uint8_t ph = phone_geph[i];
+        fwrite(&idx, sizeof(idx), 1, fp); fwrite(&ph, 1, 1, fp); fwrite(nav.geph + i, sizeof(geph_t), 1, fp); k++;
+    }
+    if (fclose(fp) != 0 || rename(tmp, path) != 0) { remove(tmp); return -1; }
+    return k;
+}
+
+int prtk_nav_load(const char *path)
+{
+    FILE *fp;
+    navfile_t h;
+    uint32_t i;
+    int k = 0;
+    if (!initialised || !path || !(fp = fopen(path, "rb"))) return -1;
+    if (fread(&h, sizeof(h), 1, fp) != 1 || h.magic != NAVFILE_MAGIC || h.version != NAVFILE_VERSION ||
+        h.eph_size != sizeof(eph_t) || h.geph_size != sizeof(geph_t) || h.n > (uint32_t)nav.n || h.ng > (uint32_t)nav.ng) {
+        fclose(fp); return -1;
+    }
+    for (i = 0; i < h.n + h.ng; i++) {
+        int32_t idx; uint8_t ph;
+        eph_t e; geph_t g;
+        if (fread(&idx, sizeof(idx), 1, fp) != 1 || fread(&ph, 1, 1, fp) != 1) break;
+        if (i < h.n) {
+            if (fread(&e, sizeof(e), 1, fp) != 1) break;
+            if (idx < 0 || idx >= nav.n || e.sat <= 0 || e.sat > MAXSAT || satsys(e.sat, NULL) == SYS_GLO) continue;
+            if (nav.eph[idx].sat > 0) continue;      /* one already received in this session is newer */
+            nav.eph[idx] = e; phone_eph[idx] = ph; k++;
+        } else {
+            if (fread(&g, sizeof(g), 1, fp) != 1) break;
+            if (idx < 0 || idx >= nav.ng || satsys(g.sat, NULL) != SYS_GLO) continue;
+            if (nav.geph[idx].sat > 0) continue;
+            nav.geph[idx] = g; phone_geph[idx] = ph; k++;
+        }
+    }
+    fclose(fp);
+    if (norm(nav.ion_gps, 8) == 0.0) memcpy(nav.ion_gps, h.ion_gps, sizeof(h.ion_gps));
+    nav_prune = 1;
+    return k;
+}
+
+/* ---- Ephemerides from the phone's navigation messages --------------------------------------------------------------- */
+
+/* the parts of each satellite's message collected so far, with the time each came */
+typedef struct {
+    uint8_t gps[4][30]; gtime_t gps_t[4];        /* GPS / QZSS LNAV subframes 1-3 and 4 (24 data bits per word) */
+    uint8_t gps_cand[4][30];                     /* ... received once without valid parity, waiting for a second copy */
+    uint8_t gal[5][16]; gtime_t gal_t[5];        /* Galileo I/NAV word types 1-5 (128 bits) */
+    uint8_t bds[3][38]; uint32_t bds_sow[3]; gtime_t bds_t[3]; /* BeiDou D1 subframes 1-3 (300 bits, deinterleaved) */
+} navparts_t;
+
+/* GLONASS strings 1-4 (string bits 85-6) per Android svid: the slot (1-24), or 93-106 = frequency channel + 100 while
+   the slot is not known */
+typedef struct { uint8_t s[4][10]; gtime_t t[4]; } gloparts_t;
+
+static navparts_t parts[MAXSAT];
+static gloparts_t gloparts[128];
+
+static void navmsg_clear(void)
+{
+    memset(parts, 0, sizeof(parts)); memset(gloparts, 0, sizeof(gloparts));
+    memset(phone_eph, 0, sizeof(phone_eph)); memset(phone_geph, 0, sizeof(phone_geph));
+    navmsgs = navbad = 0;
+}
+
+static uint32_t u32(const uint8_t *p) { return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | p[3]; }
+
+/* a received part, at most max seconds old */
+static int recent(gtime_t t, double max) { return t.time != 0 && fabs(timediff(now_t, t)) <= max; }
+
+/* an orbit that can belong to a GNSS satellite, with a reference time near now */
+static int plausible(const eph_t *e, double tmax)
+{
+    /* semi-major axis: GPS 26 600 km, Galileo 29 600 km, BeiDou MEO 27 900 km, IGSO 42 200 km */
+    return e->sat > 0 && e->A > 2.0e7 && e->A < 4.5e7 && e->e >= 0.0 && e->e < 0.1 &&
+           fabs(timediff(e->toe, now_t)) <= tmax;
+}
+
+/*
+ * GPS / QZSS L1 C/A subframe: 10 words of 30 bits (D1-D30). Android asks for the words "as demodulated", so the data
+ * bits can be inverted (D30* of the word before = 1), and chips may deliver them already corrected. Each word is tried
+ * both ways against its parity (with D29* / D30* of the word before; for the first word, whose predecessor is in the
+ * previous subframe, all four, and the TLM preamble 0x8B). Some chips deliver corrected data bits with meaningless
+ * parity bits (a 2017 phone: 2 % of its subframes pass): then the plain data bits are taken when the preamble is right.
+ * out: 30 bytes, 24 data bits per word. Returns 2 = parity passed, 1 = plain data without parity, 0 = not a subframe.
+ */
+static int gps_subframe(const uint8_t *d, uint8_t *out)
+{
+    uint32_t w[10], prev = 0;
+    int i, k, mode;
+    for (i = 0; i < 10; i++) w[i] = u32(d + 4 * i) & 0x3FFFFFFFu;
+    for (k = 0; k < 4; k++) {                  /* D29* D30* before the first word */
+        for (mode = 0; mode < 2; mode++) {     /* 0: as transmitted, 1: data bits already corrected */
+            uint8_t buf[30];
+            int j;
+            prev = (uint32_t)k;
+            for (j = 0; j < 10; j++) {
+                uint32_t x = w[j];
+                if (mode == 1 && (prev & 1)) x ^= 0x3FFFFFC0u;   /* back to the transmitted polarity */
+                if (!decode_word((prev << 30) | x, buf + 3 * j)) break;
+                prev = w[j] & 3;
+            }
+            if (j == 10 && buf[0] == 0x8B) { memcpy(out, buf, 30); return 2; }
+        }
+    }
+    for (i = 0; i < 10; i++) { out[3 * i] = (uint8_t)(w[i] >> 22); out[3 * i + 1] = (uint8_t)(w[i] >> 14); out[3 * i + 2] = (uint8_t)(w[i] >> 6); }
+    return out[0] == 0x8B ? 1 : 0;
+}
+
+static int nav_gps(int sys, int svid, int sub, const uint8_t *d, int len)
+{
+    uint8_t sf[30], buf[150];
+    int sat = satno(sys, svid), id, i, par, week;
+    double tow, dt;
+    navparts_t *q;
+    eph_t eph = {0};
+    if (sat <= 0 || len < 40 || !(par = gps_subframe(d, sf))) return -1;
+    id = getbitu(sf, 43, 3);                   /* subframe ID in the HOW */
+    if (id < 1 || id > 5 || (sub >= 1 && sub <= 5 && sub != id)) return -1;
+    /* the HOW's time of week (start of the next subframe) is now */
+    tow = time2gpst(now_t, &week);
+    dt = getbitu(sf, 24, 17) * 6.0 - tow;
+    if (dt > 302400.0) dt -= 604800.0; else if (dt < -302400.0) dt += 604800.0;
+    if (fabs(dt) > 60.0) return -1;
+    if (id == 5) return 0;                     /* almanac, not needed */
+    q = parts + sat - 1;
+    if (par == 1) {
+        /* without parity, only data seen twice (words 3-10, which repeat every 30 s while the ephemeris holds) */
+        int same = memcmp(q->gps_cand[id - 1] + 6, sf + 6, 24) == 0;
+        memcpy(q->gps_cand[id - 1], sf, 30);
+        if (!same) return 0;
+    }
+    memcpy(q->gps[id - 1], sf, 30); q->gps_t[id - 1] = now_t;
+    if (id == 4 && sys == SYS_GPS && norm(nav.ion_gps, 8) == 0.0) {   /* page 18: Klobuchar ionosphere */
+        double ion[8] = {0};
+        memset(buf, 0, sizeof(buf)); memcpy(buf + 90, sf, 30);
+        if (decode_frame(buf, sys, NULL, NULL, ion, NULL) && norm(ion, 8) > 0.0) matcpy(nav.ion_gps, ion, 8, 1);
+        return 0;
+    }
+    if (id == 4) return 0;
+    for (i = 0; i < 3; i++) if (!recent(q->gps_t[i], 120.0)) return 0;
+    for (i = 0; i < 3; i++) memcpy(buf + 30 * i, q->gps[i], 30);
+    if (!decode_frame(buf, sys, &eph, NULL, NULL, NULL)) return 0;
+    eph.sat = sat;
+    if (!plausible(&eph, 4.0 * 3600.0)) return -1;
+    return store_eph(&eph, 0, 1) ? PRTK_NAVMSG_EPH : 0;
+}
+
+/*
+ * Galileo I/NAV page (E1-B): even part (bits 0-113) and odd part (114-227). Checked as RTKLIB's u-blox decoder does:
+ * even / odd flags, nominal page and the CRC-24Q over both parts; the word is the even part's 112 data bits and the
+ * odd part's first 16.
+ */
+static int nav_gal(int svid, const uint8_t *d, int len)
+{
+    uint8_t crc[26] = {0}, word[16] = {0}, buf[112];
+    int sat = satno(SYS_GAL, svid), i, type;
+    navparts_t *q;
+    eph_t eph = {0};
+    if (sat <= 0 || len < 29) return -1;
+    if (getbitu(d, 0, 1) != 0 || getbitu(d, 114, 1) != 1) return -1;
+    if (getbitu(d, 1, 1) || getbitu(d, 115, 1)) return 0;      /* alert page */
+    for (i = 0; i < 114; i++) setbitu(crc, 4 + i, 1, getbitu(d, i, 1));
+    for (i = 0; i < 82; i++) setbitu(crc, 118 + i, 1, getbitu(d, 114 + i, 1));
+    if (rtk_crc24q(crc, 25) != getbitu(d, 114 + 82, 24)) return -1;
+    for (i = 0; i < 112; i++) setbitu(word, i, 1, getbitu(d, 2 + i, 1));
+    for (i = 0; i < 16; i++) setbitu(word, 112 + i, 1, getbitu(d, 116 + i, 1));
+    type = getbitu(word, 0, 6);
+    if (type < 1 || type > 5) return 0;
+    q = parts + sat - 1;
+    memcpy(q->gal[type - 1], word, 16); q->gal_t[type - 1] = now_t;
+    for (i = 0; i < 5; i++) if (!recent(q->gal_t[i], 120.0)) return 0;
+    memset(buf, 0, sizeof(buf));
+    for (i = 0; i < 5; i++) memcpy(buf + 16 * (i + 1), q->gal[i], 16);
+    if (!decode_gal_inav(buf, &eph, NULL, NULL) || eph.sat != sat) return 0;
+    eph.code = (1 << 0) + (1 << 9);              /* I/NAV, E1-B */
+    if (!plausible(&eph, 4.0 * 3600.0)) return -1;
+    return store_eph(&eph, 0, 1) ? PRTK_NAVMSG_EPH : 0;
+}
+
+/* BCH(15,11) code word (generator x^4 + x + 1) without error */
+static int bch15(uint32_t c)
+{
+    int i;
+    for (i = 14; i >= 4; i--) if (c & (1u << i)) c ^= 0x13u << (i - 4);
+    return (c & 0xF) == 0;
+}
+
+/*
+ * BeiDou D1 subframe: 10 words of 30 bits. Word 1 is 15 plain bits and one BCH(15,11) code word; words 2-10 are two
+ * code words, interleaved bit by bit as transmitted. RTKLIB's decoder wants them de-interleaved (22 data bits, then the
+ * 8 parity bits), the form some receivers deliver: both forms are recognised by their BCH parity. out: 38 bytes.
+ */
+static int bds_subframe(const uint8_t *d, uint8_t *out)
+{
+    uint32_t w[10];
+    int i, b, inv;
+    for (i = 0; i < 10; i++) w[i] = u32(d + 4 * i) & 0x3FFFFFFFu;
+    inv = (w[0] >> 19) == (~0x712u & 0x7FF);   /* preamble 11100010010 upside down: whole subframe inverted */
+    if (inv) for (i = 0; i < 10; i++) w[i] ^= 0x3FFFFFFFu;
+    if ((w[0] >> 19) != 0x712) return 0;
+    if (!bch15(w[0] & 0x7FFF)) return 0;
+    memset(out, 0, 38);
+    setbitu(out, 0, 30, w[0]);
+    for (i = 1; i < 10; i++) {
+        uint32_t c1 = 0, c2 = 0, x = w[i], y;
+        for (b = 0; b < 15; b++) {            /* interleaved: c1 c2 c1 c2 ... from the MSB */
+            c1 = (c1 << 1) | ((x >> (29 - 2 * b)) & 1);
+            c2 = (c2 << 1) | ((x >> (28 - 2 * b)) & 1);
+        }
+        if (bch15(c1) && bch15(c2)) {
+            y = ((c1 >> 4) << 19) | ((c2 >> 4) << 8) | ((c1 & 0xF) << 4) | (c2 & 0xF);
+        } else {                               /* de-interleaved already: data 11 + 11, parity 4 + 4 */
+            c1 = ((x >> 19) << 4) | ((x >> 4) & 0xF);
+            c2 = (((x >> 8) & 0x7FF) << 4) | (x & 0xF);
+            if (!(bch15(c1) && bch15(c2))) return 0;
+            y = x;
+        }
+        setbitu(out, 30 * i, 30, y);
+    }
+    return 1;
+}
+
+static int nav_bds(int svid, const uint8_t *d, int len)
+{
+    uint8_t sf[38], buf[38 * 5];
+    int sat = satno(SYS_CMP, svid), id, i;
+    navparts_t *q;
+    eph_t eph = {0};
+    if (sat <= 0 || len < 40) return -1;
+    if (svid <= 5 || svid >= 59) return 0;     /* geostationary satellites send D2 */
+    if (!bds_subframe(d, sf)) return -1;
+    id = getbitu(sf, 15, 3);
+    if (id < 1 || id > 3) return 0;
+    q = parts + sat - 1;
+    memcpy(q->bds[id - 1], sf, 38); q->bds_t[id - 1] = now_t;
+    q->bds_sow[id - 1] = getbitu(sf, 18, 8) << 12 | getbitu(sf, 30, 12);
+    for (i = 0; i < 3; i++) if (!recent(q->bds_t[i], 60.0)) return 0;
+    memset(buf, 0, sizeof(buf));
+    for (i = 0; i < 3; i++) memcpy(buf + 38 * i, q->bds[i], 38);
+    if (!decode_bds_d1(buf, &eph, NULL, NULL)) return 0;
+    eph.sat = sat;
+    if (!plausible(&eph, 6.0 * 3600.0)) return -1;
+    return store_eph(&eph, 0, 1) ? PRTK_NAVMSG_EPH : 0;
+}
+
+/* GLONASS string (85 bits incl. the Hamming code, MSB first); strings 1-4 of one frame, 2 s apart, give the ephemeris */
+static int nav_glo(int svid, const uint8_t *d, int len, int frq)
+{
+    uint8_t s[11], buf[50];
+    int m, i, prn;
+    gloparts_t *q;
+    geph_t geph = {0};
+    if (len < 11 || svid < 1 || svid > 127) return -1;
+    memcpy(s, d, 11); s[10] &= 0xF8;
+    if (!test_glostr(s)) return -1;
+    m = getbitu(s, 1, 4);
+    if (m < 1 || m > 4) return 0;
+    q = gloparts + svid;
+    memcpy(q->s[m - 1], s, 10); q->t[m - 1] = now_t;
+    if (m != 4) return 0;
+    for (i = 0; i < 3; i++) if (!recent(q->t[i], 10.0) || timediff(q->t[i + 1], q->t[i]) <= 0.0) return 0;
+    memset(buf, 0, sizeof(buf));
+    for (i = 0; i < 4; i++) memcpy(buf + 10 * i, q->s[i], 10);
+    geph.tof = now_t;
+    if (!decode_glostr(buf, &geph, NULL)) return 0;
+    if (satsys(geph.sat, &prn) != SYS_GLO || (svid <= NSATGLO && prn != svid)) return 0;
+    /* the frequency channel is not in strings 1-4: from the svid or the carrier frequency, else the one already known */
+    if (svid >= 93 && svid <= 106) frq = svid - 100;
+    if (frq >= -7 && frq <= 6) geph.frq = frq;
+    else if (nav.geph[prn - 1].sat == geph.sat) geph.frq = nav.geph[prn - 1].frq;
+    else return 0;
+    if (norm(geph.pos, 3) < 2.4e7 || norm(geph.pos, 3) > 2.7e7 || fabs(timediff(geph.toe, now_t)) > 3600.0) return -1;
+    return store_geph(&geph, 1) ? PRTK_NAVMSG_EPH : 0;
+}
+
+int prtk_input_navmsg(int type, int svid, int msgid, int submsgid, const uint8_t *data, int len, int glo_frq)
+{
+    int ret;
+    (void)msgid;
+    if (!initialised || now_t.time == 0) return 0;     /* the time comes with the first rover epoch */
+    switch (type) {
+        case PRTK_NAV_GPS_L1CA: ret = nav_gps(SYS_GPS, svid, submsgid, data, len); break;
+        case PRTK_NAV_QZS_L1CA: ret = nav_gps(SYS_QZS, svid, submsgid, data, len); break;
+        case PRTK_NAV_GAL_I:    ret = nav_gal(svid, data, len); break;
+        case PRTK_NAV_BDS_D1:   ret = nav_bds(svid, data, len); break;
+        case PRTK_NAV_GLO_L1CA: ret = nav_glo(svid, data, len, glo_frq); break;
+        default: return -1;
+    }
+    if (ret < 0) navbad++; else navmsgs++;
+    return ret;
 }

@@ -77,6 +77,9 @@ object MapStyles {
  * (OpenTopoMap stops at 17). The user can still zoom in further; MapLibre then enlarges the deepest tiles.
  */
 private const val VIEW_ZOOM = 17.0
+/** Zoom button animation (ms), and how long following waits after the user's own pinch or drag (ms). */
+private const val ZOOM_ANIM_MS = 250
+private const val FOLLOW_PAUSE_MS = 1500L
 
 private const val TRACK_SRC = "r-track"; private const val TRACK_LYR = "r-track-l"
 private const val PTS_SRC = "r-pts"; private const val PTS_LYR = "r-pts-l"; private const val PTS_LBL = "r-pts-t"
@@ -139,6 +142,9 @@ fun RtkMap(
     val drawnCoverage = remember { mutableStateOf<Long?>(null) }
     val lastZoomIn = remember { mutableStateOf(zoomInKey) }
     val lastZoomOut = remember { mutableStateOf(zoomOutKey) }
+    // While following the position: no camera move until this time (ms), so a zoom (buttons or pinch) is not cut short
+    // by the next follow step, which only moves the centre and keeps the zoom.
+    val followPauseUntil = remember { longArrayOf(0L) }
     // Own position: blue while known, the last known one grey while there is none (no fix, signal lost).
     val lastPosition = remember { mutableStateOf(position) }
     if (position != null && position.quality != com.rfsat.pocketgnss.protocol.FixQuality.NONE) lastPosition.value = position
@@ -178,6 +184,13 @@ fun RtkMap(
                 m.uiSettings.isAttributionEnabled = true
                 m.uiSettings.isCompassEnabled = true
                 m.uiSettings.isTiltGesturesEnabled = false
+                // A pinch or drag by the user: following waits until the gesture is over.
+                m.addOnCameraMoveStartedListener { reason ->
+                    if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) followPauseUntil[0] = System.currentTimeMillis() + FOLLOW_PAUSE_MS
+                }
+                m.addOnCameraMoveListener {
+                    if (followPauseUntil[0] > 0 && System.currentTimeMillis() < followPauseUntil[0]) followPauseUntil[0] = maxOf(followPauseUntil[0], System.currentTimeMillis() + 300)
+                }
                 m.addOnMapClickListener { pt ->
                     val hit = m.queryRenderedFeatures(m.projection.toScreenLocation(pt), PTS_LYR).firstOrNull()
                     hit?.getNumberProperty("i")?.toInt()?.let { i -> currentPoints.value.getOrNull(i)?.let { currentTap.value(it) } }
@@ -210,13 +223,22 @@ fun RtkMap(
                 placed.value = true
             }
             if (fitKey != lastFit.value) { fitCamera(map, track, points, position, true, fields); lastFit.value = fitKey }
-            if (zoomInKey != lastZoomIn.value) { map.animateCamera(CameraUpdateFactory.zoomIn()); lastZoomIn.value = zoomInKey }
-            if (zoomOutKey != lastZoomOut.value) { map.animateCamera(CameraUpdateFactory.zoomOut()); lastZoomOut.value = zoomOutKey }
+            val steps = (zoomInKey - lastZoomIn.value) - (zoomOutKey - lastZoomOut.value)
+            val zoomed = zoomInKey != lastZoomIn.value || zoomOutKey != lastZoomOut.value
+            lastZoomIn.value = zoomInKey; lastZoomOut.value = zoomOutKey
+            if (zoomed && steps != 0) {
+                val z = (map.cameraPosition.zoom + steps).coerceIn(map.minZoomLevel, map.maxZoomLevel)
+                // Following: one move to the position at the new zoom (a separate centre move would cancel the zoom).
+                if (follow && position != null) map.animateCamera(CameraUpdateFactory.newCameraPosition(CameraPosition.Builder()
+                    .target(LatLng(position.latitude, position.longitude)).zoom(z).build()), ZOOM_ANIM_MS)
+                else map.animateCamera(CameraUpdateFactory.zoomTo(z), ZOOM_ANIM_MS)
+                followPauseUntil[0] = System.currentTimeMillis() + ZOOM_ANIM_MS + 50
+            }
             if (recenterKey != lastRecenter.value) {
                 position?.let { map.animateCamera(CameraUpdateFactory.newCameraPosition(CameraPosition.Builder()
                     .target(LatLng(it.latitude, it.longitude)).zoom(VIEW_ZOOM).build())) }
                 lastRecenter.value = recenterKey
-            } else if (follow && position != null) {
+            } else if (follow && position != null && !zoomed && System.currentTimeMillis() >= followPauseUntil[0]) {
                 map.easeCamera(CameraUpdateFactory.newLatLng(LatLng(position.latitude, position.longitude)), 300)
             }
         }

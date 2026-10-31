@@ -12,6 +12,9 @@ carry these two changes over and re-run `PppTest`.
 
 Only what the phone RTK engine (`../prtk.c`) needs: RTK filter (rtkpos, lambda), single point positioning
 (pntpos), satellite orbits and clocks (ephemeris, preceph, sbas, ionex), PPP helpers (ppp, ppp_ar, tides),
-RTCM 2/3 decoding and encoding (rtcm, rtcm2, rtcm3, rtcm3e), common functions (rtkcmn, geoid, trace).
+RTCM 2/3 decoding and encoding (rtcm, rtcm2, rtcm3, rtcm3e), common functions (rtkcmn, geoid, trace), and the
+navigation message decoders of `rcvraw.c` (GPS / QZSS LNAV, Galileo I/NAV and F/NAV, BeiDou D1 / D2, GLONASS, NavIC):
+that file is cut before `init_raw`, as the receiver input functions after it need the receiver drivers, which are
+not included; the part kept is unmodified.
 To update: copy the same files from a newer demo5 release and re-run the host validation described in
 `docs/phone-rtk.md`.

@@ -85,11 +85,12 @@ JNIEXPORT void JNICALL FN(base)(JNIEnv *env, jobject thiz, jdoubleArray out)
 {
     prtk_base_t b;
     prtk_base(&b);
-    jdouble v[18] = {
+    jdouble v[21] = {
         b.has_pos, b.xyz[0], b.xyz[1], b.xyz[2], b.llh[0], b.llh[1], b.llh[2], b.station_id, b.nobs,
-        b.obs_week, b.obs_tow, b.neph, b.ngeph, (double)b.frames, b.nssr, b.ssr_week, b.ssr_tow, b.ncbias
+        b.obs_week, b.obs_tow, b.neph, b.ngeph, (double)b.frames, b.nssr, b.ssr_week, b.ssr_tow, b.ncbias,
+        b.neph_phone, (double)b.navmsgs, (double)b.navbad
     };
-    (*env)->SetDoubleArrayRegion(env, out, 0, 18, v);
+    (*env)->SetDoubleArrayRegion(env, out, 0, 21, v);
 }
 
 JNIEXPORT jstring JNICALL FN(message)(JNIEnv *env, jobject thiz) { return (*env)->NewStringUTF(env, prtk_message()); }
@@ -107,4 +108,30 @@ JNIEXPORT jint JNICALL FN(ddCode)(JNIEnv *env, jobject thiz, jdoubleArray rr, ji
     (*env)->ReleaseDoubleArrayElements(env, res, v, 0);
     (*env)->ReleaseDoubleArrayElements(env, elev, e, 0);
     return n;
+}
+
+JNIEXPORT jint JNICALL FN(navSave)(JNIEnv *env, jobject thiz, jstring path)
+{
+    const char *p = (*env)->GetStringUTFChars(env, path, NULL);
+    jint n = p ? prtk_nav_save(p) : -1;
+    if (p) (*env)->ReleaseStringUTFChars(env, path, p);
+    return n;
+}
+
+JNIEXPORT jint JNICALL FN(navLoad)(JNIEnv *env, jobject thiz, jstring path)
+{
+    const char *p = (*env)->GetStringUTFChars(env, path, NULL);
+    jint n = p ? prtk_nav_load(p) : -1;
+    if (p) (*env)->ReleaseStringUTFChars(env, path, p);
+    return n;
+}
+
+JNIEXPORT jint JNICALL FN(navMessage)(JNIEnv *env, jobject thiz, jint type, jint svid, jint msgId, jint subId, jbyteArray data, jint gloFrq)
+{
+    jint n = (*env)->GetArrayLength(env, data), ret;
+    jbyte *b = (*env)->GetByteArrayElements(env, data, NULL);
+    if (!b) return -1;
+    ret = prtk_input_navmsg(type, svid, msgId, subId, (const uint8_t *)b, n, gloFrq);
+    (*env)->ReleaseByteArrayElements(env, data, b, JNI_ABORT);
+    return ret;
 }

@@ -131,7 +131,7 @@
     <string name="disp_utm_auto">Automático (huso de la posición)</string>
     <string name="disp_utm_zone">Huso UTM</string>
     <string name="disp_utm_zone_n">Huso %1$d (meridiano central %2$d°)</string>
-    <string name="eph_help">Algunos casters envían las órbitas de los satélites (efemérides) rara vez o nunca, y el RTK del teléfono espera. Una segunda conexión a una estación IGS / EUREF cercana (p. ej. DYNG00GRC0 cerca de Atenas en igs-ip.net, gratis con registro en BKG) las da al momento.</string>
+    <string name="eph_help">El RTK del teléfono lee las órbitas de los satélites (efemérides transmitidas) de los propios mensajes de los satélites cuando el teléfono los entrega (Herramientas &gt; GNSS en bruto del teléfono lo muestra). Si no, y como respaldo, una segunda conexión a una estación IGS / EUREF cercana (p. ej. DYNG00GRC0 cerca de Atenas en igs-ip.net, gratis con registro en BKG) las da al instante.</string>
     <string name="eph_mount">Punto de montaje</string>
     <string name="eph_no_profile">Guarde primero la cuenta: Herramientas &gt; Correcciones &gt; perfil de caster (p. ej. la plantilla IGS-IP (BKG) con su acceso de BKG).</string>
     <string name="eph_profile">Cuenta (perfil de caster guardado)</string>
@@ -349,8 +349,11 @@
     <string name="live_base_value">n.º %1$d a %2$s</string>
     <string name="live_corrections">Correcciones</string>
     <string name="live_dop">DOP</string>
+    <string name="live_eph_phone">%1$d del teléfono</string>
     <string name="live_fix">Solución</string>
     <string name="live_fix_gap">Posición del teléfono a RTK</string>
+    <string name="live_fix_gap_no_phone">– (sin posición del teléfono ahora)</string>
+    <string name="live_fix_gap_no_rtk">– (sin solución RTK ahora)</string>
     <string name="live_height_ell">Altura (elipsoide)</string>
     <string name="live_height_msl">Altitud (nivel del mar)</string>
     <string name="live_lat">Latitud</string>
@@ -386,7 +389,7 @@
     <string name="live_rtk_hint">Active el relé NTRIP (caster y punto de montaje en Ajustes) para RTK; hasta entonces el teléfono da una posición autónoma.</string>
     <string name="live_rtk_no_basepos">aún no hay posición de la estación (1005/1006)</string>
     <string name="live_rtk_no_solution">sin solución por ahora</string>
-    <string name="live_rtk_noeph">Aún no han llegado efemérides transmitidas del caster (RTCM 1019/1020/1045/1046/1042) y el teléfono las necesita para calcular la posición de los satélites. Muchos flujos de red (VRS, estación más cercana) no las incluyen: active el flujo de efemérides (Configuración &gt; Conexión del receptor).</string>
+    <string name="live_rtk_noeph">Aún no hay efemérides transmitidas: este caster no envía ninguna (RTCM 1019/1020/1045/1046/1042) y el teléfono no entrega mensajes de navegación, así que las posiciones de los satélites son desconocidas. Active el flujo de efemérides (Ajustes &gt; Conexión del receptor).</string>
     <string name="live_rtk_nophase">Este teléfono no da fase portadora en este momento: RTK no puede fijar (teléfono solo de código o ahorro de energía activo). La posición se queda a nivel de metro.</string>
     <string name="live_rtk_pppstream">Este flujo envía correcciones PPP (SSR), no datos de estación base: ponga Correcciones en PPP (HAS / SSR) en Configuración &gt; Conexión del receptor, o elija un mountpoint RTK.</string>
     <string name="live_rtk_reflected">Las señales llegan al teléfono por reflexión (residuos de código %1$s): la posición puede desviarse metros o más, diga lo que diga la precisión del RTK. Sitúese a cielo abierto, lejos de paredes, coches y de su cuerpo.</string>
@@ -563,6 +566,9 @@
     <string name="raw_interval">Intervalo</string>
     <string name="raw_intro">Phone RTK necesita medidas en bruto con fase portadora, idealmente en dos bandas (L1 + L5/E5a). Los teléfonos varían mucho, así que pruebe cada modelo al aire libre con el cielo despejado.</string>
     <string name="raw_marker">Nombre del punto</string>
+    <string name="raw_nav_help">El RTK del teléfono lee las efemérides de los satélites de estos mensajes, así que no necesita un flujo de efemérides. Si no llega ninguno, este teléfono no los entrega.</string>
+    <string name="raw_nav_none">ninguno por ahora</string>
+    <string name="raw_nav_received">Mensajes de navegación recibidos</string>
     <string name="raw_no">no</string>
     <string name="raw_phone">Este teléfono</string>
     <string name="raw_post">Posprocesado</string>

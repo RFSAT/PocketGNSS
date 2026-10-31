@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.location.GnssMeasurementRequest
 import android.location.GnssMeasurementsEvent
+import android.location.GnssNavigationMessage
 import android.location.GnssStatus
 import android.location.Location
 import android.location.LocationListener
@@ -12,6 +13,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import com.rfsat.pocketgnss.raw.AndroidRaw
+import com.rfsat.pocketgnss.raw.NavMessage
 import com.rfsat.pocketgnss.raw.RawConvert
 import com.rfsat.pocketgnss.rtk.FixGate
 import com.rfsat.pocketgnss.rtk.IonoChooser
@@ -113,6 +115,13 @@ class PhoneRtkLink private constructor(
     private var lastEmitMs = 0L
     private val iono = IonoChooser(options.ionoFree)
     private val convergence = PppConvergence()
+    /** GLONASS frequency channel per slot, from the carrier frequencies measured (the navigation strings do not give it). */
+    private val gloChannels = IntArray(128) { -99 }
+    /** Navigation messages from the phone used, ephemerides they gave, and whether the phone sent none (logged once). */
+    private var navCount = 0L
+    private var navEphs = 0
+    private var navReported = false
+    private val navFile = java.io.File(context.filesDir, NAV_FILE)
 
     private val _state get() = shared
 
@@ -142,6 +151,10 @@ class PhoneRtkLink private constructor(
         override fun onGnssMeasurementsReceived(event: GnssMeasurementsEvent) { epoch(event) }
     }
 
+    private val navCallback = object : GnssNavigationMessage.Callback() {
+        override fun onGnssNavigationMessageReceived(event: GnssNavigationMessage) { navMessage(event) }
+    }
+
     @Suppress("DEPRECATION")
     private fun isMock(l: Location) = if (Build.VERSION.SDK_INT >= 31) l.isMock else l.isFromMockProvider
 
@@ -150,6 +163,9 @@ class PhoneRtkLink private constructor(
         if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) throw IOException("Location is off on this phone: turn it on in quick settings")
         val ok = RtkNative.startFor(options, this)
         if (!ok) throw IOException("Phone RTK engine could not start")
+        // The last session's ephemerides: valid ones (GPS 2 h, Galileo 4 h, ...) give a position at once after a restart.
+        val kept = synchronized(engineLock) { if (RtkNative.owner === this) RtkNative.navLoad(navFile.path) else -1 }
+        if (kept > 0) com.rfsat.pocketgnss.core.AppLog.i("Phone RTK", "$kept ephemerides of the last session read: those still valid are used until new ones come")
         shared.value = PhoneRtkState()
         val t = HandlerThread("phone-rtk").apply { start() }
         thread = t
@@ -167,6 +183,29 @@ class PhoneRtkLink private constructor(
         } catch (e: SecurityException) {
             close(); throw IOException("Location permission missing")
         }
+        // The satellites' own navigation messages, for ephemerides without a caster (on phones that deliver them).
+        try {
+            if (Build.VERSION.SDK_INT >= 30) lm.registerGnssNavigationMessageCallback(executor, navCallback)
+            else @Suppress("DEPRECATION") lm.registerGnssNavigationMessageCallback(navCallback, h)
+        } catch (_: Exception) {}
+    }
+
+    /** One navigation message (engine thread): decoded by the engine into broadcast ephemerides. */
+    private fun navMessage(m: GnssNavigationMessage) {
+        if (closed) return
+        val frq = if (m.type == GnssNavigationMessage.TYPE_GLO_L1CA) gloChannels[m.svid.coerceIn(0, 127)] else -99
+        val r = synchronized(engineLock) {
+            if (closed || RtkNative.owner !== this) return
+            RtkNative.navMessage(m.type, m.svid, m.messageId, m.submessageId, m.data, frq)
+        }
+        if (r >= 0) navCount++
+        if (r == 1 && ++navEphs == 1) com.rfsat.pocketgnss.core.AppLog.i("Phone RTK",
+            "The phone delivers the satellites' navigation messages: ephemerides are decoded from them, no ephemeris stream needed")
+    }
+
+    /** Every few minutes and at the end: the ephemerides for the next start. */
+    private fun saveNav() {
+        synchronized(engineLock) { if (RtkNative.owner === this) RtkNative.navSave(navFile.path) }
     }
 
     private fun epoch(event: GnssMeasurementsEvent) {
@@ -185,12 +224,20 @@ class PhoneRtkLink private constructor(
             return
         }
         noDataSince = 0L
+        for (m in ms) if (m.constellation == GLONASS && m.svid in 1..127) {
+            NavMessage.glonassChannel(m.carrierHz).takeIf { it != -99 }?.let { gloChannels[m.svid] = it }
+        }
         arrays.fill(e.forEngine(options))
         // Learn this phone: satellites with carrier phase, and how many slipped, per epoch; saved about once a minute.
         val phaseSats = e.obs.filter { it.phase != null }.map { it.sat }.toSet()
         val slipSats = e.obs.filter { it.phase != null && it.lli and 1 != 0 }.map { it.sat }.toSet()
         learner.add(phaseSats.size, slipSats.size)
         if (++learnedEpochs % 60 == 0) onProfile(learner.profile())
+        if (learnedEpochs % 300 == 0) saveNav()
+        if (learnedEpochs == 180 && navCount == 0L && !navReported) {
+            navReported = true
+            com.rfsat.pocketgnss.core.AppLog.i("Phone RTK", "The phone delivers no navigation messages: ephemerides come from the caster or the ephemeris stream only")
+        }
         // PPP on a phone without a second frequency: broadcast ionosphere instead of the ionosphere-free combination.
         val dual = if (options.ppp) IonoChooser.dualSatellites(e) else 0
         if (options.ppp) iono.update(dual)?.let { f ->
@@ -322,6 +369,8 @@ class PhoneRtkLink private constructor(
         try { lm.unregisterGnssMeasurementsCallback(measurementCallback) } catch (_: Exception) {}
         try { lm.unregisterGnssStatusCallback(statusCallback) } catch (_: Exception) {}
         try { lm.removeUpdates(listener) } catch (_: Exception) {}
+        try { lm.unregisterGnssNavigationMessageCallback(navCallback) } catch (_: Exception) {}
+        try { saveNav() } catch (_: Exception) {}
         val h = handler
         // Freed here and now (not later on the engine thread, where it could hit the next link's engine); an epoch
         // still queued on that thread finds the engine no longer its own and returns.
@@ -387,6 +436,9 @@ class PhoneRtkLink private constructor(
         /** Epochs (s) without a solution, despite [STUCK_MIN_PHASE] signals with carrier phase, after which the filter restarts. */
         const val STUCK_EPOCHS = 60
         const val STUCK_MIN_PHASE = 10
+        /** The engine's broadcast ephemerides between sessions (app storage). */
+        const val NAV_FILE = "ephemerides.bin"
+        private const val GLONASS = 3
 
         /** 6 Jan 1980 00:00:00 UTC in Unix milliseconds. */
         private const val GPS_EPOCH_MS = 315_964_800_000L

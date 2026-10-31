@@ -116,6 +116,9 @@ class RawReplayLink(dir: File, private val options: RtkOptions, private val spee
     private fun nextEpoch() = rinex?.next() ?: log?.next()
     private val frames = File(dir, "base.rtcm3").takeIf { it.isFile }?.readBytes()?.let { RtcmFrames.split(it) } ?: emptyList()
     private var fi = 0
+    /** The phone's navigation messages (recorded since 1.12.22), fed after the epoch they came with. */
+    private val navs = com.rfsat.pocketgnss.raw.GnssLogReader.navTimeline(File(dir, "gnss_log.txt"))
+    private var ni = 0
     private val total = if (fromLog) logEpochs else rinexEpochs
     private var done = 0
     private val arrays = RoverArrays()
@@ -165,6 +168,11 @@ class RawReplayLink(dir: File, private val options: RtkOptions, private val spee
             if (options.ppp) iono.update(IonoChooser.dualSatellites(e))?.let { f -> RtkNative.setIono(if (f) 1 else 0); convergence.reset() }
             val rst = RtkNative.rover(e.gpsWeek, e.towSeconds, arrays.n, arrays.sys, arrays.prn, arrays.codes, arrays.p, arrays.l, arrays.d,
                 arrays.snr, arrays.lli, solOut)
+            val t = e.gpsWeek * 604_800.0 + e.towSeconds
+            while (ni < navs.size && navs[ni].time <= t + 0.001) {
+                val n = navs[ni++]
+                RtkNative.navMessage(n.message.type, n.message.svid, n.message.messageId, n.message.submessageId, n.message.data, n.gloChannel)
+            }
             RtkNative.base(baseOut)
             Pair(rst, RtkNative.message())
         }

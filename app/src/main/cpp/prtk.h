@@ -92,6 +92,9 @@ typedef struct {
     int nssr;           /* PPP: satellites with current SSR orbit and clock corrections */
     int ssr_week; double ssr_tow; /* time of the latest SSR clock correction */
     int ncbias;         /* satellites with SSR code biases */
+    int neph_phone;     /* ephemerides held that came from the phone's own navigation messages */
+    long navmsgs;       /* navigation messages from the phone accepted (parity / CRC passed) */
+    long navbad;        /* ... and rejected */
 } prtk_base_t;
 
 /* default options for phones */
@@ -111,6 +114,26 @@ void prtk_set_time(int week, double tow);
 void prtk_set_iono(int iono_free);
 /* restart the position filter; ephemerides, corrections, base position and options are kept */
 void prtk_reset(void);
+
+/* Broadcast ephemerides kept between engine starts (a file in the app's storage), so the first solution after a
+ * restart does not wait for every satellite's ephemeris to come again: written by prtk_nav_save (on stop and every few
+ * minutes), read by prtk_nav_load right after prtk_init. Entries no longer valid at the first rover epoch are dropped
+ * then. Both return the number of ephemerides written / read, or -1 (no file, another format). */
+int prtk_nav_save(const char *path);
+int prtk_nav_load(const char *path);
+
+/* Ephemerides from the phone's own navigation messages (Android GnssNavigationMessage), so the engine needs no
+ * ephemerides from the caster (a network stream such as Metrica's MSM_NEAR carries none). Types as Android's. */
+#define PRTK_NAV_GPS_L1CA  0x0101   /* 10 words of 30 bits per subframe, each in the low 30 bits of 4 bytes (40 bytes) */
+#define PRTK_NAV_QZS_L1CA  0x0401
+#define PRTK_NAV_GLO_L1CA  0x0301   /* one string of 85 bits, MSB first (11 bytes) */
+#define PRTK_NAV_BDS_D1    0x0501   /* as GPS: 10 words of 30 bits (40 bytes) */
+#define PRTK_NAV_GAL_I     0x0601   /* one I/NAV page: even + odd part, 2 x 114 bits, MSB first (29 bytes) */
+#define PRTK_NAVMSG_EPH    1        /* prtk_input_navmsg: a new ephemeris was completed */
+/* One navigation message (type, svid and data as Android reports them; glo_frq = GLONASS frequency channel -7..6 of
+ * the satellite, from its carrier frequency, or -99). Returns PRTK_NAVMSG_EPH when it completed an ephemeris that the
+ * engine did not hold, 0 when it was kept, -1 when it failed its parity / CRC test or is of a kind not used. */
+int prtk_input_navmsg(int type, int svid, int msgid, int submsgid, const uint8_t *data, int len, int glo_frq);
 
 /* Tuning (analysis of recorded sessions, and settings that prove themselves): applied at the next prtk_init. */
 #define PRTK_TUNE_MAXINNO_CODE  0   /* code innovation rejection threshold, m (RTKLIB default 30) */

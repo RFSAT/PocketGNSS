@@ -131,7 +131,7 @@
     <string name="disp_utm_auto">Αυτόματα (ζώνη της θέσης)</string>
     <string name="disp_utm_zone">Ζώνη UTM</string>
     <string name="disp_utm_zone_n">Ζώνη %1$d (κεντρικός μεσημβρινός %2$d°)</string>
-    <string name="eph_help">Ορισμένοι caster στέλνουν τις τροχιές των δορυφόρων (εφημερίδες) σπάνια ή καθόλου, οπότε το RTK του τηλεφώνου περιμένει. Μια δεύτερη σύνδεση σε σταθμό IGS / EUREF κοντά σας (π.χ. DYNG00GRC0 κοντά στην Αθήνα, στο igs-ip.net, δωρεάν με εγγραφή στο BKG) τις δίνει αμέσως.</string>
+    <string name="eph_help">Το RTK του τηλεφώνου διαβάζει τις τροχιές των δορυφόρων (εφημερίδες εκπομπής) από τα ίδια τα μηνύματα των δορυφόρων, όταν το τηλέφωνο τα παρέχει (το δείχνει το Εργαλεία &gt; Ακατέργαστα GNSS τηλεφώνου). Διαφορετικά, και ως εφεδρεία, μια δεύτερη σύνδεση σε σταθμό IGS / EUREF κοντά σας (π.χ. DYNG00GRC0 κοντά στην Αθήνα στο igs-ip.net, δωρεάν με εγγραφή στο BKG) τις δίνει αμέσως.</string>
     <string name="eph_mount">Mountpoint</string>
     <string name="eph_no_profile">Αποθηκεύστε πρώτα τον λογαριασμό: Εργαλεία &gt; Διορθώσεις &gt; προφίλ caster (π.χ. το προκαθορισμένο IGS-IP (BKG) με τα στοιχεία σας στην BKG).</string>
     <string name="eph_profile">Λογαριασμός (αποθηκευμένο προφίλ caster)</string>
@@ -349,8 +349,11 @@
     <string name="live_base_value">#%1$d σε %2$s</string>
     <string name="live_corrections">Διορθώσεις</string>
     <string name="live_dop">DOP</string>
+    <string name="live_eph_phone">%1$d από το τηλέφωνο</string>
     <string name="live_fix">Λύση</string>
     <string name="live_fix_gap">Θέση τηλεφώνου έως RTK</string>
+    <string name="live_fix_gap_no_phone">– (καμία θέση τηλεφώνου τώρα)</string>
+    <string name="live_fix_gap_no_rtk">– (καμία λύση RTK τώρα)</string>
     <string name="live_height_ell">Υψόμετρο (ελλειψοειδές)</string>
     <string name="live_height_msl">Υψόμετρο (ΜΣΘ)</string>
     <string name="live_lat">Πλάτος</string>
@@ -386,7 +389,7 @@
     <string name="live_rtk_hint">Ενεργοποιήστε την αναμετάδοση NTRIP (caster και mountpoint στις Ρυθμίσεις) για RTK· μέχρι τότε το τηλέφωνο δίνει αυτόνομη θέση.</string>
     <string name="live_rtk_no_basepos">δεν υπάρχει ακόμη θέση σταθμού (1005/1006)</string>
     <string name="live_rtk_no_solution">καμία λύση προς το παρόν</string>
-    <string name="live_rtk_noeph">Δεν έχουν φτάσει ακόμη εφημερίδες από τον caster (RTCM 1019/1020/1045/1046/1042) και το τηλέφωνο τις χρειάζεται για να υπολογίσει τις θέσεις των δορυφόρων. Πολλές ροές δικτύου (VRS, πλησιέστερος σταθμός) δεν τις περιλαμβάνουν: ενεργοποιήστε τη ροή εφημερίδων (Ρυθμίσεις &gt; Σύνδεση δέκτη).</string>
+    <string name="live_rtk_noeph">Δεν υπάρχουν ακόμη εφημερίδες εκπομπής: αυτός ο caster δεν στέλνει (RTCM 1019/1020/1045/1046/1042) και το τηλέφωνο δεν παρέχει μηνύματα πλοήγησης, οπότε οι θέσεις των δορυφόρων είναι άγνωστες. Ενεργοποιήστε τη ροή εφημερίδων (Ρυθμίσεις &gt; Σύνδεση δέκτη).</string>
     <string name="live_rtk_nophase">Αυτή τη στιγμή δεν υπάρχει φάση φέροντος από το τηλέφωνο: το RTK δεν μπορεί να δώσει fixed (τηλέφωνο μόνο κώδικα ή ενεργή εξοικονόμηση ενέργειας). Η θέση μένει σε επίπεδο μέτρου.</string>
     <string name="live_rtk_pppstream">Αυτή η ροή στέλνει διορθώσεις PPP (SSR), όχι δεδομένα σταθμού βάσης: ορίστε Διορθώσεις σε PPP (HAS / SSR) στις Ρυθμίσεις &gt; Σύνδεση δέκτη ή επιλέξτε mountpoint RTK.</string>
     <string name="live_rtk_reflected">Τα σήματα φτάνουν στο τηλέφωνο από ανάκλαση (υπόλοιπα κώδικα %1$s): η θέση μπορεί να απέχει μέτρα ή περισσότερο, όποια ακρίβεια κι αν δείχνει το RTK. Μετακινηθείτε σε ανοιχτό ουρανό, μακριά από τοίχους, αυτοκίνητα και το σώμα σας.</string>
@@ -563,6 +566,9 @@
     <string name="raw_interval">Διάστημα</string>
     <string name="raw_intro">Το Phone RTK χρειάζεται ακατέργαστες μετρήσεις με φάση φέροντος, ιδανικά σε δύο ζώνες (L1 + L5/E5a). Τα τηλέφωνα διαφέρουν πολύ, γι’ αυτό δοκιμάστε κάθε μοντέλο σε ανοιχτό ουρανό.</string>
     <string name="raw_marker">Όνομα σημείου</string>
+    <string name="raw_nav_help">Το RTK του τηλεφώνου διαβάζει τις εφημερίδες των δορυφόρων από αυτά τα μηνύματα, οπότε δεν χρειάζεται ροή εφημερίδων. Αν δεν φτάνει κανένα, αυτό το τηλέφωνο δεν τα παρέχει.</string>
+    <string name="raw_nav_none">κανένα μέχρι στιγμής</string>
+    <string name="raw_nav_received">Μηνύματα πλοήγησης που ελήφθησαν</string>
     <string name="raw_no">όχι</string>
     <string name="raw_phone">Αυτό το τηλέφωνο</string>
     <string name="raw_post">Μεταεπεξεργασία</string>

@@ -131,7 +131,7 @@
     <string name="disp_utm_auto">Automatique (fuseau de la position)</string>
     <string name="disp_utm_zone">Fuseau UTM</string>
     <string name="disp_utm_zone_n">Fuseau %1$d (méridien central %2$d°)</string>
-    <string name="eph_help">Certains casters envoient les orbites des satellites (éphémérides) rarement ou jamais, et le RTK du téléphone attend. Une seconde connexion à une station IGS / EUREF proche (p. ex. DYNG00GRC0 près d’Athènes sur igs-ip.net, gratuite avec une inscription BKG) les fournit aussitôt.</string>
+    <string name="eph_help">Le RTK du téléphone lit les orbites des satellites (éphémérides radiodiffusées) dans les messages des satellites eux-mêmes lorsque le téléphone les fournit (Outils &gt; GNSS brut du téléphone l\'indique). Sinon, et en secours, une seconde connexion à une station IGS / EUREF proche (p. ex. DYNG00GRC0 près d\'Athènes sur igs-ip.net, gratuite avec inscription BKG) les donne aussitôt.</string>
     <string name="eph_mount">Point de montage</string>
     <string name="eph_no_profile">Enregistrez d’abord le compte : Outils &gt; Corrections &gt; profil de caster (par ex. le modèle IGS-IP (BKG) avec vos identifiants BKG).</string>
     <string name="eph_profile">Compte (profil de caster enregistré)</string>
@@ -349,8 +349,11 @@
     <string name="live_base_value">n° %1$d à %2$s</string>
     <string name="live_corrections">Corrections</string>
     <string name="live_dop">DOP</string>
+    <string name="live_eph_phone">%1$d du téléphone</string>
     <string name="live_fix">Solution</string>
     <string name="live_fix_gap">Position du téléphone à RTK</string>
+    <string name="live_fix_gap_no_phone">– (pas de position du téléphone en ce moment)</string>
+    <string name="live_fix_gap_no_rtk">– (pas de solution RTK en ce moment)</string>
     <string name="live_height_ell">Hauteur (ellipsoïde)</string>
     <string name="live_height_msl">Altitude (niveau de la mer)</string>
     <string name="live_lat">Latitude</string>
@@ -386,7 +389,7 @@
     <string name="live_rtk_hint">Activez le relais NTRIP (caster et point de montage dans Réglages) pour le RTK ; d’ici là, le téléphone donne une position autonome.</string>
     <string name="live_rtk_no_basepos">pas encore de position de station (1005/1006)</string>
     <string name="live_rtk_no_solution">pas de solution pour l\'instant</string>
-    <string name="live_rtk_noeph">Aucune éphéméride radiodiffusée reçue du caster pour l’instant (RTCM 1019/1020/1045/1046/1042) ; le téléphone en a besoin pour calculer la position des satellites. Beaucoup de flux de réseau (VRS, station la plus proche) n’en contiennent pas : activez le flux d’éphémérides (Configuration &gt; Connexion au récepteur).</string>
+    <string name="live_rtk_noeph">Pas encore d\'éphémérides radiodiffusées : ce caster n\'en envoie pas (RTCM 1019/1020/1045/1046/1042) et le téléphone ne fournit pas de messages de navigation, les positions des satellites sont donc inconnues. Activez le flux d\'éphémérides (Réglages &gt; Connexion du récepteur).</string>
     <string name="live_rtk_nophase">Pas de phase porteuse de ce téléphone pour l’instant : le RTK ne peut pas fixer (téléphone à code seul, ou économie d’énergie encore active). La position reste au niveau métrique.</string>
     <string name="live_rtk_pppstream">Ce flux envoie des corrections PPP (SSR), pas des données de station de base : réglez Corrections sur PPP (HAS / SSR) dans Configuration &gt; Connexion au récepteur, ou choisissez un point de montage RTK.</string>
     <string name="live_rtk_reflected">Les signaux atteignent le téléphone par réflexion (résidus de code %1$s) : la position peut être fausse de plusieurs mètres ou plus, quelle que soit la précision annoncée par le RTK. Placez-vous en ciel dégagé, loin des murs, des voitures et de votre corps.</string>
@@ -563,6 +566,9 @@
     <string name="raw_interval">Intervalle</string>
     <string name="raw_intro">Phone RTK a besoin de mesures brutes avec phase porteuse, idéalement sur deux bandes (L1 + L5/E5a). Les téléphones diffèrent beaucoup : testez chaque modèle dehors, sous un ciel dégagé.</string>
     <string name="raw_marker">Nom du repère</string>
+    <string name="raw_nav_help">Le RTK du téléphone lit les éphémérides des satellites dans ces messages et n\'a alors besoin d\'aucun flux d\'éphémérides. S\'il n\'en arrive aucun, ce téléphone ne les fournit pas.</string>
+    <string name="raw_nav_none">aucun pour l\'instant</string>
+    <string name="raw_nav_received">Messages de navigation reçus</string>
     <string name="raw_no">non</string>
     <string name="raw_phone">Ce téléphone</string>
     <string name="raw_post">Post-traitement</string>

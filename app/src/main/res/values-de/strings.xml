@@ -131,7 +131,7 @@
     <string name="disp_utm_auto">Automatisch (Zone der Position)</string>
     <string name="disp_utm_zone">UTM-Zone</string>
     <string name="disp_utm_zone_n">Zone %1$d (Mittelmeridian %2$d°)</string>
-    <string name="eph_help">Manche Caster senden Satellitenbahnen (Broadcast-Ephemeriden) selten oder gar nicht, sodass Telefon-RTK wartet. Eine zweite Verbindung zu einer IGS-/EUREF-Station in Ihrer Nähe (z. B. DYNG00GRC0 bei Athen auf igs-ip.net, kostenlos mit BKG-Registrierung) liefert sie sofort.</string>
+    <string name="eph_help">Telefon-RTK liest die Satellitenbahnen (Broadcast-Ephemeriden) aus den Nachrichten der Satelliten selbst, wenn das Telefon sie liefert (Werkzeuge &gt; Telefon-Rohdaten GNSS zeigt es). Sonst, und als Reserve, liefert eine zweite Verbindung zu einer IGS-/EUREF-Station in Ihrer Nähe (z. B. DYNG00GRC0 bei Athen auf igs-ip.net, kostenlos mit BKG-Registrierung) sie sofort.</string>
     <string name="eph_mount">Mountpoint</string>
     <string name="eph_no_profile">Zuerst das Konto speichern: Werkzeuge &gt; Korrekturen &gt; Caster-Profil (z. B. die Vorlage IGS-IP (BKG) mit Ihrem BKG-Login).</string>
     <string name="eph_profile">Konto (gespeichertes Caster-Profil)</string>
@@ -349,8 +349,11 @@
     <string name="live_base_value">#%1$d in %2$s</string>
     <string name="live_corrections">Korrekturen</string>
     <string name="live_dop">DOP</string>
+    <string name="live_eph_phone">%1$d vom Telefon</string>
     <string name="live_fix">Lösung</string>
     <string name="live_fix_gap">Telefon-Fix zu RTK</string>
+    <string name="live_fix_gap_no_phone">– (gerade keine Telefonposition)</string>
+    <string name="live_fix_gap_no_rtk">– (gerade keine RTK-Lösung)</string>
     <string name="live_height_ell">Höhe (Ellipsoid)</string>
     <string name="live_height_msl">Höhe (NN)</string>
     <string name="live_lat">Breite</string>
@@ -386,7 +389,7 @@
     <string name="live_rtk_hint">Für RTK das NTRIP-Relay einschalten (Caster und Mountpoint in der Einrichtung); bis dahin liefert das Telefon eine autonome Position.</string>
     <string name="live_rtk_no_basepos">noch keine Stationsposition (1005/1006)</string>
     <string name="live_rtk_no_solution">derzeit keine Lösung</string>
-    <string name="live_rtk_noeph">Vom Caster sind noch keine Broadcast-Ephemeriden gekommen (RTCM 1019/1020/1045/1046/1042), und das Telefon braucht sie, um die Satellitenpositionen zu berechnen. Viele Netzströme (VRS, nächste Station) enthalten keine: den Ephemeridenstrom einschalten (Einrichtung &gt; Empfängerverbindung).</string>
+    <string name="live_rtk_noeph">Noch keine Broadcast-Ephemeriden: Dieser Caster sendet keine (RTCM 1019/1020/1045/1046/1042), und das Telefon liefert keine Navigationsnachrichten, daher sind die Satellitenpositionen unbekannt. Den Ephemeriden-Stream einschalten (Einrichtung &gt; Empfängerverbindung).</string>
     <string name="live_rtk_nophase">Derzeit keine Trägerphase von diesem Telefon: RTK kann nicht fixen (Telefon nur mit Code oder Energiesparen noch aktiv). Die Position bleibt im Meterbereich.</string>
     <string name="live_rtk_pppstream">Dieser Stream sendet PPP-Korrekturen (SSR), keine Basisstationsdaten: Korrekturen in Einrichtung &gt; Empfängerverbindung auf PPP (HAS / SSR) stellen oder einen RTK-Mountpoint wählen.</string>
     <string name="live_rtk_reflected">Die Signale erreichen das Telefon über Reflexionen (Code-Residuen %1$s): Die Position kann um Meter oder mehr daneben liegen, egal welche Genauigkeit RTK angibt. Gehen Sie unter freien Himmel, weg von Wänden, Autos und Ihrem Körper.</string>
@@ -563,6 +566,9 @@
     <string name="raw_interval">Intervall</string>
     <string name="raw_intro">Phone RTK braucht Rohmessungen mit Trägerphase, am besten auf zwei Frequenzen (L1 + L5/E5a). Telefone unterscheiden sich stark, testen Sie daher jedes Modell im Freien unter offenem Himmel.</string>
     <string name="raw_marker">Markername</string>
+    <string name="raw_nav_help">Telefon-RTK liest die Ephemeriden der Satelliten aus diesen Nachrichten und braucht dann keinen Ephemeriden-Stream. Kommen keine an, liefert dieses Telefon sie nicht.</string>
+    <string name="raw_nav_none">bisher keine</string>
+    <string name="raw_nav_received">Navigationsnachrichten erhalten</string>
     <string name="raw_no">nein</string>
     <string name="raw_phone">Dieses Telefon</string>
     <string name="raw_post">Nachbearbeitung</string>

@@ -16,6 +16,8 @@ object GnssLog {
         "MultipathIndicator,SnrInDb,ConstellationType,AgcDb,BasebandCn0DbHz,FullInterSignalBiasNanos," +
         "FullInterSignalBiasUncertaintyNanos,SatelliteInterSignalBiasNanos,SatelliteInterSignalBiasUncertaintyNanos," +
         "CodeType,ChipsetElapsedRealtimeNanos"
+    /** Navigation messages as the phone demodulated them (GnssNavigationMessage), for ephemerides without a caster. */
+    const val NAV_FIELDS = "Nav,Svid,Type,Status,MessageId,Sub-messageId,Data(Bytes)"
     const val FIX_FIELDS = "Fix,Provider,LatitudeDegrees,LongitudeDegrees,AltitudeMeters,SpeedMps,AccuracyMeters,BearingDegrees," +
         "UnixTimeMillis,SpeedAccuracyMps,BearingAccuracyDegrees,elapsedRealtimeNanos,VerticalAccuracyMeters"
 
@@ -23,7 +25,8 @@ object GnssLog {
         append("#\n# Header Description:\n#\n")
         append("# Version: $app Platform: $android Manufacturer/Model: $device\n#\n")
         append("# ").append(RAW_FIELDS).append('\n')
-        append("#\n# ").append(FIX_FIELDS).append("\n#\n")
+        append("#\n# ").append(FIX_FIELDS).append('\n')
+        append("#\n# ").append(NAV_FIELDS).append("\n#\n")
     }
 
     private fun d(v: Double?) = v?.let { if (it == it.toLong().toDouble() && kotlin.math.abs(it) < 1e15) it.toLong().toString() else "%s".format(Locale.US, it) } ?: ""
@@ -38,6 +41,12 @@ object GnssLog {
         d(m.fullIsbNanos), d(m.fullIsbUncertaintyNanos), d(m.satelliteIsbNanos), d(m.satelliteIsbUncertaintyNanos),
         m.codeType ?: "", c.elapsedRealtimeNanos?.toString() ?: "",
     ).joinToString(",")
+
+    fun nav(m: NavMessage): String = buildString {
+        append("Nav,").append(m.svid).append(',').append(m.type).append(',').append(m.status).append(',').append(m.messageId).append(',')
+            .append(m.submessageId)
+        for (b in m.data) append(',').append(b.toInt())
+    }
 
     fun fix(provider: String, lat: Double, lon: Double, alt: Double?, speed: Float?, acc: Float?, bearing: Float?, timeMs: Long,
             elapsedNanos: Long?, vAcc: Float?): String = listOf(

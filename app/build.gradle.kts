@@ -4,7 +4,7 @@ plugins {
 }
 
 // The one place to change the app version.
-val appVersion = "1.12.21"
+val appVersion = "1.12.22"
 val appVersionCode = appVersion.split(".").map { it.toInt() }.let { (a, b, c) -> a * 10000 + b * 100 + c }
 
 android {
@@ -128,7 +128,7 @@ val buildHostRtk by tasks.registering(Exec::class) {
     val javaHome = File(System.getProperty("java.home"))
     val sources = listOf("prtk.c", "prtk_jni.c").map { File(cpp, it).path } +
         listOf("rtkcmn", "rtkpos", "lambda", "ephemeris", "preceph", "sbas", "ionex", "pntpos", "ppp", "ppp_ar", "rtcm", "rtcm2",
-            "rtcm3", "rtcm3e", "tides", "geoid", "trace").map { File(cpp, "rtklib/$it.c").path }
+            "rtcm3", "rtcm3e", "tides", "geoid", "trace", "rcvraw").map { File(cpp, "rtklib/$it.c").path }
     inputs.dir(cpp)
     outputs.dir(outDir)
     onlyIf { System.getProperty("os.name").startsWith("Linux") && File(javaHome, "include/jni.h").exists() }

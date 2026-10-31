@@ -47,6 +47,11 @@ object RtkNative {
     /** [out] ([RtkBase.SIZE] values): see [RtkBase.from]. */
     external fun base(out: DoubleArray)
     external fun message(): String
+    /** Keeps the engine's broadcast ephemerides in [path] / reads them back after a start; the number, or -1. */
+    external fun navSave(path: String): Int
+    external fun navLoad(path: String): Int
+    /** One navigation message from the phone (Android type, svid, data), GLONASS channel or -99; 1 = a new ephemeris, 0 kept, -1 rejected. */
+    external fun navMessage(type: Int, svid: Int, msgId: Int, subId: Int, data: ByteArray, gloFrq: Int): Int
 
     /** Starts the engine with [o]. */
     fun start(o: RtkOptions): Boolean = init(o.engineMode, o.navsys, o.elevationMaskDeg, o.snrMaskDbHz, o.arMode, if (o.glonassAr) 1 else 0,

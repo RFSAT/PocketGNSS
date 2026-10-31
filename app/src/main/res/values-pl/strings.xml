@@ -131,7 +131,7 @@
     <string name="disp_utm_auto">Automatycznie (strefa pozycji)</string>
     <string name="disp_utm_zone">Strefa UTM</string>
     <string name="disp_utm_zone_n">Strefa %1$d (południk osiowy %2$d°)</string>
-    <string name="eph_help">Niektóre castery wysyłają orbity satelitów (efemerydy) rzadko lub wcale, więc RTK telefonu czeka. Drugie połączenie ze stacją IGS / EUREF w pobliżu (np. DYNG00GRC0 koło Aten na igs-ip.net, bezpłatnie po rejestracji w BKG) dostarcza je od razu.</string>
+    <string name="eph_help">RTK telefonu odczytuje orbity satelitów (efemerydy rozgłoszeniowe) z wiadomości samych satelitów, gdy telefon je udostępnia (pokazuje to Narzędzia &gt; Surowe dane GNSS telefonu). W przeciwnym razie, i jako zapas, drugie połączenie ze stacją IGS / EUREF w pobliżu (np. DYNG00GRC0 koło Aten na igs-ip.net, bezpłatnie po rejestracji w BKG) daje je od razu.</string>
     <string name="eph_mount">Mountpoint</string>
     <string name="eph_no_profile">Najpierw zapisz konto: Narzędzia &gt; Poprawki &gt; profil castera (np. szablon IGS-IP (BKG) z twoim loginem BKG).</string>
     <string name="eph_profile">Konto (zapisany profil castera)</string>
@@ -349,8 +349,11 @@
     <string name="live_base_value">nr %1$d w odległości %2$s</string>
     <string name="live_corrections">Poprawki</string>
     <string name="live_dop">DOP</string>
+    <string name="live_eph_phone">%1$d z telefonu</string>
     <string name="live_fix">Rozwiązanie</string>
     <string name="live_fix_gap">Pozycja telefonu do RTK</string>
+    <string name="live_fix_gap_no_phone">– (teraz brak pozycji telefonu)</string>
+    <string name="live_fix_gap_no_rtk">– (teraz brak rozwiązania RTK)</string>
     <string name="live_height_ell">Wysokość (elipsoidalna)</string>
     <string name="live_height_msl">Wysokość (n.p.m.)</string>
     <string name="live_lat">Szerokość</string>
@@ -386,7 +389,7 @@
     <string name="live_rtk_hint">Włącz przekaźnik NTRIP (caster i mountpoint w Ustawieniach), aby mieć RTK; do tego czasu telefon podaje pozycję autonomiczną.</string>
     <string name="live_rtk_no_basepos">brak jeszcze pozycji stacji (1005/1006)</string>
     <string name="live_rtk_no_solution">obecnie brak rozwiązania</string>
-    <string name="live_rtk_noeph">Z castera nie dotarły jeszcze efemerydy rozgłoszeniowe (RTCM 1019/1020/1045/1046/1042), a telefon potrzebuje ich do obliczenia pozycji satelitów. Wiele strumieni sieciowych (VRS, najbliższa stacja) ich nie zawiera: włącz strumień efemeryd (Ustawienia &gt; Połączenie z odbiornikiem).</string>
+    <string name="live_rtk_noeph">Brak jeszcze efemeryd rozgłoszeniowych: ten caster ich nie wysyła (RTCM 1019/1020/1045/1046/1042), a telefon nie udostępnia wiadomości nawigacyjnych, więc pozycje satelitów są nieznane. Włącz strumień efemeryd (Ustawienia &gt; Połączenie z odbiornikiem).</string>
     <string name="live_rtk_nophase">Ten telefon nie podaje teraz fazy nośnej: RTK nie może uzyskać fixed (telefon tylko z kodem lub nadal włączone oszczędzanie energii). Pozycja pozostaje na poziomie metra.</string>
     <string name="live_rtk_pppstream">Ten strumień wysyła poprawki PPP (SSR), a nie dane stacji bazowej: ustaw Poprawki na PPP (HAS / SSR) w Ustawienia &gt; Połączenie z odbiornikiem lub wybierz mountpoint RTK.</string>
     <string name="live_rtk_reflected">Sygnały docierają do telefonu po odbiciu (residua kodu %1$s): pozycja może być błędna o metry lub więcej, niezależnie od dokładności podawanej przez RTK. Przejdź pod otwarte niebo, z dala od ścian, samochodów i własnego ciała.</string>
@@ -563,6 +566,9 @@
     <string name="raw_interval">Interwał</string>
     <string name="raw_intro">Phone RTK wymaga surowych pomiarów z fazą nośną, najlepiej na dwóch pasmach (L1 + L5/E5a). Telefony bardzo się różnią, więc testuj każdy model na zewnątrz przy otwartym niebie.</string>
     <string name="raw_marker">Nazwa punktu</string>
+    <string name="raw_nav_help">RTK telefonu odczytuje efemerydy satelitów z tych wiadomości, więc nie potrzebuje strumienia efemeryd. Jeśli żadne nie przychodzą, ten telefon ich nie udostępnia.</string>
+    <string name="raw_nav_none">na razie brak</string>
+    <string name="raw_nav_received">Odebrane wiadomości nawigacyjne</string>
     <string name="raw_no">nie</string>
     <string name="raw_phone">Ten telefon</string>
     <string name="raw_post">Postprocessing</string>

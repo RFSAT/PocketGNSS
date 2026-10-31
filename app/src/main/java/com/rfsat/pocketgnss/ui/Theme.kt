@@ -39,7 +39,9 @@ private val Light = lightColorScheme(
  * read at arm's length, in a car or on a tractor.
  */
 private val AppTypography = androidx.compose.material3.Typography().let { t ->
-    t.copy(bodySmall = t.bodySmall.copy(fontSize = t.bodyMedium.fontSize, lineHeight = t.bodyMedium.lineHeight))
+    // Comments and notes (bodySmall) justified to the full width; labels and values set their own alignment.
+    t.copy(bodySmall = t.bodySmall.copy(fontSize = t.bodyMedium.fontSize, lineHeight = t.bodyMedium.lineHeight,
+        textAlign = androidx.compose.ui.text.style.TextAlign.Justify))
 }
 
 @Composable

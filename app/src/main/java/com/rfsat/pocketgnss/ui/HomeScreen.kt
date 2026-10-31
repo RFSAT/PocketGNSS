@@ -48,14 +48,11 @@ fun HomeScreen(engine: GnssEngine, onOpenTab: (Tab) -> Unit, onReconnect: () -> 
     fun openUrl(url: String) = try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } catch (_: Exception) {}
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
 
-    // Label columns as wide as their longest label, so the values sit right next to the labels (status card and the
-    // about rows each fitted to their own labels).
-    val statusKeys = fittedKeyWidth(listOf(stringResource(R.string.home_variant), stringResource(R.string.home_link),
-        stringResource(R.string.home_module), stringResource(R.string.live_fix), stringResource(R.string.home_state)))
+    // About rows: a label column as wide as their longest label. The status card's values follow their own labels
+    // (inline): with "Receiver version" setting the column, Link, Fix and State sat far from theirs.
     val aboutKeys = fittedKeyWidth(listOf(stringResource(R.string.home_developer), stringResource(R.string.home_project),
         stringResource(R.string.home_hardware), stringResource(R.string.home_interfaces), stringResource(R.string.home_licence),
         stringResource(R.string.home_credits)))
-    androidx.compose.runtime.CompositionLocalProvider(LocalKeyWidth provides statusKeys) {
     Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(stringResource(R.string.app_name), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 28.sp)
@@ -83,20 +80,20 @@ fun HomeScreen(engine: GnssEngine, onOpenTab: (Tab) -> Unit, onReconnect: () -> 
                     is Connection.Failed -> c.message
                 }, fontWeight = FontWeight.SemiBold)
             }
-            KeyValue(stringResource(R.string.home_variant), stringResource(variantName(s.receiverVariant)))
+            KeyValue(stringResource(R.string.home_variant), stringResource(variantName(s.receiverVariant)), inline = true)
             if (s.receiverVariant == com.rfsat.pocketgnss.link.ReceiverVariant.UNSET) VariantPicker(engine)
             if (ready != null) {
-                KeyValue(stringResource(R.string.home_link), ready.info.detail)
-                rx.module?.let { KeyValue(stringResource(R.string.home_module), it + (rx.firmware?.let { f -> " · $f" } ?: "")) }
+                KeyValue(stringResource(R.string.home_link), ready.info.detail, inline = true)
+                rx.module?.let { KeyValue(stringResource(R.string.home_module), it + (rx.firmware?.let { f -> " · $f" } ?: ""), inline = true) }
                 val f = fix
                 KeyValue(stringResource(R.string.live_fix), if (f != null) stringResource(fixLabel(f)) + " · " + formatAccuracy(f.horizontalAccuracy)
-                    else stringResource(R.string.top_no_fix), live = true)
+                    else stringResource(R.string.top_no_fix), live = true, inline = true)
                 KeyValue(stringResource(R.string.home_state), buildList {
                     if (ntrip.status != com.rfsat.pocketgnss.core.NtripStatus.OFF) add(stringResource(R.string.state_ntrip, ntrip.status.name.lowercase()))
                     if (rec.active) add(stringResource(R.string.state_logging, rec.fixes))
                     if (s.mockLocation) add(stringResource(R.string.state_mock))
                     if (s.nmeaServer) add(stringResource(R.string.state_server, s.nmeaServerPort))
-                }.ifEmpty { listOf(stringResource(R.string.state_receiving)) }.joinToString(", "), live = true)
+                }.ifEmpty { listOf(stringResource(R.string.state_receiving)) }.joinToString(", "), live = true, inline = true)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     // Navigation shortcuts: all neutral (a filled button is kept for a screen's main action, e.g. Connect).
                     ActionButton(onClick = { onOpenTab(Tab.LIVE) }) { Text(stringResource(R.string.tab_live)) }
@@ -137,7 +134,6 @@ fun HomeScreen(engine: GnssEngine, onOpenTab: (Tab) -> Unit, onReconnect: () -> 
         Text(stringResource(R.string.home_not_affiliated), style = MaterialTheme.typography.bodySmall, color = muted)
         HorizontalDivider()
         Text(stringResource(R.string.home_ai_ack), Modifier.fillMaxWidth(), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall, color = muted)
-    }
     }
 }
 

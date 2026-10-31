@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.location.GnssMeasurementRequest
 import android.location.GnssMeasurementsEvent
+import android.location.GnssNavigationMessage
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -48,6 +49,8 @@ data class RawState(
     val error: String? = null,
     /** Callbacks report the measurements but the phone says they are unsupported or location is off. */
     val status: String? = null,
+    /** Navigation messages received per system ("GPS", "Galileo", ...) during the test. */
+    val navMessages: Map<String, Int> = emptyMap(),
 )
 
 /**
@@ -78,6 +81,15 @@ class PhoneRawLogger(
     private var rtcmBytes = 0L
     private var rawLines = 0L
     private var gotEvents = false
+    private val navCounts = java.util.TreeMap<String, Int>()
+
+    private val navCallback = object : GnssNavigationMessage.Callback() {
+        override fun onGnssNavigationMessageReceived(event: GnssNavigationMessage) {
+            val m = NavMessage(event.type, event.svid, event.status, event.messageId, event.submessageId, event.data)
+            m.system?.let { navCounts[it] = (navCounts[it] ?: 0) + 1 }
+            log?.let { w -> try { w.write(GnssLog.nav(m)); w.write("\n") } catch (_: Exception) {} }
+        }
+    }
 
     /** Last position from the phone, for the caster's GGA when nothing else gives one. */
     val location: Location? get() = lastLocation
@@ -133,6 +145,7 @@ class PhoneRawLogger(
             _state.value = RawState(error = "Location is off on this phone: turn it on in quick settings"); return
         }
         analyzer = RawAnalyzer(); lastDisc = null; rtcmBytes = 0; mainFrames.reset(); navFrames.reset(); rawLines = 0; gotEvents = false
+        navCounts.clear()
         val caps = capabilities()
         var dir: File? = null
         if (record) {
@@ -159,6 +172,10 @@ class PhoneRawLogger(
                 @Suppress("DEPRECATION") lm.registerGnssMeasurementsCallback(callback, h)
             }
             lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000L, 0f, listener, t.looper)
+            try {
+                if (Build.VERSION.SDK_INT >= 30) lm.registerGnssNavigationMessageCallback(executor, navCallback)
+                else @Suppress("DEPRECATION") lm.registerGnssNavigationMessageCallback(navCallback, h)
+            } catch (_: Exception) {}
         } catch (e: SecurityException) {
             _state.value = RawState(error = "Location permission missing"); closeFiles(); return
         } catch (e: Exception) {
@@ -171,6 +188,7 @@ class PhoneRawLogger(
         if (_state.value.running) com.rfsat.pocketgnss.core.AppLog.i("Phone raw", "Stopped")
         try { lm.unregisterGnssMeasurementsCallback(callback) } catch (_: Exception) {}
         try { lm.removeUpdates(listener) } catch (_: Exception) {}
+        try { lm.unregisterGnssNavigationMessageCallback(navCallback) } catch (_: Exception) {}
         val h = handler
         if (h != null) {
             // Finish the files on the logging thread, after any pending event.
@@ -179,7 +197,7 @@ class PhoneRawLogger(
             done.await(5, java.util.concurrent.TimeUnit.SECONDS)
         } else closeFiles()
         thread?.quitSafely(); thread = null; handler = null
-        _state.value = _state.value.copy(running = false, recording = false, report = analyzer.report())
+        _state.value = _state.value.copy(running = false, recording = false, report = analyzer.report(), navMessages = HashMap(navCounts))
     }
 
     private fun closeFiles() {
@@ -222,7 +240,8 @@ class PhoneRawLogger(
         if (now - lastPublish >= 1000) {
             lastPublish = now
             log?.flush()
-            _state.value = _state.value.copy(report = analyzer.report(), rinexEpochs = rinex?.epochs ?: 0, rtcmBytes = rtcmBytes, rawLines = rawLines)
+            _state.value = _state.value.copy(report = analyzer.report(), rinexEpochs = rinex?.epochs ?: 0, rtcmBytes = rtcmBytes, rawLines = rawLines,
+                navMessages = HashMap(navCounts))
         }
     }
 
