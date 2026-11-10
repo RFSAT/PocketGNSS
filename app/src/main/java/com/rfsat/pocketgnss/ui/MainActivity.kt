@@ -204,7 +204,10 @@ class MainActivity : ComponentActivity() {
                     adapter == null -> engine.disconnect(getString(R.string.conn_no_bt))
                     !adapter.isEnabled -> engine.disconnect(getString(R.string.conn_bt_off))
                     s.btAddress.isBlank() -> engine.disconnect(getString(R.string.conn_bt_pick))
-                    else -> try { engine.connectBluetooth(adapter.getRemoteDevice(s.btAddress)) } catch (_: IllegalArgumentException) {
+                    else -> try {
+                        val d = adapter.getRemoteDevice(s.btAddress)
+                        if (s.btBle) engine.connectBle(d) else engine.connectBluetooth(d)
+                    } catch (_: IllegalArgumentException) {
                         engine.disconnect(getString(R.string.conn_bt_pick))
                     }
                 }

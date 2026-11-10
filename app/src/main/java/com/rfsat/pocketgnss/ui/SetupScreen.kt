@@ -76,7 +76,18 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
                 LinkKind.USB -> {
                     Picker(stringResource(R.string.setup_baud), bauds, s.usbBaud, { if (it == 0) auto else "$it bd" }, { b -> upd { it.copy(usbBaud = b) } })
                     Text(stringResource(R.string.setup_baud_help), style = MaterialTheme.typography.bodySmall, color = muted)
+                    // Two-port USB chips (the Postcard's CH342): port A ESP32, port B the LG290P itself.
+                    val portAuto = stringResource(R.string.setup_usb_port_auto, if (s.receiverVariant.defaultUsbPort == 1) "B" else "A")
+                    Picker(stringResource(R.string.setup_usb_port), listOf(-1, 0, 1), s.usbPort, { p -> when (p) { 0 -> "A"; 1 -> "B"; else -> portAuto } },
+                        { p -> upd { it.copy(usbPort = p) } })
+                    Text(stringResource(R.string.setup_usb_port_help), style = MaterialTheme.typography.bodySmall, color = muted)
                 }
+                LinkKind.BLUETOOTH -> ChoiceRow(stringResource(R.string.setup_bt_type), listOf(false to stringResource(R.string.setup_bt_classic),
+                    true to stringResource(R.string.setup_bt_ble)), s.btBle) { v -> upd { it.copy(btBle = v) } }
+                else -> {}
+            }
+            if (s.source == LinkKind.BLUETOOTH && s.btBle) BleScanList(engine)
+            else when (s.source) {
                 LinkKind.BLUETOOTH -> {
                     val devices = remember(btRefresh) {
                         try { context.getSystemService(BluetoothManager::class.java)?.adapter?.bondedDevices?.toList() ?: emptyList() } catch (_: SecurityException) { null }
@@ -84,8 +95,8 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
                     if (devices == null) Text(stringResource(R.string.setup_bt_allow), style = MaterialTheme.typography.bodySmall, color = AlarmRed)
                     else if (devices.isEmpty()) Text(stringResource(R.string.setup_bt_none), style = MaterialTheme.typography.bodySmall, color = muted)
                     else for (d in devices.sortedByDescending { BluetoothSppLink.looksLikeReceiver(it.name) }) {
-                        val sel = d.address == s.btAddress
-                        Row(Modifier.fillMaxWidth().clickable { upd { it.copy(btAddress = d.address, btName = d.name ?: d.address) } }.padding(vertical = 4.dp)) {
+                        val sel = d.address == s.btAddress && !s.btBle
+                        Row(Modifier.fillMaxWidth().clickable { upd { it.copy(btAddress = d.address, btName = d.name ?: d.address, btBle = false) } }.padding(vertical = 4.dp)) {
                             Text((if (sel) "● " else "○ ") + (d.name ?: d.address), Modifier.weight(1f), fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
                                 color = if (sel) SafeGreen else MaterialTheme.colorScheme.onSurface)
                             if (BluetoothSppLink.looksLikeReceiver(d.name)) Text(stringResource(R.string.setup_bt_receiver), style = MaterialTheme.typography.bodySmall, color = SafeGreen)
@@ -127,7 +138,7 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
                         Text(stringResource(R.string.setup_phone_rtk_apply), style = MaterialTheme.typography.bodySmall, color = muted)
                     }
                 }
-                LinkKind.REPLAY -> {}
+                LinkKind.REPLAY, LinkKind.USB -> {}
                 LinkKind.SIMULATOR -> {
                     ChoiceRow(stringResource(R.string.sim_motion), listOf(SimMotion.STATIC to stringResource(R.string.sim_static),
                         SimMotion.SWATHS to stringResource(R.string.sim_swaths)), s.simMotion) { v -> upd { it.copy(simMotion = v) } }
@@ -233,8 +244,10 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
             Text(stringResource(R.string.setup_variant), fontWeight = FontWeight.SemiBold)
             VariantPicker(engine)
             Text(stringResource(R.string.setup_receiver_help), style = MaterialTheme.typography.bodySmall, color = muted)
-            TextSetting(stringResource(R.string.setup_receiver_id), s.receiverId, { v -> upd { it.copy(receiverId = v) } })
-            TextSetting(stringResource(R.string.setup_device_number), s.deviceNumber, { v -> upd { it.copy(deviceNumber = v) } }, keyboard = KeyboardType.Number)
+            if (!s.receiverVariant.isRover) {
+                TextSetting(stringResource(R.string.setup_receiver_id), s.receiverId, { v -> upd { it.copy(receiverId = v) } })
+                TextSetting(stringResource(R.string.setup_device_number), s.deviceNumber, { v -> upd { it.copy(deviceNumber = v) } }, keyboard = KeyboardType.Number)
+            }
         }
 
         Section(stringResource(R.string.setup_display)) {

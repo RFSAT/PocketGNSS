@@ -57,6 +57,8 @@ private enum class WebPhase { GUIDE, JOINING, OPEN, FAILED }
 fun ReceiverWebTool(engine: GnssEngine) {
     val context = LocalContext.current
     val s by engine.store.settings.collectAsState()
+    // RFSAT's LG290P rovers have their own settings pages (PicoRTK, PostcardRTK, RTK Everywhere).
+    if (s.receiverVariant.isRover) { RoverWebTool(engine); return }
     val cm = remember { context.getSystemService(ConnectivityManager::class.java) }
     var phase by remember { mutableStateOf(WebPhase.GUIDE) }
     var message by remember { mutableStateOf("") }
@@ -177,7 +179,7 @@ fun ReceiverWebTool(engine: GnssEngine) {
                     Text(stringResource(R.string.web_wifi_hotspot), style = MaterialTheme.typography.bodySmall, color = muted)
                     HotspotButton()
                 }
-                com.rfsat.pocketgnss.link.ReceiverVariant.UNSET -> Text(stringResource(R.string.variant_help), style = MaterialTheme.typography.bodySmall, color = muted)
+                else -> Text(stringResource(R.string.variant_help), style = MaterialTheme.typography.bodySmall, color = muted)
             }
             Text(stringResource(R.string.web_ntrip_steps), style = MaterialTheme.typography.bodySmall)
         }

@@ -127,7 +127,7 @@ fun ToolsTab(engine: GnssEngine, initialTool: ToolId? = null) {
             ToolId.CORRECTIONS -> CorrectionsTool(engine)
             ToolId.RAW -> RawTool(engine)
             ToolId.HISTORY -> HistoryTool(engine)
-            ToolId.NMEA_CONFIG -> NmeaConfigTool(engine)
+            ToolId.NMEA_CONFIG -> if (engine.store.value.receiverVariant.isRover) QuectelNmeaTool(engine) else NmeaConfigTool(engine)
             ToolId.RECEIVER_WEB -> ReceiverWebTool(engine)
             ToolId.TTFF -> TtffTool(engine)
             ToolId.STREAM -> StreamTool(engine)

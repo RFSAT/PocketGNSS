@@ -125,6 +125,9 @@ class GnssModel(private val clock: () -> Long = System::currentTimeMillis) {
 
     private var rmc: NmeaSentence.Rmc? = null
     private var gst: NmeaSentence.Gst? = null
+    /** Quectel $PQTMEPE (set by the engine): used as the error estimate when GST is not sent. */
+    var epe: com.rfsat.pocketgnss.protocol.QuectelEpe? = null
+    var epeMs = 0L
     private var gns: NmeaSentence.Gns? = null
     private var vtg: NmeaSentence.Vtg? = null
     private var dops = Triple<Double?, Double?, Double?>(null, null, null)
@@ -219,11 +222,13 @@ class GnssModel(private val clock: () -> Long = System::currentTimeMillis) {
         val lon = g.longitude ?: return null
         val r = rmc?.takeIf { sameEpoch(it.time, g.time) || it.time == null } ?: rmc?.takeIf { recent(it.time, g.time) }
         val st = gst?.takeIf { recent(it.time, g.time) }
+        // LG290P without GST: the estimated position error of the last 3 s, per axis.
+        val e = if (st == null) epe?.takeIf { now - epeMs < 3000 } else null
         val gn = gns?.takeIf { recent(it.time, g.time) }
         val speed = r?.speedKnots ?: vtg?.speedKnots
         return GnssFix(now, g.time, r?.date, lat, lon, g.altitudeMsl, g.geoidSeparation, g.quality, g.satellitesUsed,
             g.hdop ?: dops.second, dops.third, dops.first, speed?.let { it * 0.514444 }, r?.courseDeg ?: vtg?.courseTrue,
-            g.diffAgeSec, g.diffStation, st?.sdLatitude, st?.sdLongitude, st?.sdAltitude, gn?.modes)
+            g.diffAgeSec, g.diffStation, st?.sdLatitude ?: e?.north, st?.sdLongitude ?: e?.east, st?.sdAltitude ?: e?.down, gn?.modes)
     }
 
     private fun fromRmc(r: NmeaSentence.Rmc, now: Long): GnssFix? {

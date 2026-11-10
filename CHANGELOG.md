@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.13.0 (build 11300)
+Support for RFSAT's LG290P rovers (PicoRTK, ESP32-C6, PostcardRTK, RTK Everywhere, wired LG290P): choose yours in Setup. Bluetooth LE connection with scan; USB port choice for the Postcard and 460800 bit/s first. Tools > NMEA output sets the LG290P with General, Fleet or Tractor profiles and Galileo HAS, showing each reply. Live shows the rover's method, corrections and HAS state. Receiver settings opens each rover's own page.
+
 ## 1.12.22 (build 11222)
 Phone RTK reads satellite orbits from the phone's own navigation messages where the phone delivers them, so RTK also works on streams without ephemerides (e.g. Metrica MSM_NEAR), with no ephemeris stream. Orbits are kept for the next start, so a position comes at once after a restart. The map zooms while following your position, Live always shows the phone fix to RTK distance, and notes fill the screen width.
 

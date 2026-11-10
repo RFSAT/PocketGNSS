@@ -59,10 +59,15 @@ class UsbSerialLink private constructor(
                 ?: if (hasCdc(d)) CdcAcmSerialDriver(d) else null
 
         @Throws(IOException::class)
-        fun open(manager: UsbManager, device: UsbDevice, baud: Int): UsbSerialLink {
+        /**
+         * [portIndex]: which port of a multi-port chip to open (the Postcard's CH342: 0 = port A, the ESP32; 1 = port B,
+         * the LG290P); falls back to the first port when the chip has fewer.
+         */
+        fun open(manager: UsbManager, device: UsbDevice, baud: Int, portIndex: Int = 0): UsbSerialLink {
             if (!manager.hasPermission(device)) throw IOException("No USB permission for ${device.deviceName}")
             val driver = driverFor(device) ?: throw IOException("No serial driver for %04X:%04X".format(device.vendorId, device.productId))
-            val port = driver.ports.firstOrNull() ?: throw IOException("No serial port on the device")
+            val port = driver.ports.getOrNull(portIndex) ?: driver.ports.firstOrNull() ?: throw IOException("No serial port on the device")
+            val portLabel = if (driver.ports.size > 1) " · port " + ('A' + driver.ports.indexOf(port)) else ""
             val conn = manager.openDevice(device) ?: throw IOException("openDevice() returned null")
             try {
                 port.open(conn)
@@ -79,10 +84,11 @@ class UsbSerialLink private constructor(
                 UsbChip.UBLOX -> "u-blox ZED-F9x (bottom USB)"
                 UsbChip.OTHER -> device.productName ?: "USB serial"
                 UsbChip.CP210X, UsbChip.CH34X -> "RFSAT receiver (USB data port)"
+                UsbChip.RASPBERRY_PI -> "PicoRTK (USB)"
                 else -> (device.productName ?: chip.label) + " (USB)"
             }
-            val detail = "%s · %04X:%04X%s".format(chip.label, device.vendorId, device.productId,
-                if (chip == UsbChip.UBLOX) "" else " · $baud bd")
+            val detail = "%s · %04X:%04X%s%s".format(chip.label, device.vendorId, device.productId,
+                if (chip == UsbChip.UBLOX || chip == UsbChip.RASPBERRY_PI) "" else " · $baud bd", portLabel)
             return UsbSerialLink(port, LinkInfo(LinkKind.USB, name, detail, chip, baud))
         }
     }

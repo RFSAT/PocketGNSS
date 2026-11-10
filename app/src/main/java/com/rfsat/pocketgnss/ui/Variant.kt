@@ -23,6 +23,11 @@ import com.rfsat.pocketgnss.link.ReceiverVariant
     ReceiverVariant.LTE -> R.string.variant_lte
     ReceiverVariant.WIFI -> R.string.variant_wifi
     ReceiverVariant.UNSET -> R.string.variant_unset
+    ReceiverVariant.PICORTK -> R.string.variant_picortk
+    ReceiverVariant.LG290P_C6 -> R.string.variant_c6
+    ReceiverVariant.POSTCARDRTK -> R.string.variant_postcard
+    ReceiverVariant.RTK_EVERYWHERE -> R.string.variant_rtke
+    ReceiverVariant.LG290P_WIRED -> R.string.variant_wired
 }
 
 /** How that version's own NTRIP client reaches the RTK service. */
@@ -30,26 +35,45 @@ import com.rfsat.pocketgnss.link.ReceiverVariant
     ReceiverVariant.LTE -> R.string.route_lte
     ReceiverVariant.WIFI -> R.string.route_wifi
     ReceiverVariant.UNSET -> R.string.route_unset
+    ReceiverVariant.PICORTK -> R.string.route_picortk
+    ReceiverVariant.LG290P_C6 -> R.string.route_c6
+    ReceiverVariant.POSTCARDRTK -> R.string.route_postcard
+    ReceiverVariant.RTK_EVERYWHERE -> R.string.route_rtke
+    ReceiverVariant.LG290P_WIRED -> R.string.route_wired
 }
 
-/** What to check when the receiver gets no corrections. */
+/** What to check when the receiver gets no corrections (matching Part U of the master documentation for the rovers). */
 @StringRes fun variantTroubleshoot(v: ReceiverVariant): Int = when (v) {
     ReceiverVariant.LTE -> R.string.trouble_lte
     ReceiverVariant.WIFI -> R.string.trouble_wifi
     ReceiverVariant.UNSET -> R.string.trouble_unset
+    ReceiverVariant.PICORTK -> R.string.trouble_picortk
+    ReceiverVariant.LG290P_C6 -> R.string.trouble_c6
+    ReceiverVariant.POSTCARDRTK -> R.string.trouble_postcard
+    ReceiverVariant.RTK_EVERYWHERE -> R.string.trouble_rtke
+    ReceiverVariant.LG290P_WIRED -> R.string.trouble_wired
 }
 
-/** Chips to choose the hardware version, with the explanation of the chosen one. */
+/** Chips to choose the receiver: RFSAT AgriBIT (u-blox) or one of RFSAT's LG290P rovers, with the chosen one explained. */
 @Composable
-fun VariantPicker(engine: GnssEngine, explain: Boolean = true) {
+fun VariantPicker(engine: GnssEngine, explain: Boolean = true, rovers: Boolean = true) {
     val s by engine.store.settings.collectAsState()
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(stringResource(R.string.variant_group_agribit), style = MaterialTheme.typography.labelMedium, color = muted)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            for (v in listOf(ReceiverVariant.LTE, ReceiverVariant.WIFI))
+            for (v in ReceiverVariant.AGRIBIT)
                 ChoiceChip(s.receiverVariant == v, stringResource(variantName(v)), { engine.store.update { it.copy(receiverVariant = v) } })
         }
+        if (rovers) {
+            Text(stringResource(R.string.variant_group_rovers), style = MaterialTheme.typography.labelMedium, color = muted)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (v in ReceiverVariant.ROVERS)
+                    ChoiceChip(s.receiverVariant == v, stringResource(variantName(v)), { engine.store.update { it.copy(receiverVariant = v) } })
+            }
+        }
         if (explain) Text(stringResource(if (s.receiverVariant == ReceiverVariant.UNSET) R.string.variant_help else variantRoute(s.receiverVariant)),
-            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            style = MaterialTheme.typography.bodySmall, color = muted)
     }
 }
 

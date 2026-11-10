@@ -18,7 +18,38 @@ enum class LinkKind { USB, BLUETOOTH, TCP, PHONE, SIMULATOR,
  *  - [WIFI]: compact two-board build (ESP32-DevKitC on ESP_F9x, no modem); corrections only through a Wi-Fi access
  *    point: a field router or the phone's own hotspot (D3.3 §4.2, D3.5 GNSS-spec-13).
  */
-enum class ReceiverVariant { UNSET, LTE, WIFI }
+enum class ReceiverVariant {
+    UNSET, LTE, WIFI,
+    /*
+     * RFSAT's RTK rovers built on the Quectel LG290P (master documentation RFSAT-RTK-DOC-001, variants V1-V6).
+     * Their firmware (PicoRTK, PostcardRTK, RTK Everywhere) sets the receiver and runs its own NTRIP client;
+     * V5 / V6 is the receiver on its own, configured once with the profiles of the documentation.
+     */
+    /** V1: Waveshare LG290P module + Raspberry Pi Pico 2 W (PicoRTK firmware). */
+    PICORTK,
+    /** V2: Waveshare LG290P module + ESP32-C6 SuperMini (PostcardRTK firmware for the C6; Bluetooth LE only). */
+    LG290P_C6,
+    /** V3: SparkFun RTK Postcard with the PostcardRTK firmware. */
+    POSTCARDRTK,
+    /** V4: SparkFun RTK Postcard + Portability Shield with RFSAT's RTK Everywhere fork. */
+    RTK_EVERYWHERE,
+    /** V5 / V6: the LG290P on its own, over USB or its UART (no firmware of ours). */
+    LG290P_WIRED;
+
+    /** One of RFSAT's LG290P rovers (not the AgriBIT u-blox receiver). */
+    val isRover: Boolean get() = this == PICORTK || this == LG290P_C6 || this == POSTCARDRTK || this == RTK_EVERYWHERE || this == LG290P_WIRED
+
+    /**
+     * USB port to open on two-port USB chips when Setup says "automatic": the Postcard's CH342 gives port A to the ESP32
+     * (console, flashing) and port B straight to the LG290P, which is where the NMEA is.
+     */
+    val defaultUsbPort: Int get() = if (this == POSTCARDRTK || this == RTK_EVERYWHERE) 1 else 0
+
+    companion object {
+        val AGRIBIT = listOf(LTE, WIFI)
+        val ROVERS = listOf(PICORTK, LG290P_C6, POSTCARDRTK, RTK_EVERYWHERE, LG290P_WIRED)
+    }
+}
 
 /** USB bridge chip of a receiver, from its vendor ID. */
 enum class UsbChip(val vendorId: Int, val label: String) {
@@ -35,6 +66,8 @@ enum class UsbChip(val vendorId: Int, val label: String) {
     CH34X(0x1A86, "ESP32 data port (CH34x)"),
     ESPRESSIF(0x303A, "Espressif native USB (ESP32)"),
     FTDI(0x0403, "FTDI serial"),
+    /** Raspberry Pi Pico 2 W (PicoRTK, variant V1): the RP2350's own USB serial (CDC), position and receiver bridge. */
+    RASPBERRY_PI(0x2E8A, "Raspberry Pi Pico USB (PicoRTK)"),
     OTHER(0, "USB serial");
 
     /** Bridges wired to an ESP32's EN / IO0 through DTR / RTS: toggling those lines would reset the board. */

@@ -23,6 +23,12 @@ data class AppSettings(
     val usbBaud: Int = 0,
     val btAddress: String = "",
     val btName: String = "",
+    /** The saved Bluetooth device is a Bluetooth LE one (Nordic UART Service: PicoRTK, PostcardRTK, ESP32-C6 rover). */
+    val btBle: Boolean = false,
+    /** USB port on two-port chips (CH342 of the Postcard): -1 automatic (from the receiver choice), 0 port A, 1 port B. */
+    val usbPort: Int = -1,
+    /** Address of the rover's web page on a shared Wi-Fi (picortk.local, postcardrtk.local or an IP); empty = default. */
+    val roverHost: String = "",
     val tcpHost: String = "192.168.4.1",
     val tcpPort: Int = 3967,
     val autoReconnect: Boolean = true,
@@ -147,6 +153,9 @@ class SettingsStore(context: Context, keystore: SecretCipher = KeystoreCipher) {
             usbBaud = prefs.getInt("usbBaud", d.usbBaud),
             btAddress = prefs.getString("btAddress", d.btAddress) ?: "",
             btName = prefs.getString("btName", d.btName) ?: "",
+            btBle = prefs.getBoolean("btBle", d.btBle),
+            usbPort = prefs.getInt("usbPort", d.usbPort),
+            roverHost = prefs.getString("roverHost", d.roverHost) ?: "",
             tcpHost = prefs.getString("tcpHost", d.tcpHost) ?: d.tcpHost,
             tcpPort = prefs.getInt("tcpPort", d.tcpPort),
             autoReconnect = prefs.getBoolean("autoReconnect", d.autoReconnect),
@@ -222,6 +231,7 @@ class SettingsStore(context: Context, keystore: SecretCipher = KeystoreCipher) {
             .putString("source", s.source.name)
             .putInt("usbBaud", s.usbBaud)
             .putString("btAddress", s.btAddress).putString("btName", s.btName)
+            .putBoolean("btBle", s.btBle).putInt("usbPort", s.usbPort).putString("roverHost", s.roverHost)
             .putString("tcpHost", s.tcpHost).putInt("tcpPort", s.tcpPort)
             .putBoolean("autoReconnect", s.autoReconnect)
             .putBoolean("phoneRtk", s.phoneRtk).putBoolean("phoneRtkStatic", s.phoneRtkStatic).putBoolean("phonePpp", s.phonePpp)

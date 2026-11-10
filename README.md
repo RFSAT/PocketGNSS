@@ -47,10 +47,17 @@ agricultural GNSS enabled services*) are listed on the same CORDIS Results page.
 
 ## Connections
 
+From 1.13 the app also supports **RFSAT's LG290P rovers** (master documentation RFSAT-RTK-DOC-001, part P):
+PicoRTK (V1), LG290P + ESP32-C6 (V2), PostcardRTK (V3), the Postcard with RFSAT's RTK Everywhere fork (V4) and the
+LG290P wired on its own (V5, V6). Choose the receiver in Setup; it sets the USB defaults (460800 bd tried first, port B
+of the Postcard's two-port CH342), the help texts and which tools apply. Raspberry Pi Pico USB (vendor 0x2E8A) opens
+the app when plugged in.
+
 | Source | What it is | Notes |
 |---|---|---|
 | USB | **Upper micro-USB = data / COM port** (D3.3 §4.7.1): the ESP32-DevKitC's CP210x bridge, carrying the NMEA ESPrtk sends to TX_UART0 (§4.7.7), 115200 bd as in D3.5 GNSS-test-11 | Middle port = power (5 V, min 1 A); bottom port = the ZED-F9x's own CDC-ACM USB, "not normally used" but the one that takes UBX configuration directly (u-center, §4.7.22). Both are recognised by vendor ID and open the app (`res/xml/device_filter.xml`). On the ESP32 port DTR/RTS are left alone because they drive EN/IO0 and would reset it; baud 115200 or automatic search. |
 | Bluetooth | Classic SPP to "BTU-ESPrtk : <ID>_<suffix>" (D3.3 §4.7.14), same NMEA as the USB port (GNSS-test-12, verified with a Galaxy S10) | Paired devices only (pair in Android settings), so only BLUETOOTH_CONNECT is needed; auto-reconnect. |
+| Bluetooth LE | Nordic UART Service (NUS) of RFSAT's LG290P rovers: PicoRTK, PostcardRTK, the ESP32-C6 rover (`link/BleNusLink.kt`) | Found with a scan in Setup (BLUETOOTH_SCAN with neverForLocation; location permission before Android 12); NMEA from TX notifications, RTCM to RX in MTU-sized writes; auto-reconnect. |
 | TCP | NMEA over the network (ESPrtk Wi-Fi stream, EOS Tools Pro on port 3967, any NMEA server) | Auto-reconnect. |
 | Phone GNSS | The phone's own GNSS chip (`link/PhoneGnssLink.kt`), for use without the receiver or for comparison | Android Location + GnssStatus converted to NMEA (`link/PhoneNmea.kt`: GGA, RMC, VTG, GST with Android's accuracy, GSA, GSV with L1/L5 signal IDs), so every screen works. Autonomous only: RTCM and UBX cannot be sent to the chip, so phone NTRIP, NMEA output configuration and mock location are disabled; mock positions are ignored so the app never reads back its own output. Needs location permission. |
 | Simulator | Synthetic ZED-F9P (`sim/SimReceiver.kt`) | Behaves like the D3.5 results: TTFF ~26 s cold, SBAS, float, RTK fixed 25-30 s after corrections; correction link per receiver version (LTE: ~57 s to RTK data, 16-25 s outages, ~95 %; Wi-Fi: ~15 s, short drop-outs, ~99 %); static or tractor-on-swaths; answers UBX VALSET/VALGET/RST/MON-VER. Every screen and tool works with it (and Play review needs it). |
@@ -154,6 +161,17 @@ agricultural GNSS enabled services*) are listed on the same CORDIS Results page.
   navigation rate 1-20 Hz, and save to RAM + BBR + Flash; UBX CFG-VALSET with ACK per message, read-back with
   CFG-VALGET. Works for sure on the F9x USB port; through the ESP32 only if ESPrtk passes UBX through (the tool
   says which).
+* **NMEA output, LG290P rovers**: the receiver profiles of the master documentation (General, Fleet, Tractor), for
+  the receiver's 4-pin socket (UART3) or the port in use, Galileo HAS on/off, then save ($PQTMSAVEPAR) and restart
+  ($PQTMSRR). Each command is shown with the receiver's reply (OK / ERROR / no reply). Commands reach the receiver only
+  on a direct link (V5 USB, Postcard port B). `protocol/Quectel.kt`; its checksums are unit-tested against the
+  documentation's command table.
+* **Rover status (Live)**: `$PRFSM` from PicoRTK / PostcardRTK (method ladder, corrections live/stale/none, age,
+  station, estimates), Galileo HAS state from `$PQTMPPPNAV`, receiver error from `$PQTMEPE` (also used as accuracy
+  when GST is absent).
+* **Receiver settings, LG290P rovers**: joins the rover's setup network (PicoRTK-Setup → 192.168.42.1,
+  PostcardRTK-Setup → 192.168.4.1, RTK Config → 192.168.4.1) or opens it on a shared Wi-Fi (picortk.local,
+  postcardrtk.local, or the IP shown by the device). The wired LG290P has no web page.
 * **Receiver settings**: shows the set-up steps for the chosen version (LTE: SIM, BG96, APN in section 16; Wi-Fi:
   router or phone hotspot SSID in section 4, with a shortcut to the phone's hotspot settings; both: NTRIP in
   section 7), then joins the hotspot "ESPrtk : <ID>" (WifiNetworkSpecifier, Android 10+; or the Wi-Fi the

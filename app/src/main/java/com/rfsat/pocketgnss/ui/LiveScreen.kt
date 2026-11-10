@@ -118,6 +118,8 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
             }
         }
 
+        RoverStatusSection(engine)
+
         Section(stringResource(R.string.live_corrections)) {
             val ageText = f?.diffAgeSec?.let { stringResource(R.string.live_age_value, it, f.diffStation ?: "—") } ?: stringResource(R.string.live_age_none)
             KeyValue(stringResource(R.string.live_age), ageText, live = true)
@@ -339,3 +341,51 @@ fun phoneMethodLabel(method: String): Int? = when (method) {
 /** [phoneMethodLabel] as text, or the method itself when it has no translation. */
 @Composable
 fun methodText(method: String): String = phoneMethodLabel(method)?.let { stringResource(it) } ?: method
+
+/** RFSAT method ladder and corrections source. */
+@androidx.annotation.StringRes
+fun rfsatMethodLabel(m: String): Int? = when (m.uppercase(Locale.US)) {
+    "FIX" -> R.string.rv_m_fix; "FLOAT" -> R.string.rv_m_float; "DGNSS" -> R.string.rv_m_dgnss
+    "HASCONV" -> R.string.rv_m_hasconv; "HAS" -> R.string.rv_m_has; "SBAS" -> R.string.rv_m_sbas
+    "GNSS" -> R.string.rv_m_gnss; "DR" -> R.string.rv_m_dr; "NONE" -> R.string.rv_m_none
+    else -> null
+}
+
+/**
+ * Status of an RFSAT LG290P rover (P-2 item 5): the firmware's method ladder ($PRFSM), the receiver's Galileo HAS state
+ * ($PQTMPPPNAV) and its estimated error ($PQTMEPE). Shown only while those sentences arrive (last 5 s).
+ */
+@Composable
+fun RoverStatusSection(engine: GnssEngine) {
+    val rv by engine.rover.collectAsState()
+    val now = System.currentTimeMillis()
+    val r = rv.rfsat?.takeIf { now - rv.rfsatMs < 5000 }
+    val p = rv.ppp?.takeIf { now - rv.pppMs < 5000 }
+    val e = rv.epe?.takeIf { now - rv.epeMs < 5000 }
+    if (r == null && p == null && e == null) return
+    Section(stringResource(R.string.rv_title)) {
+        if (r != null) {
+            KeyValue(stringResource(R.string.rv_method), (rfsatMethodLabel(r.method)?.let { stringResource(it) } ?: r.method) + " · " + r.ladder, live = true)
+            val corr = when (r.corrections.lowercase(Locale.US)) {
+                "live" -> stringResource(R.string.rv_corr_live); "stale" -> stringResource(R.string.rv_corr_stale); else -> stringResource(R.string.rv_corr_none)
+            }
+            KeyValue(stringResource(R.string.rv_corrections), corr + (r.ageSec?.let { " · %.0f s".format(Locale.US, it) } ?: "") +
+                (r.station?.let { " · $it" } ?: ""), live = true,
+                valueColor = if (r.corrections.equals("live", true)) SafeGreen else if (r.corrections.equals("stale", true)) AlarmRed else Color.Unspecified)
+            if (r.estH != null || r.estV != null)
+                KeyValue(stringResource(R.string.rv_estimate), stringResource(R.string.live_accuracy_value,
+                    r.estH?.let { formatAccuracy(it) } ?: "—", r.estV?.let { formatAccuracy(it) } ?: "—"), live = true)
+        }
+        if (p != null) {
+            val state = when {
+                p.converged && p.galileoHas -> stringResource(R.string.rv_has_converged)
+                p.converging && p.galileoHas -> stringResource(R.string.rv_has_converging)
+                p.galileoHas -> stringResource(R.string.rv_has_received)
+                else -> stringResource(R.string.rv_has_off)
+            }
+            KeyValue(stringResource(R.string.rv_has), state + (p.diffAgeSec?.takeIf { p.galileoHas }?.let { " · %.0f s".format(Locale.US, it) } ?: ""),
+                live = true, valueColor = if (p.converged && p.galileoHas) SafeGreen else Color.Unspecified)
+        }
+        if (e != null) KeyValue(stringResource(R.string.rv_epe), stringResource(R.string.live_accuracy_value, formatAccuracy(e.horizontal), formatAccuracy(e.down)), live = true)
+    }
+}

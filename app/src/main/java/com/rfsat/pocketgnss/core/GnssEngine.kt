@@ -12,6 +12,7 @@ import com.rfsat.pocketgnss.data.SessionRecorder
 import com.rfsat.pocketgnss.data.SettingsStore
 import com.rfsat.pocketgnss.data.SurveyPoint
 import com.rfsat.pocketgnss.data.TrackPoint
+import com.rfsat.pocketgnss.link.BleNusLink
 import com.rfsat.pocketgnss.link.BluetoothSppLink
 import com.rfsat.pocketgnss.link.GnssLink
 import com.rfsat.pocketgnss.link.LinkInfo
@@ -25,6 +26,11 @@ import com.rfsat.pocketgnss.protocol.Nmea
 import com.rfsat.pocketgnss.protocol.NmeaMsg
 import com.rfsat.pocketgnss.protocol.NmeaSentence
 import com.rfsat.pocketgnss.protocol.Ntrip
+import com.rfsat.pocketgnss.protocol.Quectel
+import com.rfsat.pocketgnss.protocol.QuectelEpe
+import com.rfsat.pocketgnss.protocol.QuectelPppNav
+import com.rfsat.pocketgnss.protocol.QuectelProfile
+import com.rfsat.pocketgnss.protocol.RfsatStatus
 import com.rfsat.pocketgnss.protocol.StartType
 import com.rfsat.pocketgnss.protocol.StreamSplitter
 import com.rfsat.pocketgnss.protocol.Ubx
@@ -61,6 +67,15 @@ sealed class Connection {
 
 data class ReceiverInfo(val module: String? = null, val firmware: String? = null, val protocol: String? = null,
                         val datum: String? = null, val lastText: String? = null, val ubxAnswered: Boolean = false)
+
+/**
+ * Status of an RFSAT LG290P rover (master documentation, P-2): RFSAT's method ladder ($PRFSM), the receiver's PPP / HAS
+ * state ($PQTMPPPNAV) and its estimated position error ($PQTMEPE), each with the time it last arrived.
+ */
+data class RoverStatus(val rfsat: RfsatStatus? = null, val rfsatMs: Long = 0, val ppp: QuectelPppNav? = null, val pppMs: Long = 0,
+                       val epe: QuectelEpe? = null, val epeMs: Long = 0) {
+    val any: Boolean get() = rfsat != null || ppp != null || epe != null
+}
 
 data class StreamStats(val bytes: Long = 0, val nmeaLines: Long = 0, val badChecksums: Long = 0, val garbageBytes: Long = 0,
                        val ubxFrames: Long = 0, val rates: List<RateMeter.Row> = emptyList(), val lastDataMs: Long = 0, val baud: Int? = null)
@@ -107,6 +122,11 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     val console: StateFlow<List<String>> = _console.asStateFlow()
     private val _receiver = MutableStateFlow(ReceiverInfo())
     val receiver: StateFlow<ReceiverInfo> = _receiver.asStateFlow()
+    private val _rover = MutableStateFlow(RoverStatus())
+    /** RFSAT rover status sentences, when the receiver sends them. */
+    val rover: StateFlow<RoverStatus> = _rover.asStateFlow()
+    /** Waiters for Quectel command replies: sentence name and the deferred line. */
+    private val quectelWaiters = CopyOnWriteArrayList<Pair<String, CompletableDeferred<String>>>()
     private val _recording = MutableStateFlow(RecordingState())
     val recording: StateFlow<RecordingState> = _recording.asStateFlow()
     private val _track = MutableStateFlow<List<TrackPoint>>(emptyList())
@@ -344,14 +364,19 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         link?.close(); link = null
         for (w in waiters) w.second.cancel()
         waiters.clear()
+        for (w in quectelWaiters) w.second.cancel()
+        quectelWaiters.clear()
     }
 
     fun connectUsb(manager: UsbManager, device: UsbDevice) {
         val s = store.value
         open(context.getString(R.string.conn_opening_usb)) {
             val chip = UsbChip.of(device.vendorId)
-            val baud = if (chip == UsbChip.UBLOX) 115200 else (s.usbBaud.takeIf { it > 0 } ?: 115200)
-            UsbSerialLink.open(manager, device, baud)
+            // RFSAT's LG290P rovers: the receiver's own UART runs at 460800 (V5, Postcard port B); the Pico ignores the rate.
+            val rover = s.receiverVariant.isRover
+            val baud = if (chip == UsbChip.UBLOX) 115200 else (s.usbBaud.takeIf { it > 0 } ?: if (rover) 460800 else 115200)
+            val port = if (s.usbPort >= 0) s.usbPort else s.receiverVariant.defaultUsbPort
+            UsbSerialLink.open(manager, device, baud, port)
         }
     }
 
@@ -359,6 +384,13 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     fun connectBluetooth(device: BluetoothDevice) {
         val name = try { device.name } catch (_: SecurityException) { null } ?: device.address
         open(context.getString(R.string.conn_opening_bt, name), retry = true) { BluetoothSppLink.open(device) }
+    }
+
+    /** Bluetooth LE (Nordic UART Service): PicoRTK, PostcardRTK and the ESP32-C6 rover. */
+    @SuppressLint("MissingPermission")
+    fun connectBle(device: BluetoothDevice) {
+        val name = try { device.name } catch (_: SecurityException) { null } ?: device.address
+        open(context.getString(R.string.conn_opening_ble, name), retry = true) { BleNusLink.open(context, device) }
     }
 
     fun connectTcp(host: String, port: Int) {
@@ -450,13 +482,15 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     private fun attachLink(l: GnssLink) {
         link = l
         model = GnssModel(); rates.clear(); splitter = newSplitter(); bytes = 0; lastDataMs = 0
-        _receiver.value = ReceiverInfo(); _fix.value = null; _sats.value = emptyList()
+        _receiver.value = ReceiverInfo(); _fix.value = null; _sats.value = emptyList(); _rover.value = RoverStatus()
         alertLogic.reset(); _alerts.value = AlertState()
         _connection.value = Connection.Ready(l.info)
         readerJob = scope.launch(Dispatchers.IO) { readLoop(l) }
         scope.launch {
             delay(1500)
-            pollVersion()
+            // An LG290P answers $PQTMVERNO, not UBX. Only a direct link reaches it (V5 USB, Postcard port B); through
+            // PicoRTK / PostcardRTK the command gets no reply, which is harmless.
+            if (store.value.receiverVariant.isRover) quectelVersion() else pollVersion()
         }
         if (store.value.ntripEnabled && l.info.writable && !ntripClient.running) ntripClient.start(store.value.ntrip)
         updateEphStream()
@@ -465,7 +499,8 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     private suspend fun readLoop(l: GnssLink) {
         val buf = ByteArray(4096)
         val start = System.currentTimeMillis()
-        val bauds = listOf(115200, 9600, 38400, 57600, 230400, 460800)
+        val bauds = if (store.value.receiverVariant.isRover) listOf(460800, 115200, 38400, 9600, 57600, 230400)
+            else listOf(115200, 9600, 38400, 57600, 230400, 460800)
         var baudIdx = 0
         var baudSince = start
         val autobaud = l.info.kind == LinkKind.USB && l.info.chip != UsbChip.UBLOX && store.value.usbBaud == 0
@@ -503,6 +538,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         server.send(line)
         if (!store.value.btServerPositionOnly || BtNmeaServer.typeOf(line) in BtNmeaServer.POSITION_SENTENCES) btServer.send(line)
         if (s is NmeaSentence.Gga && s.quality != FixQuality.NONE) lastGgaLine = line
+        if (s is NmeaSentence.Other && s.talker == "P") onProprietary(s.type, s.fields, line, now)
         val f0 = model.accept(s) ?: return
         val f = if (f0.quality != FixQuality.DGNSS) f0 else f0.copy(dgnss = if (link?.info?.phoneRtk == true)
             DgnssSource.ofPhoneMethod(f0.quality, com.rfsat.pocketgnss.link.PhoneRtkLink.state.value.source)
@@ -513,6 +549,38 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         if (link?.info?.kind != LinkKind.PHONE && link?.info?.kind != LinkKind.REPLAY) mock.push(f)
         onFix(f, now)
     }
+
+    /** Quectel replies and status sentences, and RFSAT's $PRFSM. */
+    private fun onProprietary(type: String, fields: List<String>, line: String, now: Long) {
+        val name = "P$type"
+        for (w in quectelWaiters) if (w.first == name) { w.second.complete(line); quectelWaiters.remove(w) }
+        when (name) {
+            "PQTMEPE" -> Quectel.epe(fields)?.let { e -> _rover.value = _rover.value.copy(epe = e, epeMs = now); model.epe = e; model.epeMs = now }
+            "PQTMPPPNAV" -> Quectel.pppNav(fields)?.let { _rover.value = _rover.value.copy(ppp = it, pppMs = now) }
+            "PRFSM" -> Quectel.rfsat(fields)?.let { _rover.value = _rover.value.copy(rfsat = it, rfsatMs = now) }
+            "PQTMVERNO" -> Quectel.version(fields)?.let { v ->
+                _receiver.value = _receiver.value.copy(module = v.module, firmware = v.version, protocol = "NMEA · Quectel PQTM")
+            }
+        }
+    }
+
+    /**
+     * Sends a Quectel command ([body] without '$' and checksum) and waits for the reply of the same name: OK, ERROR
+     * or the value read back. Null when nothing came back in [timeoutMs] (no direct link to the receiver).
+     */
+    suspend fun quectel(body: String, timeoutMs: Long = 1500): Quectel.Reply? {
+        if (link == null) return null
+        val name = Quectel.name(body)
+        val d = CompletableDeferred<String>()
+        val w = name to d
+        quectelWaiters.add(w)
+        withContext(Dispatchers.IO) { writeRaw((Quectel.command(body) + "\r\n").toByteArray(Charsets.US_ASCII)) }
+        val line = withTimeoutOrNull(timeoutMs) { d.await() }
+        quectelWaiters.removeIf { it === w }
+        return line?.let { Quectel.reply(name, it) }
+    }
+
+    suspend fun quectelVersion(): Boolean = quectel(QuectelProfile.VERSION) != null
 
     /** Every fix into the position history, with the method and, for phone RTK, the engine's state. */
     private fun recordHistory(f: GnssFix, now: Long) {
