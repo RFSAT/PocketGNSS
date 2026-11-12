@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.13.2 (build 11302)
+Receivers with their own NTRIP client (RFSAT rovers V1-V4, AgriBIT): the phone's NTRIP relay now waits while the receiver's own corrections are in use and takes over when they stop, so two correction streams never reach the receiver together (that broke RTK). Live shows what the relay is doing: on hold, on standby or feeding.
+
 ## 1.13.1 (build 11301)
 Setup now says what the connection is doing under the Connect button: connecting, connected (receiver and link), or why it failed; Disconnect reads Cancel while a connection is being made. With an LG290P receiver, the accuracy now uses the receiver's own position-error estimate ($PQTMEPE, the figure on the RTK Everywhere display) when it arrives, instead of its larger GST figure; Live shows both. Home keeps a Change button for the receiver choice.
 

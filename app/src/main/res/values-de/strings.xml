@@ -1064,4 +1064,7 @@
     <string name="rv_gst">GST (H, zum Vergleich)</string>
     <string name="home_variant_change">Ändern</string>
     <string name="home_variant_done">Fertig</string>
+    <string name="relay_checking">Relais wartet: prüft, ob der Empfänger Korrekturen über sein eigenes WLAN bekommt (bis 25 s).</string>
+    <string name="relay_receiver_own">Relais in Bereitschaft: der Empfänger nutzt seine eigenen Korrekturen. Das Telefon übernimmt, wenn sie 20 s ausbleiben.</string>
+    <string name="relay_feeding">Relais versorgt den Empfänger: seine eigenen Korrekturen sind nicht in Gebrauch.</string>
 </resources>

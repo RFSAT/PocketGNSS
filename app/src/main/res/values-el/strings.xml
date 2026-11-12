@@ -1064,4 +1064,7 @@
     <string name="rv_gst">GST (Ο, για σύγκριση)</string>
     <string name="home_variant_change">Αλλαγή</string>
     <string name="home_variant_done">Τέλος</string>
+    <string name="relay_checking">Αναμετάδοση σε αναμονή: έλεγχος αν ο δέκτης λαμβάνει διορθώσεις από το δικό του Wi-Fi (έως 25 s).</string>
+    <string name="relay_receiver_own">Αναμετάδοση σε ετοιμότητα: ο δέκτης χρησιμοποιεί τις δικές του διορθώσεις. Το τηλέφωνο αναλαμβάνει αν σταματήσουν για 20 s.</string>
+    <string name="relay_feeding">Η αναμετάδοση τροφοδοτεί τον δέκτη: οι δικές του διορθώσεις δεν χρησιμοποιούνται.</string>
 </resources>

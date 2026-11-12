@@ -1097,4 +1097,7 @@
     <string name="rv_gst">GST (H, para comparação)</string>
     <string name="home_variant_change">Alterar</string>
     <string name="home_variant_done">Concluído</string>
+    <string name="relay_checking">Relé em espera: a verificar se o recetor recebe correções pela sua própria Wi-Fi (até 25 s).</string>
+    <string name="relay_receiver_own">Relé em reserva: o recetor usa as suas próprias correções. O telefone assume se pararem 20 s.</string>
+    <string name="relay_feeding">O relé alimenta o recetor: as suas próprias correções não estão em uso.</string>
 </resources>

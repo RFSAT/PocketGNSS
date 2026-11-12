@@ -79,6 +79,21 @@ data class RoverStatus(val rfsat: RfsatStatus? = null, val rfsatMs: Long = 0, va
     val any: Boolean get() = rfsat != null || ppp != null || epe != null
 }
 
+/**
+ * Who corrects a receiver that has its own NTRIP client (AgriBIT, PicoRTK, the C6 rover, PostcardRTK, RTK Everywhere)
+ * while the phone's NTRIP relay is on (1.13.1). Two correction streams at once break RTK: the receiver's firmware passes
+ * bytes from Wi-Fi and from Bluetooth to the GNSS chip as they come, so RTCM frames interleave and fail their CRC, and a
+ * caster may allow one login per account. The relay therefore stands by while the receiver's own corrections are in
+ * use and takes over when they stop.
+ *  - [DIRECT]: the relay feeds the receiver as before (receiver without its own client, or relay off).
+ *  - [CHECKING]: relay held back for up to 25 s, watching whether the receiver's own corrections are in use.
+ *  - [RECEIVER_OWN]: they are; the relay is disconnected from the caster and takes over 20 s after they stop.
+ *  - [FEEDING]: the relay feeds the receiver; if no corrections are in use within the wait, it checks again.
+ */
+enum class RelayRole { DIRECT, CHECKING, RECEIVER_OWN, FEEDING }
+
+data class RelayArbiter(val role: RelayRole = RelayRole.DIRECT, val sinceMs: Long = 0)
+
 data class StreamStats(val bytes: Long = 0, val nmeaLines: Long = 0, val badChecksums: Long = 0, val garbageBytes: Long = 0,
                        val ubxFrames: Long = 0, val rates: List<RateMeter.Row> = emptyList(), val lastDataMs: Long = 0, val baud: Int? = null)
 
@@ -147,7 +162,15 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 8)
     val messages: SharedFlow<String> = _messages.asSharedFlow()
 
-    val ntripClient = NtripClient(scope, forward = { writeRaw(it); raw.onRtcm(it); caster.send(it) }, gga = { ggaForCaster() },
+    /** The phone relay's RTCM reaches the receiver only while this is open (see [RelayRole]). */
+    @Volatile private var relayGateOpen = true
+    private val _relay = MutableStateFlow(RelayArbiter())
+    /** Relay arbitration for receivers with their own NTRIP client. */
+    val relay: StateFlow<RelayArbiter> = _relay.asStateFlow()
+    private val relayArb = RelayArbitration()
+    private var relayCheckedMs = 0L
+
+    val ntripClient = NtripClient(scope, forward = { if (relayGateOpen) writeRaw(it); raw.onRtcm(it); caster.send(it) }, gga = { ggaForCaster() },
         stallMs = { if (store.value.phonePpp && store.value.phoneRtk) NtripClient.STALL_SSR_MS else NtripClient.STALL_RTK_MS })
     /** Local NTRIP caster for other rovers (Setup > Outputs). */
     val caster = NtripCaster()
@@ -494,7 +517,9 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
             // PicoRTK / PostcardRTK the command gets no reply, which is harmless.
             if (store.value.receiverVariant.isRover) quectelVersion() else pollVersion()
         }
-        if (store.value.ntripEnabled && l.info.writable && !ntripClient.running) ntripClient.start(store.value.ntrip)
+        _relay.value = RelayArbiter(); relayGateOpen = true; relayArb.reset()
+        // A receiver with its own NTRIP client: the arbiter decides (no second stream at connection)
+        if (store.value.ntripEnabled && l.info.writable && !ntripClient.running && !receiverHasOwnNtrip(l.info)) ntripClient.start(store.value.ntrip)
         updateEphStream()
     }
 
@@ -685,6 +710,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
 
     private fun publish() {
         val now = System.currentTimeMillis()
+        arbitrateRelay(now)
         if (link != null) {
             _sats.value = model.satellites()
             _console.value = synchronized(consoleBuf) { consoleBuf.toList() }
@@ -998,7 +1024,50 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
 
     fun setNtrip(on: Boolean) {
         store.update { it.copy(ntripEnabled = on) }
-        if (on && linkInfo?.writable != false) ntripClient.start(store.value.ntrip) else if (!rtcmCapture) ntripClient.stop()
+        val own = linkInfo?.let { receiverHasOwnNtrip(it) } == true
+        _relay.value = RelayArbiter(); relayGateOpen = true; relayArb.reset()
+        if (on && linkInfo?.writable != false && !own) ntripClient.start(store.value.ntrip) else if (!rtcmCapture) ntripClient.stop()
+    }
+
+
+    /** The connected receiver fetches corrections itself (its hardware version as chosen in Setup). */
+    private fun receiverHasOwnNtrip(info: LinkInfo): Boolean =
+        (info.kind == LinkKind.USB || info.kind == LinkKind.BLUETOOTH || info.kind == LinkKind.TCP) && store.value.receiverVariant in OWN_NTRIP
+
+    /**
+     * The receiver is using corrections now: RTK float or fixed, or DGNSS from a base (not an EGNOS satellite, station
+     * 120-158), with a recent correction age; for RFSAT firmware also "$PRFSM ... live".
+     */
+    private fun correctionsInUse(now: Long): Boolean {
+        val r = _rover.value
+        if (r.rfsat != null && now - r.rfsatMs < 5000 && r.rfsat.corrections.equals("live", true)) return true
+        val f = _fix.value ?: return false
+        if (now - f.receivedAtMs > 5000) return false
+        if (f.quality == FixQuality.RTK_FIXED || f.quality == FixQuality.RTK_FLOAT) return true
+        val sbas = f.diffStation?.trim()?.toIntOrNull()?.let { it in 120..158 } == true
+        return f.quality == FixQuality.DGNSS && f.diffAgeSec != null && f.diffAgeSec < 15 && !sbas
+    }
+
+    /** Applies a relay role: the gate to the receiver, and the relay's caster connection. */
+    private fun applyRelay(role: RelayRole, now: Long) {
+        _relay.value = RelayArbiter(role, now)
+        val feed = role == RelayRole.FEEDING || role == RelayRole.DIRECT
+        relayGateOpen = feed
+        if (role == RelayRole.FEEDING) { if (!ntripClient.running && store.value.ntrip.usable) ntripClient.start(store.value.ntrip) }
+        else if (role == RelayRole.DIRECT) {
+            // back to plain relaying (e.g. the receiver choice changed to one without its own client)
+            if (store.value.ntripEnabled && linkInfo?.writable == true && !ntripClient.running && store.value.ntrip.usable) ntripClient.start(store.value.ntrip)
+        } else if (!rtcmCapture && ntripClient.running) ntripClient.stop() // also frees a shared caster login
+        AppLog.i("Relay", "NTRIP relay: " + role.name.lowercase())
+    }
+
+    /** Once a second (from [publish]): who corrects a receiver with its own NTRIP client. */
+    private fun arbitrateRelay(now: Long) {
+        if (now - relayCheckedMs < 1000) return
+        relayCheckedMs = now
+        val info = linkInfo
+        val active = info != null && info.writable && store.value.ntripEnabled && receiverHasOwnNtrip(info)
+        relayArb.step(now, active, active && correctionsInUse(now))?.let { applyRelay(it, now) }
     }
 
     fun toast(msg: String) { _messages.tryEmit(msg) }
@@ -1009,7 +1078,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         if (raw.state.value.recording) return true
         // The phone's own GNSS (also phone RTK) stops when the screen turns off unless a foreground service holds it.
         return connection.value is Connection.Ready && simulator == null && (linkInfo?.kind == LinkKind.PHONE ||
-            recording.value.active || ntripClient.running || s.mockLocation || s.nmeaServer || (s.btServer && btServer.running) || s.casterOn || s.apiJson || s.apiBroadcast)
+            recording.value.active || ntripClient.running || (s.ntripEnabled && _relay.value.role != RelayRole.DIRECT) || s.mockLocation || s.nmeaServer || (s.btServer && btServer.running) || s.casterOn || s.apiJson || s.apiBroadcast)
     }
 
     /** Stops background activity (notification "Stop" action). */
@@ -1031,6 +1100,11 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     fun close() { shutdown(); scope.cancel() }
 
     companion object {
+
+        /** Receivers with their own NTRIP client (the relay then arbitrates, [RelayRole]). V5 / V6 wired have none. */
+        val OWN_NTRIP = setOf(com.rfsat.pocketgnss.link.ReceiverVariant.LTE, com.rfsat.pocketgnss.link.ReceiverVariant.WIFI,
+            com.rfsat.pocketgnss.link.ReceiverVariant.PICORTK, com.rfsat.pocketgnss.link.ReceiverVariant.LG290P_C6,
+            com.rfsat.pocketgnss.link.ReceiverVariant.POSTCARDRTK, com.rfsat.pocketgnss.link.ReceiverVariant.RTK_EVERYWHERE)
         /** Broadcast of each position (at most 5 per second) to apps holding [PERMISSION_POSITION]. */
         const val ACTION_POSITION = "com.PocketGNSS.action.POSITION"
         const val PERMISSION_POSITION = "com.PocketGNSS.permission.POSITION"

@@ -1130,4 +1130,7 @@
     <string name="rv_gst">GST (P, dla porównania)</string>
     <string name="home_variant_change">Zmień</string>
     <string name="home_variant_done">Gotowe</string>
+    <string name="relay_checking">Przekaźnik wstrzymany: sprawdzanie, czy odbiornik dostaje poprawki przez własne Wi-Fi (do 25 s).</string>
+    <string name="relay_receiver_own">Przekaźnik w gotowości: odbiornik używa własnych poprawek. Telefon przejmie, jeśli ustaną na 20 s.</string>
+    <string name="relay_feeding">Przekaźnik zasila odbiornik: jego własne poprawki nie są używane.</string>
 </resources>

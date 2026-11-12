@@ -1066,4 +1066,7 @@
     <string name="rv_gst">GST (H, for comparison)</string>
     <string name="home_variant_change">Change</string>
     <string name="home_variant_done">Done</string>
+    <string name="relay_checking">Relay on hold: checking whether the receiver gets corrections through its own Wi-Fi (up to 25 s).</string>
+    <string name="relay_receiver_own">Relay on standby: the receiver uses its own corrections. The phone takes over if they stop for 20 s.</string>
+    <string name="relay_feeding">Relay feeding the receiver: its own corrections are not in use.</string>
 </resources>

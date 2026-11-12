@@ -1097,4 +1097,7 @@
     <string name="rv_gst">GST (O, per confronto)</string>
     <string name="home_variant_change">Cambia</string>
     <string name="home_variant_done">Fatto</string>
+    <string name="relay_checking">Relay in attesa: verifica se il ricevitore riceve correzioni dalla propria Wi-Fi (fino a 25 s).</string>
+    <string name="relay_receiver_own">Relay in riserva: il ricevitore usa le proprie correzioni. Il telefono subentra se si fermano per 20 s.</string>
+    <string name="relay_feeding">Il relay alimenta il ricevitore: le sue correzioni non sono in uso.</string>
 </resources>

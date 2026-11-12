@@ -143,6 +143,14 @@ fun LiveScreen(engine: GnssEngine, onReconnect: () -> Unit) {
                     ((System.currentTimeMillis() - ntrip.lastDataMs) / 1000.0).takeIf { ntrip.lastDataMs > 0 && it >= 3 }
                         ?.let { " · " + stringResource(R.string.live_ntrip_last, it) }.orEmpty(),
                 live = true)
+            // Receivers with their own NTRIP client: what the relay is doing about it (1.13.1)
+            val relay by engine.relay.collectAsState()
+            when (relay.role) {
+                com.rfsat.pocketgnss.core.RelayRole.CHECKING -> Text(stringResource(R.string.relay_checking), style = MaterialTheme.typography.bodySmall, color = InfoViolet)
+                com.rfsat.pocketgnss.core.RelayRole.RECEIVER_OWN -> Text(stringResource(R.string.relay_receiver_own), style = MaterialTheme.typography.bodySmall, color = SafeGreen)
+                com.rfsat.pocketgnss.core.RelayRole.FEEDING -> Text(stringResource(R.string.relay_feeding), style = MaterialTheme.typography.bodySmall, color = InfoViolet)
+                com.rfsat.pocketgnss.core.RelayRole.DIRECT -> {}
+            }
             ntrip.base?.let { b ->
                 val g = b.geodetic
                 val dist = f?.let { Geo.distance(it.latitude, it.longitude, g.latitude, g.longitude) }
