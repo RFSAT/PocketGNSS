@@ -35,18 +35,22 @@ data class GnssFix(
     val modes: String?,
     /** For a DGNSS fix (GGA quality 2), where the corrections come from when that can be told (see [DgnssSource]). */
     val dgnss: DgnssSource? = null,
+    /** LG290P $PQTMEPE 2-D error, metres: the figure RTK Everywhere shows on its display (1.13.4). */
+    val epe2d: Double? = null,
 ) {
     /** Height above the WGS-84 ellipsoid (MSL + geoid separation), metres. */
     val ellipsoidHeight: Double? get() = altitudeMsl?.let { it + (geoidSeparation ?: 0.0) }
 
     /** True when the horizontal accuracy comes from GST rather than an estimate from the fix type. */
-    val measuredAccuracy: Boolean get() = sdLatitude != null && sdLongitude != null
+    val measuredAccuracy: Boolean get() = epe2d != null || (sdLatitude != null && sdLongitude != null)
 
     /**
      * Horizontal accuracy (metres, ~68 %). From GST when present; otherwise a conservative estimate from
      * the fix type and HDOP, using the accuracies validated in D3.5 (RTK fixed ~1 cm, SBAS ~30 cm, autonomous ~1 m).
      */
     val horizontalAccuracy: Double get() {
+        // The receiver's own 2-D figure, not recomputed from its north / east parts, so it equals the receiver display
+        if (epe2d != null) return epe2d
         if (sdLatitude != null && sdLongitude != null) return sqrt(sdLatitude * sdLatitude + sdLongitude * sdLongitude)
         val h = (hdop ?: 1.0).coerceIn(0.5, 20.0)
         return when (quality) {
@@ -232,7 +236,7 @@ class GnssModel(private val clock: () -> Long = System::currentTimeMillis) {
         val speed = r?.speedKnots ?: vtg?.speedKnots
         return GnssFix(now, g.time, r?.date, lat, lon, g.altitudeMsl, g.geoidSeparation, g.quality, g.satellitesUsed,
             g.hdop ?: dops.second, dops.third, dops.first, speed?.let { it * 0.514444 }, r?.courseDeg ?: vtg?.courseTrue,
-            g.diffAgeSec, g.diffStation, st?.sdLatitude ?: e?.north, st?.sdLongitude ?: e?.east, st?.sdAltitude ?: e?.down, gn?.modes)
+            g.diffAgeSec, g.diffStation, st?.sdLatitude ?: e?.north, st?.sdLongitude ?: e?.east, st?.sdAltitude ?: e?.down, gn?.modes, epe2d = e?.horizontal)
     }
 
     private fun fromRmc(r: NmeaSentence.Rmc, now: Long): GnssFix? {

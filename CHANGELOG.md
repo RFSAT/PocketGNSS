@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.13.4 (build 11304)
+LG290P accuracy now equals the figure on the RTK Everywhere display exactly: the app shows the receiver's own 2-D error from $PQTMEPE instead of recomputing it from the north and east errors, which gave a slightly different value.
+
 ## 1.13.3 (build 11303)
 Accuracy check, automatic: at every position the app now records the receiver's own error figures (GST and $PQTMEPE, the figure on the RTK Everywhere display) side by side with the accuracy it shows. Live shows which figure is in use and the difference over the session; Log recordings add accuracy.csv with every epoch, for an exact comparison.
 

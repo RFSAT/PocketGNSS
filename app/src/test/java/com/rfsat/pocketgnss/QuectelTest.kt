@@ -103,8 +103,9 @@ class QuectelTest {
         assertEquals(kotlin.math.hypot(0.05, 0.04), f1.horizontalAccuracy, 1e-9)
         val both = com.rfsat.pocketgnss.core.GnssModel()
         both.accept(parse(gst))
-        both.epe = Quectel.epe(fields("PQTMEPE,2,0.004,0.003,0.008,0.005,0.009")); both.epeMs = System.currentTimeMillis()
+        both.epe = Quectel.epe(fields("PQTMEPE,2,0.004,0.004,0.008,0.005,0.009")); both.epeMs = System.currentTimeMillis()
         val f2 = both.accept(parse(gga))!!
+        // 1.13.4: the 2-D field itself (0.005), not hypot(north, east) = 0.0057
         assertEquals(0.005, f2.horizontalAccuracy, 1e-9)
         assertTrue(f2.measuredAccuracy)
     }
