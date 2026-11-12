@@ -1067,4 +1067,12 @@
     <string name="relay_checking">Relais wartet: prüft, ob der Empfänger Korrekturen über sein eigenes WLAN bekommt (bis 25 s).</string>
     <string name="relay_receiver_own">Relais in Bereitschaft: der Empfänger nutzt seine eigenen Korrekturen. Das Telefon übernimmt, wenn sie 20 s ausbleiben.</string>
     <string name="relay_feeding">Relais versorgt den Empfänger: seine eigenen Korrekturen sind nicht in Gebrauch.</string>
+    <string name="cmp_source">Genauigkeit stammt aus</string>
+    <string name="cmp_src_epe">Fehlerschätzung des Empfängers ($PQTMEPE, wie im Display)</string>
+    <string name="cmp_src_gst">GST (der Empfänger sendet kein $PQTMEPE)</string>
+    <string name="cmp_src_est">grobe Schätzung aus HDOP (kein GST, kein $PQTMEPE)</string>
+    <string name="cmp_diff">GST − EPE (gleiche Epochen)</string>
+    <string name="cmp_diff_value">Median %1$s · Verhältnis %2$s · Bereich %3$s bis %4$s · %5$d Epochen</string>
+    <string name="cmp_no_epe">Der Empfänger sendet kein $PQTMEPE, daher ist kein Vergleich mit dem Display möglich. RTK Everywhere: im RFSAT Configurator „Accuracy sentence for apps“ ankreuzen, senden, dann SPEXE,SAVE und SPEXE,REBOOT.</string>
+    <string name="cmp_record">Protokoll → Aufzeichnen speichert jede Epoche nebeneinander in accuracy.csv (wird mit der Sitzung geteilt).</string>
 </resources>

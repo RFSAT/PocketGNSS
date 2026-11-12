@@ -370,7 +370,10 @@ fun RoverStatusSection(engine: GnssEngine) {
     val r = rv.rfsat?.takeIf { now - rv.rfsatMs < 5000 }
     val p = rv.ppp?.takeIf { now - rv.pppMs < 5000 }
     val e = rv.epe?.takeIf { now - rv.epeMs < 5000 }
-    if (r == null && p == null && e == null) return
+    val acc by engine.accuracy.collectAsState()
+    val s by engine.store.settings.collectAsState()
+    val cmp = acc?.takeIf { s.receiverVariant.isRover }
+    if (r == null && p == null && e == null && cmp == null) return
     Section(stringResource(R.string.rv_title)) {
         if (r != null) {
             KeyValue(stringResource(R.string.rv_method), (rfsatMethodLabel(r.method)?.let { stringResource(it) } ?: r.method) + " · " + r.ladder, live = true)
@@ -397,5 +400,20 @@ fun RoverStatusSection(engine: GnssEngine) {
         if (e != null) KeyValue(stringResource(R.string.rv_epe), stringResource(R.string.live_accuracy_value, formatAccuracy(e.horizontal), formatAccuracy(e.down)), live = true)
         // GST next to it: the LG290P's GST reads larger than its EPE; the accuracy above uses the EPE when it arrives
         rv.gstH?.takeIf { now - rv.gstMs < 5000 }?.let { KeyValue(stringResource(R.string.rv_gst), formatAccuracy(it), live = true) }
+        // Automatic comparison over this connection, from the same epochs (1.13.3)
+        if (cmp != null) {
+            KeyValue(stringResource(R.string.cmp_source), stringResource(when (cmp.lastSource) {
+                com.rfsat.pocketgnss.core.AccuracyCompare.Source.EPE -> R.string.cmp_src_epe
+                com.rfsat.pocketgnss.core.AccuracyCompare.Source.GST -> R.string.cmp_src_gst
+                else -> R.string.cmp_src_est
+            }), live = true)
+            if (cmp.paired > 0 && cmp.medianDiff != null)
+                KeyValue(stringResource(R.string.cmp_diff), stringResource(R.string.cmp_diff_value,
+                    "%+.1f cm".format(Locale.US, cmp.medianDiff * 100), cmp.medianRatio?.let { "%.2f".format(Locale.US, it) } ?: "—",
+                    "%+.1f".format(Locale.US, (cmp.minDiff ?: 0.0) * 100), "%+.1f cm".format(Locale.US, (cmp.maxDiff ?: 0.0) * 100), cmp.paired), live = true)
+            else if (cmp.epochs >= 10)
+                Text(stringResource(R.string.cmp_no_epe), style = MaterialTheme.typography.bodySmall, color = AlarmRed)
+            Text(stringResource(R.string.cmp_record), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }

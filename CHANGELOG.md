@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.13.3 (build 11303)
+Accuracy check, automatic: at every position the app now records the receiver's own error figures (GST and $PQTMEPE, the figure on the RTK Everywhere display) side by side with the accuracy it shows. Live shows which figure is in use and the difference over the session; Log recordings add accuracy.csv with every epoch, for an exact comparison.
+
 ## 1.13.2 (build 11302)
 Receivers with their own NTRIP client (RFSAT rovers V1-V4, AgriBIT): the phone's NTRIP relay now waits while the receiver's own corrections are in use and takes over when they stop, so two correction streams never reach the receiver together (that broke RTK). Live shows what the relay is doing: on hold, on standby or feeding.
 

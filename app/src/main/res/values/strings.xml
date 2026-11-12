@@ -1069,4 +1069,12 @@
     <string name="relay_checking">Relay on hold: checking whether the receiver gets corrections through its own Wi-Fi (up to 25 s).</string>
     <string name="relay_receiver_own">Relay on standby: the receiver uses its own corrections. The phone takes over if they stop for 20 s.</string>
     <string name="relay_feeding">Relay feeding the receiver: its own corrections are not in use.</string>
+    <string name="cmp_source">Accuracy shown from</string>
+    <string name="cmp_src_epe">receiver\'s error estimate ($PQTMEPE, as on its display)</string>
+    <string name="cmp_src_gst">GST (the receiver sends no $PQTMEPE)</string>
+    <string name="cmp_src_est">rough estimate from HDOP (no GST, no $PQTMEPE)</string>
+    <string name="cmp_diff">GST − EPE (same epochs)</string>
+    <string name="cmp_diff_value">median %1$s · ratio %2$s · range %3$s to %4$s · %5$d epochs</string>
+    <string name="cmp_no_epe">The receiver sends no $PQTMEPE, so its display figure cannot be compared. RTK Everywhere: tick \"Accuracy sentence for apps\" in the RFSAT Configurator, send, then SPEXE,SAVE and SPEXE,REBOOT.</string>
+    <string name="cmp_record">Log → Record saves every epoch side by side in accuracy.csv (shared with the session).</string>
 </resources>

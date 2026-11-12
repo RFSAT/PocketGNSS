@@ -1133,4 +1133,12 @@
     <string name="relay_checking">Przekaźnik wstrzymany: sprawdzanie, czy odbiornik dostaje poprawki przez własne Wi-Fi (do 25 s).</string>
     <string name="relay_receiver_own">Przekaźnik w gotowości: odbiornik używa własnych poprawek. Telefon przejmie, jeśli ustaną na 20 s.</string>
     <string name="relay_feeding">Przekaźnik zasila odbiornik: jego własne poprawki nie są używane.</string>
+    <string name="cmp_source">Dokładność z</string>
+    <string name="cmp_src_epe">szacunek błędu odbiornika ($PQTMEPE, jak na jego ekranie)</string>
+    <string name="cmp_src_gst">GST (odbiornik nie wysyła $PQTMEPE)</string>
+    <string name="cmp_src_est">zgrubny szacunek z HDOP (bez GST i $PQTMEPE)</string>
+    <string name="cmp_diff">GST − EPE (te same epoki)</string>
+    <string name="cmp_diff_value">mediana %1$s · stosunek %2$s · zakres %3$s do %4$s · %5$d epok</string>
+    <string name="cmp_no_epe">Odbiornik nie wysyła $PQTMEPE, więc nie można porównać z jego ekranem. RTK Everywhere: zaznacz „Accuracy sentence for apps” w RFSAT Configurator, wyślij, potem SPEXE,SAVE i SPEXE,REBOOT.</string>
+    <string name="cmp_record">Dziennik → Nagrywaj zapisuje każdą epokę obok siebie w accuracy.csv (udostępniany z sesją).</string>
 </resources>

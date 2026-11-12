@@ -293,10 +293,14 @@ object FixCsv {
     }
 }
 
-/** A recording session: raw.nmea (everything the receiver sent) and fixes.csv (one row per logged epoch). */
+/**
+ * A recording session: raw.nmea (everything the receiver sent), fixes.csv (one row per logged epoch) and accuracy.csv
+ * (every GGA epoch: the receiver's GST and $PQTMEPE error figures side by side with the accuracy PocketGNSS showed).
+ */
 class SessionRecorder(val dir: File) {
     private val raw: BufferedWriter
     private val csv: BufferedWriter
+    private val acc: BufferedWriter
     var fixes = 0; private set
     var lines = 0L; private set
     val startedMs = System.currentTimeMillis()
@@ -305,11 +309,15 @@ class SessionRecorder(val dir: File) {
         dir.mkdirs()
         raw = File(dir, "raw.nmea").bufferedWriter()
         csv = File(dir, "fixes.csv").bufferedWriter().also { it.write(FixCsv.HEADER + "\n") }
+        acc = File(dir, "accuracy.csv").bufferedWriter().also { it.write(com.rfsat.pocketgnss.core.AccuracyCompare.HEADER + "\n") }
     }
 
     @Synchronized fun line(s: String) { raw.write(s); raw.write("\r\n"); lines++ }
-    @Synchronized fun fix(f: GnssFix) { csv.write(FixCsv.row(f)); csv.write("\n"); fixes++; if (fixes % 20 == 0) { csv.flush(); raw.flush() } }
-    @Synchronized fun close() { try { raw.close() } catch (_: Exception) {}; try { csv.close() } catch (_: Exception) {} }
+    @Synchronized fun fix(f: GnssFix) { csv.write(FixCsv.row(f)); csv.write("\n"); fixes++; if (fixes % 20 == 0) { csv.flush(); raw.flush(); acc.flush() } }
+    @Synchronized fun accuracy(r: com.rfsat.pocketgnss.core.AccuracyCompare.Row) { acc.write(r.csv()); acc.write("\n") }
+    @Synchronized fun close() {
+        try { raw.close() } catch (_: Exception) {}; try { csv.close() } catch (_: Exception) {}; try { acc.close() } catch (_: Exception) {}
+    }
 
     companion object {
         private val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)

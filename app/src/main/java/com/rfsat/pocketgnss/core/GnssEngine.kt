@@ -144,6 +144,13 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     val rover: StateFlow<RoverStatus> = _rover.asStateFlow()
     /** Waiters for Quectel command replies: sentence name and the deferred line. */
     private val quectelWaiters = CopyOnWriteArrayList<Pair<String, CompletableDeferred<String>>>()
+    /** Last GST, paired with each GGA for the accuracy comparison. */
+    @Volatile private var lastGst: NmeaSentence.Gst? = null
+    @Volatile private var lastGstMs = 0L
+    private val accStats = AccuracyCompare.Stats()
+    private val _accuracy = MutableStateFlow<AccuracyCompare.Summary?>(null)
+    /** Running comparison of the receiver's GST and $PQTMEPE over this connection (1.13.3). */
+    val accuracy: StateFlow<AccuracyCompare.Summary?> = _accuracy.asStateFlow()
     private val _recording = MutableStateFlow(RecordingState())
     val recording: StateFlow<RecordingState> = _recording.asStateFlow()
     private val _track = MutableStateFlow<List<TrackPoint>>(emptyList())
@@ -508,6 +515,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         link = l
         model = GnssModel(); rates.clear(); splitter = newSplitter(); bytes = 0; lastDataMs = 0
         _receiver.value = ReceiverInfo(); _fix.value = null; _sats.value = emptyList(); _rover.value = RoverStatus()
+        accStats.reset(); _accuracy.value = null; lastGst = null
         alertLogic.reset(); _alerts.value = AlertState()
         _connection.value = Connection.Ready(l.info)
         readerJob = scope.launch(Dispatchers.IO) { readLoop(l) }
@@ -568,15 +576,38 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         if (s is NmeaSentence.Other && s.talker == "P") onProprietary(s.type, s.fields, line, now)
         if (s is NmeaSentence.Gst && s.sdLatitude != null && s.sdLongitude != null)
             _rover.value = _rover.value.copy(gstH = kotlin.math.hypot(s.sdLatitude, s.sdLongitude), gstMs = now)
+        if (s is NmeaSentence.Gst) { lastGst = s; lastGstMs = now }
         val f0 = model.accept(s) ?: return
         val f = if (f0.quality != FixQuality.DGNSS) f0 else f0.copy(dgnss = if (link?.info?.phoneRtk == true)
             DgnssSource.ofPhoneMethod(f0.quality, com.rfsat.pocketgnss.link.PhoneRtkLink.state.value.source)
         else DgnssSource.of(f0.quality, model.satellites(), ntripClient.ntrip.value.let { it.status == NtripStatus.STREAMING && now - it.lastDataMs < 30_000 }))
         _fix.value = f
+        if (s is NmeaSentence.Gga) compareAccuracy(f, now)
         recordHistory(f, now)
         // Mock location from the phone's own chip would only feed the phone its own position back.
         if (link?.info?.kind != LinkKind.PHONE && link?.info?.kind != LinkKind.REPLAY) mock.push(f)
         onFix(f, now)
+    }
+
+    /**
+     * The receiver's error figures at this GGA epoch, side by side with the accuracy shown: running statistics for Live,
+     * and a row of accuracy.csv while recording (1.13.3).
+     */
+    private fun compareAccuracy(f: GnssFix, now: Long) {
+        val g = lastGst?.takeIf { now - lastGstMs < AccuracyCompare.FRESH_MS }
+        val rv = _rover.value
+        val e = rv.epe?.takeIf { now - rv.epeMs < AccuracyCompare.FRESH_MS }
+        val ppp = rv.ppp?.takeIf { now - rv.pppMs < 3000 }
+        // Same rule as GnssModel.fromGga: EPE of the last 3 s first, then GST, else the rough HDOP estimate
+        val source = when {
+            model.epe != null && now - model.epeMs < 3000 -> AccuracyCompare.Source.EPE
+            f.measuredAccuracy -> AccuracyCompare.Source.GST
+            else -> AccuracyCompare.Source.ESTIMATE
+        }
+        val row = AccuracyCompare.Row(now, f, g?.let { now - lastGstMs }, g?.rmsRange, g?.sdLatitude, g?.sdLongitude, g?.sdAltitude,
+            e?.let { now - rv.epeMs }, e, ppp?.solution, f.horizontalAccuracy, source)
+        accStats.add(row)
+        recorder?.accuracy(row)
     }
 
     /** Quectel replies and status sentences, and RFSAT's $PRFSM. */
@@ -711,6 +742,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
     private fun publish() {
         val now = System.currentTimeMillis()
         arbitrateRelay(now)
+        if (link != null) _accuracy.value = accStats.summary().takeIf { it.epochs > 0 }
         if (link != null) {
             _sats.value = model.satellites()
             _console.value = synchronized(consoleBuf) { consoleBuf.toList() }
