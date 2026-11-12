@@ -1090,4 +1090,11 @@
     <string name="rover_web_home_help_ip">Si el rover y este teléfono comparten Wi-Fi, escriba la dirección IP que aparece abajo a la izquierda en la pantalla del Portability Shield.</string>
     <string name="rover_web_address">Dirección</string>
     <string name="rover_web_open">Abrir</string>
+    <string name="setup_status_connected">Conectado: %1$s · %2$s</string>
+    <string name="setup_status_failed">No conectado: %1$s</string>
+    <string name="setup_status_none">No conectado</string>
+    <string name="setup_status_permission">Esperando el permiso USB…</string>
+    <string name="rv_gst">GST (H, para comparar)</string>
+    <string name="home_variant_change">Cambiar</string>
+    <string name="home_variant_done">Listo</string>
 </resources>

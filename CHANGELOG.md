@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.13.1 (build 11301)
+Setup now says what the connection is doing under the Connect button: connecting, connected (receiver and link), or why it failed; Disconnect reads Cancel while a connection is being made. With an LG290P receiver, the accuracy now uses the receiver's own position-error estimate ($PQTMEPE, the figure on the RTK Everywhere display) when it arrives, instead of its larger GST figure; Live shows both. Home keeps a Change button for the receiver choice.
+
 ## 1.13.0 (build 11300)
 Support for RFSAT's LG290P rovers (PicoRTK, ESP32-C6, PostcardRTK, RTK Everywhere, wired LG290P): choose yours in Setup. Bluetooth LE connection with scan; USB port choice for the Postcard and 460800 bit/s first. Tools > NMEA output sets the LG290P with General, Fleet or Tractor profiles and Galileo HAS, showing each reply. Live shows the rover's method, corrections and HAS state. Receiver settings opens each rover's own page.
 

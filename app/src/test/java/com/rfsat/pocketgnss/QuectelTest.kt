@@ -92,6 +92,25 @@ class QuectelTest {
         assertNull(Quectel.pppNav(f.take(20)))
     }
 
+    /** 1.13.1: the LG290P's $PQTMEPE (the figure on the RTK Everywhere display) is preferred over its larger GST. */
+    @Test fun epePreferredOverGst() {
+        fun parse(body: String) = Nmea.parse(Quectel.command(body))!!
+        val gga = "GNGGA,120000.00,3758.0000,N,02345.0000,E,4,30,0.5,100.0,M,30.0,M,1.0,0001"
+        val gst = "GNGST,120000.00,0.5,0.1,0.1,0,0.050,0.040,0.080"
+        val withGst = com.rfsat.pocketgnss.core.GnssModel()
+        withGst.accept(parse(gst))
+        val f1 = withGst.accept(parse(gga))!!
+        assertEquals(kotlin.math.hypot(0.05, 0.04), f1.horizontalAccuracy, 1e-9)
+        val both = com.rfsat.pocketgnss.core.GnssModel()
+        both.accept(parse(gst))
+        both.epe = Quectel.epe(fields("PQTMEPE,2,0.004,0.003,0.008,0.005,0.009")); both.epeMs = System.currentTimeMillis()
+        val f2 = both.accept(parse(gga))!!
+        assertEquals(0.005, f2.horizontalAccuracy, 1e-9)
+        assertTrue(f2.measuredAccuracy)
+    }
+
+    private fun fields(line: String): List<String> = (Nmea.parse(Quectel.command(line)) as NmeaSentence.Other).fields
+
     @Test fun variants() {
         assertEquals(1, ReceiverVariant.POSTCARDRTK.defaultUsbPort)
         assertEquals(0, ReceiverVariant.PICORTK.defaultUsbPort)

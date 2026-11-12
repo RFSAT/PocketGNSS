@@ -387,5 +387,7 @@ fun RoverStatusSection(engine: GnssEngine) {
                 live = true, valueColor = if (p.converged && p.galileoHas) SafeGreen else Color.Unspecified)
         }
         if (e != null) KeyValue(stringResource(R.string.rv_epe), stringResource(R.string.live_accuracy_value, formatAccuracy(e.horizontal), formatAccuracy(e.down)), live = true)
+        // GST next to it: the LG290P's GST reads larger than its EPE; the accuracy above uses the EPE when it arrives
+        rv.gstH?.takeIf { now - rv.gstMs < 5000 }?.let { KeyValue(stringResource(R.string.rv_gst), formatAccuracy(it), live = true) }
     }
 }

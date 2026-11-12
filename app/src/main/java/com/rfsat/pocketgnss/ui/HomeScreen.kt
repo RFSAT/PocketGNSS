@@ -18,6 +18,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -80,8 +81,16 @@ fun HomeScreen(engine: GnssEngine, onOpenTab: (Tab) -> Unit, onReconnect: () -> 
                     is Connection.Failed -> c.message
                 }, fontWeight = FontWeight.SemiBold)
             }
-            KeyValue(stringResource(R.string.home_variant), stringResource(variantName(s.receiverVariant)), inline = true)
-            if (s.receiverVariant == com.rfsat.pocketgnss.link.ReceiverVariant.UNSET) VariantPicker(engine)
+            // The receiver choice stays changeable here (1.13.1): before, it was offered only while none was chosen
+            var changeVariant by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+            val unset = s.receiverVariant == com.rfsat.pocketgnss.link.ReceiverVariant.UNSET
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) { KeyValue(stringResource(R.string.home_variant), stringResource(variantName(s.receiverVariant)), inline = true) }
+                if (!unset) ActionButton(onClick = { changeVariant = !changeVariant }, compact = true) {
+                    Text(stringResource(if (changeVariant) R.string.home_variant_done else R.string.home_variant_change))
+                }
+            }
+            if (unset || changeVariant) VariantPicker(engine)
             if (ready != null) {
                 KeyValue(stringResource(R.string.home_link), ready.info.detail, inline = true)
                 rx.module?.let { KeyValue(stringResource(R.string.home_module), it + (rx.firmware?.let { f -> " · $f" } ?: ""), inline = true) }

@@ -148,9 +148,15 @@ fun SetupScreen(engine: GnssEngine, onReconnect: () -> Unit, onNeedLocation: () 
             if (s.source == LinkKind.BLUETOOTH || s.source == LinkKind.TCP)
                 SwitchRow(stringResource(R.string.setup_autoreconnect), s.autoReconnect, { v -> upd { it.copy(autoReconnect = v) } })
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ActionButton(onClick = onReconnect, emphasis = true) { Text(stringResource(if (conn is Connection.Ready) R.string.action_reconnect else R.string.action_connect)) }
-                if (conn !is Connection.NoDevice) ActionButton(onClick = { engine.disconnect() }) { Text(stringResource(R.string.action_disconnect)) }
+                ActionButton(onClick = onReconnect, emphasis = true, enabled = conn !is Connection.Connecting) {
+                    Text(stringResource(if (conn is Connection.Ready) R.string.action_reconnect else R.string.action_connect))
+                }
+                // While connecting the second button cancels; once connected it disconnects
+                if (conn !is Connection.NoDevice) ActionButton(onClick = { engine.disconnect() }) {
+                    Text(stringResource(if (conn is Connection.Connecting || conn is Connection.AwaitingPermission) R.string.action_cancel else R.string.action_disconnect))
+                }
             }
+            ConnectionStatusLine(conn)
         }
 
         BtShareSection(engine, Modifier.bringIntoViewRequester(btRequester))
@@ -401,4 +407,20 @@ private fun AppInterfaceSection(engine: GnssEngine) {
         SwitchRow(stringResource(R.string.out_server_local), s.apiJsonLocalOnly, { v -> upd { it.copy(apiJsonLocalOnly = v, apiJson = false) } })
         SwitchRow(stringResource(R.string.api_broadcast), s.apiBroadcast, { v -> upd { it.copy(apiBroadcast = v) } }, stringResource(R.string.api_broadcast_help))
     }
+}
+
+/**
+ * What the connection is doing, under the Connect / Disconnect buttons: a Bluetooth LE connection takes a few seconds,
+ * and without this line Setup gave no sign of it working (1.13.1).
+ */
+@Composable
+fun ConnectionStatusLine(conn: Connection) {
+    val (text, colour) = when (conn) {
+        is Connection.Ready -> stringResource(R.string.setup_status_connected, conn.info.name, conn.info.detail) to SafeGreen
+        is Connection.Connecting -> stringResource(R.string.conn_connecting, conn.label) to InfoViolet
+        Connection.AwaitingPermission -> stringResource(R.string.setup_status_permission) to InfoViolet
+        is Connection.Failed -> stringResource(R.string.setup_status_failed, conn.message) to AlarmRed
+        Connection.NoDevice -> stringResource(R.string.setup_status_none) to MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Text(text, style = MaterialTheme.typography.bodyMedium, color = colour, fontWeight = if (conn is Connection.Ready) FontWeight.SemiBold else FontWeight.Normal)
 }

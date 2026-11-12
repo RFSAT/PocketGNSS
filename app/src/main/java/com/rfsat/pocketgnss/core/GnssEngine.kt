@@ -73,7 +73,9 @@ data class ReceiverInfo(val module: String? = null, val firmware: String? = null
  * state ($PQTMPPPNAV) and its estimated position error ($PQTMEPE), each with the time it last arrived.
  */
 data class RoverStatus(val rfsat: RfsatStatus? = null, val rfsatMs: Long = 0, val ppp: QuectelPppNav? = null, val pppMs: Long = 0,
-                       val epe: QuectelEpe? = null, val epeMs: Long = 0) {
+                       val epe: QuectelEpe? = null, val epeMs: Long = 0,
+                       /** Horizontal 1-sigma from GST, shown next to the EPE for comparison. */
+                       val gstH: Double? = null, val gstMs: Long = 0) {
     val any: Boolean get() = rfsat != null || ppp != null || epe != null
 }
 
@@ -539,6 +541,8 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         if (!store.value.btServerPositionOnly || BtNmeaServer.typeOf(line) in BtNmeaServer.POSITION_SENTENCES) btServer.send(line)
         if (s is NmeaSentence.Gga && s.quality != FixQuality.NONE) lastGgaLine = line
         if (s is NmeaSentence.Other && s.talker == "P") onProprietary(s.type, s.fields, line, now)
+        if (s is NmeaSentence.Gst && s.sdLatitude != null && s.sdLongitude != null)
+            _rover.value = _rover.value.copy(gstH = kotlin.math.hypot(s.sdLatitude, s.sdLongitude), gstMs = now)
         val f0 = model.accept(s) ?: return
         val f = if (f0.quality != FixQuality.DGNSS) f0 else f0.copy(dgnss = if (link?.info?.phoneRtk == true)
             DgnssSource.ofPhoneMethod(f0.quality, com.rfsat.pocketgnss.link.PhoneRtkLink.state.value.source)

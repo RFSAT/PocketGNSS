@@ -1057,4 +1057,11 @@
     <string name="rover_web_home_help_ip">Wenn Rover und Telefon im selben WLAN sind, die IP-Adresse eingeben, die unten links im Display des Portability Shield steht.</string>
     <string name="rover_web_address">Adresse</string>
     <string name="rover_web_open">Öffnen</string>
+    <string name="setup_status_connected">Verbunden: %1$s · %2$s</string>
+    <string name="setup_status_failed">Nicht verbunden: %1$s</string>
+    <string name="setup_status_none">Nicht verbunden</string>
+    <string name="setup_status_permission">Warte auf USB-Berechtigung…</string>
+    <string name="rv_gst">GST (H, zum Vergleich)</string>
+    <string name="home_variant_change">Ändern</string>
+    <string name="home_variant_done">Fertig</string>
 </resources>

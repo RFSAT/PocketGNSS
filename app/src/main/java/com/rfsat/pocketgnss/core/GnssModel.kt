@@ -125,7 +125,11 @@ class GnssModel(private val clock: () -> Long = System::currentTimeMillis) {
 
     private var rmc: NmeaSentence.Rmc? = null
     private var gst: NmeaSentence.Gst? = null
-    /** Quectel $PQTMEPE (set by the engine): used as the error estimate when GST is not sent. */
+    /**
+     * Quectel $PQTMEPE (set by the engine): the LG290P's own position-error estimate, the figure RTK Everywhere shows on
+     * its display and PicoRTK / PostcardRTK on their pages. Preferred over GST when it arrives: the LG290P's GST is
+     * derived from the measurement residuals and reads several times larger for an RTK fixed solution (1.13.1).
+     */
     var epe: com.rfsat.pocketgnss.protocol.QuectelEpe? = null
     var epeMs = 0L
     private var gns: NmeaSentence.Gns? = null
@@ -221,9 +225,9 @@ class GnssModel(private val clock: () -> Long = System::currentTimeMillis) {
         val lat = g.latitude ?: return null
         val lon = g.longitude ?: return null
         val r = rmc?.takeIf { sameEpoch(it.time, g.time) || it.time == null } ?: rmc?.takeIf { recent(it.time, g.time) }
-        val st = gst?.takeIf { recent(it.time, g.time) }
-        // LG290P without GST: the estimated position error of the last 3 s, per axis.
-        val e = if (st == null) epe?.takeIf { now - epeMs < 3000 } else null
+        // LG290P: its estimated position error of the last 3 s, per axis, first; otherwise GST.
+        val e = epe?.takeIf { now - epeMs < 3000 }
+        val st = if (e == null) gst?.takeIf { recent(it.time, g.time) } else null
         val gn = gns?.takeIf { recent(it.time, g.time) }
         val speed = r?.speedKnots ?: vtg?.speedKnots
         return GnssFix(now, g.time, r?.date, lat, lon, g.altitudeMsl, g.geoidSeparation, g.quality, g.satellitesUsed,
