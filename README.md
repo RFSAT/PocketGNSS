@@ -67,10 +67,10 @@ the app when plugged in.
 | Tab | Purpose |
 |---|---|
 | Home | Connection card with quick actions, receiver version (asked once if not set), receiver module (from UBX MON-VER), description, RFSAT / AgriBIT credits, Claude AI acknowledgement |
-| Live | Source name with a Disconnect button, fix banner coloured by fix type with accuracy (GST-measured or estimated), fix-loss alert strip, position (with grid easting / northing when a grid is chosen), height MSL / ellipsoid, satellites, DOP, speed, correction age and station, receiver version with what to check when no corrections arrive, per-constellation RTK mode (GNS), phone NTRIP status and base distance, NTRIP / Recording / Mark point buttons, sky plot and C/N0 bars |
+| Live | Source name with a Disconnect button, fix banner coloured by fix type with accuracy (the receiver's `$PQTMEPE` or GST, otherwise estimated), fix-loss alert strip, position (with grid easting / northing when a grid is chosen), height MSL / ellipsoid, satellites, DOP, speed, correction age and station, receiver version with what to check when no corrections arrive, per-constellation RTK mode (GNS), phone NTRIP status and base distance, NTRIP / Recording / Mark point buttons, sky plot and C/N0 bars |
 | Map | MapLibre with Street / Satellite / Terrain (same raster sources as DBM and PocketSpectro): position coloured by fix, track coloured by fix type, field boundaries with name and area, the boundary being captured, the guidance passes (straight, curved, headland) and the coverage map, saved points with names, NTRIP base station, follow / recenter / fit / mark / clear |
 | Tools | Survey point · Stake out · Field boundary · Guidance · Corrections (NTRIP) · Position history · Phone raw GNSS (RTK test) · NMEA output (UBX) · Receiver settings (web) · Time to fix · Data stream |
-| Log | Recording (raw NMEA + fixes CSV, minimum fix and interval), live NMEA viewer (filter by sentence type, pause, show more, copy, share the shown lines as .nmea; last 2000 sentences, nothing saved unless shared), saved points (KML / CSV / GeoJSON / shapefile; import), fields (KML / GeoJSON / shapefile / CSV; import), sessions (NMEA / CSV / GPX / KML; phone raw sessions as RINEX / GnssLog / RTCM / ZIP; delete) |
+| Log | Recording (raw NMEA + fixes CSV, minimum fix and interval), live NMEA viewer (filter by sentence type, pause, show more, copy, share the shown lines as .nmea; last 2000 sentences, nothing saved unless shared), saved points (KML / CSV / GeoJSON / shapefile; import), fields (KML / GeoJSON / shapefile / CSV; import), sessions (NMEA / CSV / GPX / KML; Accuracy for LG290P recordings; phone raw sessions as RINEX / GnssLog / RTCM / ZIP; delete) |
 | Setup | Connection source and its options (Phone: Phone RTK on/off, moving or still), phone NTRIP caster, outputs (mock location, NMEA TCP server, phone as Bluetooth GNSS receiver), fix-loss alert, receiver ID and device number, display units and grid, simulator |
 | Exit | Confirms, stops recording, closes the link and outputs |
 
@@ -167,8 +167,19 @@ the app when plugged in.
   on a direct link (V5 USB, Postcard port B). `protocol/Quectel.kt`; its checksums are unit-tested against the
   documentation's command table.
 * **Rover status (Live)**: `$PRFSM` from PicoRTK / PostcardRTK (method ladder, corrections live/stale/none, age,
-  station, estimates), Galileo HAS state from `$PQTMPPPNAV`, receiver error from `$PQTMEPE` (also used as accuracy
-  when GST is absent).
+  station, estimates), Galileo HAS state from `$PQTMPPPNAV`, receiver error from `$PQTMEPE`. The accuracy shown is the
+  receiver's own `$PQTMEPE` 2-D figure when it arrives (1.13.1; from 1.13.4 exactly the value on the RTK Everywhere
+  display), otherwise GST, otherwise an HDOP estimate. On the V4 the sentence must be enabled for apps
+  (`messageRatePQTM_PQTMEPE`, RFSAT Configurator).
+* **Accuracy comparison (LG290P)**: at every epoch the receiver's GST and `$PQTMEPE` beside the accuracy shown and its
+  source; a running summary on Live (source, median GST − EPE difference), every epoch in `accuracy.csv` of a recording
+  (`core/AccuracyCompare.kt`, 1.13.3). Log > Sessions > **Accuracy** shares the file (1.13.5).
+* **Relay standby for rovers with their own NTRIP client** (PicoRTK, LG290P + ESP32-C6, PostcardRTK, RTK Everywhere;
+  `core/RelayArbitration.kt`, 1.13.2): two RTCM streams from different bases break RTK, so with the NTRIP relay on the
+  app first checks for 25 s whether the rover is using corrections of its own. If it is, the relay waits; it takes over
+  when the rover's corrections stop (about 20 s; from 1.13.5 RTK on corrections over 15 s old no longer counts, as the
+  LG290P stays RTK fixed for up to 2 min on old data) and hands back when they return. If the relay's corrections are
+  not used either, it retries after 1 min, doubling to at most 10 min. Live shows the relay's role.
 * **Receiver settings, LG290P rovers**: joins the rover's setup network (PicoRTK-Setup → 192.168.42.1,
   PostcardRTK-Setup → 192.168.4.1, RTK Config → 192.168.4.1) or opens it on a shared Wi-Fi (picortk.local,
   postcardrtk.local, or the IP shown by the device). The wired LG290P has no web page.
