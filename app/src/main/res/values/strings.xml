@@ -404,6 +404,7 @@
     <string name="live_speed">Speed / course</string>
     <string name="live_time">Time</string>
     <string name="live_waiting">Waiting for a position…</string>
+    <string name="log_accuracy">Accuracy</string>
     <string name="log_any_fix">Any fix</string>
     <string name="log_delete_point">Delete this point?</string>
     <string name="log_delete_title">Delete this session?</string>

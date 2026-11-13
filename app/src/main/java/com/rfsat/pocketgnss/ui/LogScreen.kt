@@ -161,13 +161,17 @@ fun LogScreen(engine: GnssEngine) {
                     HorizontalDivider()
                     continue
                 }
-                val raw = File(d, "raw.nmea"); val csv = File(d, "fixes.csv")
+                val raw = File(d, "raw.nmea"); val csv = File(d, "fixes.csv"); val acc = File(d, "accuracy.csv")
                 val live = rec.active && rec.dir == d
                 Text(d.name.removePrefix("session_") + if (live) "  ●" else "", fontWeight = FontWeight.SemiBold, color = if (live) SafeGreen else MaterialTheme.colorScheme.onSurface)
                 Text(stringResource(R.string.log_sizes, raw.length() / 1024.0, csv.length() / 1024.0), style = MaterialTheme.typography.bodySmall, color = muted)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     ActionButton(onClick = { share(context, raw, "text/plain") }, compact = true, enabled = raw.exists()) { Text("NMEA") }
                     ActionButton(onClick = { share(context, csv, "text/csv") }, compact = true, enabled = csv.exists()) { Text("CSV") }
+                    // 1.13.5: the receiver's GST and $PQTMEPE beside the accuracy shown, every epoch (LG290P sessions from 1.13.3)
+                    if (acc.length() > com.rfsat.pocketgnss.core.AccuracyCompare.HEADER.length + 1)
+                        ActionButton(onClick = { share(context, copyAs(context, acc, d.name + "_accuracy.csv"), "text/csv") }, compact = true) {
+                            Text(stringResource(R.string.log_accuracy)) }
                     ActionButton(onClick = { share(context, export(context, d.name + ".gpx", Exporters.trackGpx(engine.sessionTrack(d), d.name)), "application/gpx+xml") },
                         compact = true, enabled = csv.exists()) { Text("GPX") }
                     ActionButton(onClick = { share(context, export(context, d.name + ".kml", Exporters.trackKml(engine.sessionTrack(d), d.name)), "application/vnd.google-earth.kml+xml") },

@@ -402,6 +402,7 @@
     <string name="live_speed">Velocidade / rumo</string>
     <string name="live_time">Hora</string>
     <string name="live_waiting">À espera de uma posição…</string>
+    <string name="log_accuracy">Precisão</string>
     <string name="log_any_fix">Qualquer solução</string>
     <string name="log_delete_point">Eliminar este ponto?</string>
     <string name="log_delete_title">Eliminar esta sessão?</string>

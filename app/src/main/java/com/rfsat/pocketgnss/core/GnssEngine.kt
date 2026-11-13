@@ -1075,7 +1075,9 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
         if (r.rfsat != null && now - r.rfsatMs < 5000 && r.rfsat.corrections.equals("live", true)) return true
         val f = _fix.value ?: return false
         if (now - f.receivedAtMs > 5000) return false
-        if (f.quality == FixQuality.RTK_FIXED || f.quality == FixQuality.RTK_FLOAT) return true
+        // 1.13.5: RTK only counts while its corrections are fresh. The LG290P keeps reporting RTK fixed for up to
+        // about 2 min after its corrections stop (correction age climbing), which held the relay back that long.
+        if (f.quality == FixQuality.RTK_FIXED || f.quality == FixQuality.RTK_FLOAT) return (f.diffAgeSec ?: 0.0) < 15
         val sbas = f.diffStation?.trim()?.toIntOrNull()?.let { it in 120..158 } == true
         return f.quality == FixQuality.DGNSS && f.diffAgeSec != null && f.diffAgeSec < 15 && !sbas
     }

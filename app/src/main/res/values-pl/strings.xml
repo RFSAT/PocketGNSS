@@ -402,6 +402,7 @@
     <string name="live_speed">Prędkość / kurs</string>
     <string name="live_time">Czas</string>
     <string name="live_waiting">Oczekiwanie na pozycję…</string>
+    <string name="log_accuracy">Dokładność</string>
     <string name="log_any_fix">Dowolne rozwiązanie</string>
     <string name="log_delete_point">Usunąć ten punkt?</string>
     <string name="log_delete_title">Usunąć tę sesję?</string>

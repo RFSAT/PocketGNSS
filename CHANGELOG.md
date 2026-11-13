@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.13.5 (build 11305)
+Log: an Accuracy button shares a recording's accuracy.csv (the receiver's GST and $PQTMEPE beside the accuracy shown, every epoch). Relay standby: RTK on corrections more than 15 s old no longer counts as the receiver's own corrections in use, so the relay takes over within about 20 s when they stop (the LG290P stays RTK fixed for up to 2 min on old corrections).
+
 ## 1.13.4 (build 11304)
 LG290P accuracy now equals the figure on the RTK Everywhere display exactly: the app shows the receiver's own 2-D error from $PQTMEPE instead of recomputing it from the north and east errors, which gave a slightly different value.
 

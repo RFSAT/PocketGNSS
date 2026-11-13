@@ -402,6 +402,7 @@
     <string name="live_speed">Ταχύτητα / πορεία</string>
     <string name="live_time">Ώρα</string>
     <string name="live_waiting">Αναμονή θέσης…</string>
+    <string name="log_accuracy">Ακρίβεια</string>
     <string name="log_any_fix">Οποιαδήποτε λύση</string>
     <string name="log_delete_point">Διαγραφή αυτού του σημείου;</string>
     <string name="log_delete_title">Διαγραφή αυτής της συνεδρίας;</string>
