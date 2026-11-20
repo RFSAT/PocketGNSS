@@ -6,7 +6,8 @@ import java.util.Locale
  * Quectel LG290P proprietary sentences and commands, and the status sentence of RFSAT's own firmware ($PRFSM).
  *
  * The RFSAT RTK rovers (master documentation RFSAT-RTK-DOC-001) all use the LG290P: PicoRTK (V1), LG290P + ESP32-C6
- * (V2), PostcardRTK (V3), the Postcard with RTK Everywhere (V4) and the receiver wired on its own (V5, V6).
+ * (V2), PostcardRTK (V3), the Postcard with RTK Everywhere (V4), the receiver wired on its own (V5), RFSAT's own
+ * LG290P + ESP32-C6 board (V6) and the survey receiver, V4 with the IM19 tilt sensor (V7).
  * Field layouts follow RFSAT's firmware parsers (PostcardRTK nmea.cpp / ladder.cpp) and SparkFun's LG290P library.
  * Pure Kotlin, so everything here runs in plain JVM unit tests.
  */

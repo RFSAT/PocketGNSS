@@ -48,8 +48,9 @@ agricultural GNSS enabled services*) are listed on the same CORDIS Results page.
 ## Connections
 
 From 1.13 the app also supports **RFSAT's LG290P rovers** (master documentation RFSAT-RTK-DOC-001, part P):
-PicoRTK (V1), LG290P + ESP32-C6 (V2), PostcardRTK (V3), the Postcard with RFSAT's RTK Everywhere fork (V4) and the
-LG290P wired on its own (V5, V6). Choose the receiver in Setup; it sets the USB defaults (460800 bd tried first, port B
+PicoRTK (V1), LG290P + ESP32-C6 (V2, and RFSAT's own V6 board with the same C6 firmware), PostcardRTK (V3), the
+Postcard with RFSAT's RTK Everywhere fork (V4, and the survey receiver V7, which adds the IM19 tilt sensor) and the
+LG290P wired on its own (V5; also V6 through its M5 socket). Study S1 (low-cost IMU) is a desk study, not a receiver. Choose the receiver in Setup; it sets the USB defaults (460800 bd tried first, port B
 of the Postcard's two-port CH342), the help texts and which tools apply. Raspberry Pi Pico USB (vendor 0x2E8A) opens
 the app when plugged in.
 
@@ -57,7 +58,7 @@ the app when plugged in.
 |---|---|---|
 | USB | **Upper micro-USB = data / COM port** (D3.3 §4.7.1): the ESP32-DevKitC's CP210x bridge, carrying the NMEA ESPrtk sends to TX_UART0 (§4.7.7), 115200 bd as in D3.5 GNSS-test-11 | Middle port = power (5 V, min 1 A); bottom port = the ZED-F9x's own CDC-ACM USB, "not normally used" but the one that takes UBX configuration directly (u-center, §4.7.22). Both are recognised by vendor ID and open the app (`res/xml/device_filter.xml`). On the ESP32 port DTR/RTS are left alone because they drive EN/IO0 and would reset it; baud 115200 or automatic search. |
 | Bluetooth | Classic SPP to "BTU-ESPrtk : <ID>_<suffix>" (D3.3 §4.7.14), same NMEA as the USB port (GNSS-test-12, verified with a Galaxy S10) | Paired devices only (pair in Android settings), so only BLUETOOTH_CONNECT is needed; auto-reconnect. |
-| Bluetooth LE | Nordic UART Service (NUS) of RFSAT's LG290P rovers: PicoRTK, PostcardRTK, the ESP32-C6 rover (`link/BleNusLink.kt`) | Found with a scan in Setup (BLUETOOTH_SCAN with neverForLocation; location permission before Android 12); NMEA from TX notifications, RTCM to RX in MTU-sized writes; auto-reconnect. |
+| Bluetooth LE | Nordic UART Service (NUS) of RFSAT's LG290P rovers: PicoRTK, PostcardRTK, the ESP32-C6 rovers V2 and V6 (`link/BleNusLink.kt`) | Found with a scan in Setup (BLUETOOTH_SCAN with neverForLocation; location permission before Android 12); NMEA from TX notifications, RTCM to RX in MTU-sized writes; auto-reconnect. |
 | TCP | NMEA over the network (ESPrtk Wi-Fi stream, EOS Tools Pro on port 3967, any NMEA server) | Auto-reconnect. |
 | Phone GNSS | The phone's own GNSS chip (`link/PhoneGnssLink.kt`), for use without the receiver or for comparison | Android Location + GnssStatus converted to NMEA (`link/PhoneNmea.kt`: GGA, RMC, VTG, GST with Android's accuracy, GSA, GSV with L1/L5 signal IDs), so every screen works. Autonomous only: RTCM and UBX cannot be sent to the chip, so phone NTRIP, NMEA output configuration and mock location are disabled; mock positions are ignored so the app never reads back its own output. Needs location permission. |
 | Simulator | Synthetic ZED-F9P (`sim/SimReceiver.kt`) | Behaves like the D3.5 results: TTFF ~26 s cold, SBAS, float, RTK fixed 25-30 s after corrections; correction link per receiver version (LTE: ~57 s to RTK data, 16-25 s outages, ~95 %; Wi-Fi: ~15 s, short drop-outs, ~99 %); static or tractor-on-swaths; answers UBX VALSET/VALGET/RST/MON-VER. Every screen and tool works with it (and Play review needs it). |

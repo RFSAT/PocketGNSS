@@ -307,16 +307,16 @@
     <string name="hist_stats">Podana dokładność a rzeczywisty rozrzut</string>
     <string name="hist_stats_help" formatted="false">Podana = średnia dokładność deklarowana przez metodę (1 sigma). Rzeczywista = odległość RMS od odniesienia. Rozrzut = RMS wokół własnej średniej metody. W 2σ = odsetek pozycji oddalonych od odniesienia nie więcej niż dwukrotność ich podanej dokładności: wyraźnie poniżej 95 % oznacza, że metoda jest zbyt optymistyczna (lub odniesienie jest błędne).</string>
     <string name="hist_title">Historia pozycji</string>
-    <string name="home_about">PocketGNSS obsługuje centymetrowy odbiornik GNSS firmy RFSAT, opracowany w projekcie AgriBIT: wieloczęstotliwościowy odbiornik u-blox ZED-F9P / ZED-F9R z ESP32 z oprogramowaniem ESPrtk i opcjonalnym modemem LTE. Pokazuje pozycję i stan RTK w czasie rzeczywistym przez USB lub Bluetooth i pozwala skonfigurować odbiornik.</string>
+    <string name="home_about">PocketGNSS obsługuje centymetrowe odbiorniki GNSS firmy RFSAT: odbiornik AgriBIT (u-blox ZED-F9P / ZED-F9R z ESP32 z oprogramowaniem ESPrtk i opcjonalnym modemem LTE) oraz odbiorniki RFSAT od V1 do V7 oparte na Quectel LG290P (z Pico 2 W, ESP32-C6, płytką RTK Postcard z RTK Everywhere, samodzielnie na kablu lub jako odbiornik geodezyjny z czujnikiem nachylenia IM19). Pokazuje pozycję i stan RTK w czasie rzeczywistym przez USB lub Bluetooth i pozwala skonfigurować odbiornik.</string>
     <string name="home_about_2">Z poprawkami RTK, z klienta NTRIP odbiornika lub z telefonu, pozycja osiąga 1–2 cm. Aplikacja nagrywa i eksportuje ślady i pomierzone punkty, uśrednia punkty ze statystyką dokładności, tyczy, mierzy czas do rozwiązania i może udostępniać pozycję RTK innym aplikacjom w telefonie.</string>
     <string name="home_ai_ack">Opracowano przy wsparciu Claude AI (Anthropic).</string>
     <string name="home_credits">Podziękowania</string>
     <string name="home_credits_value">RTKLIB demo5 (T. Takasu, rtklibexplorer; BSD-2), usb-serial-for-android (MIT), MapLibre (BSD), OpenStreetMap, Esri, OpenTopoMap</string>
     <string name="home_developer">Twórca</string>
     <string name="home_hardware">Odbiornik</string>
-    <string name="home_hardware_value">u-blox ZED-F9P / F9R, ESP32 (ESPrtk), Quectel BG95 LTE, L1/L2/L5</string>
+    <string name="home_hardware_value">AgriBIT: u-blox ZED-F9P / F9R, ESP32 (ESPrtk), Quectel BG95 LTE. RFSAT V1–V7: Quectel LG290P z Pico 2 W, ESP32-C6 lub RTK Postcard. L1/L2/L5</string>
     <string name="home_interfaces">Interfejsy</string>
-    <string name="home_interfaces_value">Port szeregowy USB-OTG, Bluetooth SPP, TCP, NTRIP, UBX</string>
+    <string name="home_interfaces_value">Port szeregowy USB-OTG, Bluetooth SPP i LE, TCP, NTRIP, UBX, Quectel PQTM</string>
     <string name="home_licence">Licencja</string>
     <string name="home_link">Link</string>
     <string name="home_module">Moduł GNSS</string>
@@ -1041,14 +1041,14 @@
     <string name="variant_group_agribit">RFSAT AgriBIT (u-blox)</string>
     <string name="variant_group_rovers">Rovery RFSAT LG290P</string>
     <string name="variant_picortk">PicoRTK (V1)</string>
-    <string name="variant_c6">LG290P + ESP32-C6 (V2)</string>
+    <string name="variant_c6">LG290P + ESP32-C6 (V2, V6)</string>
     <string name="variant_postcard">PostcardRTK (V3)</string>
-    <string name="variant_rtke">Postcard + RTK Everywhere (V4)</string>
-    <string name="variant_wired">LG290P na kablu (V5, V6)</string>
+    <string name="variant_rtke">Postcard + RTK Everywhere (V4, V7)</string>
+    <string name="variant_wired">LG290P na kablu (V5)</string>
     <string name="route_picortk">Waveshare LG290P + Raspberry Pi Pico 2 W. Klient NTRIP PicoRTK pobiera poprawki przez Wi-Fi (router lub hotspot tego telefonu), ustawiony na jego stronie; albo telefon przekazuje je przez Bluetooth lub USB (przekaźnik NTRIP). Bluetooth klasyczny lub LE.</string>
-    <string name="route_c6">Waveshare LG290P + ESP32-C6 SuperMini. Poprawki przez Wi-Fi z własnego klienta NTRIP rovera lub z telefonu przez Bluetooth LE (C6 nie ma Bluetooth klasycznego).</string>
+    <string name="route_c6">Waveshare LG290P + ESP32-C6 SuperMini (V2) lub własna płytka RFSAT z LG290P i ESP32-C6 (V6). Poprawki przez Wi-Fi z własnego klienta NTRIP rovera lub z telefonu przez Bluetooth LE (C6 nie ma Bluetooth klasycznego).</string>
     <string name="route_postcard">SparkFun RTK Postcard z PostcardRTK. Jego klient NTRIP pobiera poprawki przez Wi-Fi, a bez nich przechodzi na Galileo HAS; albo przekazuje je telefon. USB: port B to sam LG290P, port A to ESP32.</string>
-    <string name="route_rtke">Postcard + Portability Shield z forkiem RTK Everywhere RFSAT: poprawki przez Wi-Fi z maks. czterech źródeł NTRIP po kolei, Galileo HAS jako rezerwa; albo telefon przekazuje je przez Bluetooth.</string>
+    <string name="route_rtke">Postcard + Portability Shield (V4; z czujnikiem pochylenia IM19 do pomiarów geodezyjnych: V7) z forkiem RTK Everywhere RFSAT: poprawki przez Wi-Fi z maks. czterech źródeł NTRIP po kolei, Galileo HAS jako rezerwa; albo telefon przekazuje je przez Bluetooth.</string>
     <string name="route_wired">Sam LG290P (USB lub UART, 460800 bit/s). Nie ma klienta NTRIP: poprawki pochodzą z tego telefonu (przekaźnik NTRIP przez USB) lub z Galileo HAS. Konfiguracja: Narzędzia &gt; Wyjście NMEA.</string>
     <string name="trouble_picortk">Poprawki nie docierają do odbiornika. Na stronie PicoRTK sprawdź Wi-Fi i caster (punkt montowania, login) albo włącz przekaźnik NTRIP w telefonie.</string>
     <string name="trouble_c6">Poprawki nie docierają do odbiornika. Sprawdź Wi-Fi i caster na stronie rovera albo wysyłaj poprawki z telefonu przez Bluetooth LE (przekaźnik NTRIP).</string>
@@ -1057,7 +1057,7 @@
     <string name="trouble_wired">Poprawki nie docierają do odbiornika. LG290P na kablu dostaje je tylko z tego telefonu: włącz przekaźnik NTRIP (Ustawienia &gt; NTRIP). Bez niego Galileo HAS daje decymetry po zbieżności (HAS włączony w Narzędzia &gt; Wyjście NMEA).</string>
     <string name="setup_usb_port">Port USB</string>
     <string name="setup_usb_port_auto">automatycznie (%1$s)</string>
-    <string name="setup_usb_port_help">Tylko dla układów USB z dwoma portami. Postcard (V3, V4): port B to LG290P (pozycja, polecenia odbiornika), port A to ESP32 (konsola, wgrywanie).</string>
+    <string name="setup_usb_port_help">Tylko dla układów USB z dwoma portami. Postcard (V3, V4, V7): port B to LG290P (pozycja, polecenia odbiornika), port A to ESP32 (konsola, wgrywanie).</string>
     <string name="setup_bt_type">Bluetooth</string>
     <string name="setup_bt_classic">Klasyczny (sparowany)</string>
     <string name="setup_bt_ble">Bluetooth LE (skanuj)</string>
@@ -1113,7 +1113,7 @@
     <string name="rv_m_dr">Nawigacja zliczeniowa</string>
     <string name="rv_m_none">Brak pozycji</string>
     <string name="rover_web_title">Ustawienia rovera</string>
-    <string name="rover_web_none">LG290P na kablu (V5, V6) nie ma strony WWW. Ustaw go w Narzędzia &gt; Wyjście NMEA (profile odbiornika) lub programem Quectel QGNSS na PC.</string>
+    <string name="rover_web_none">LG290P na kablu (V5) nie ma strony WWW. Ustaw go w Narzędzia &gt; Wyjście NMEA (profile odbiornika) lub programem Quectel QGNSS na PC.</string>
     <string name="rover_web_setup_title">Sieć konfiguracyjna</string>
     <string name="rover_web_setup_pico">Włącz PicoRTK poza zasięgiem zapisanej sieci Wi-Fi lub przytrzymaj jego przycisk 3 s: otworzy sieć %1$s-XXXX. Strona ustawień to http://%2$s.</string>
     <string name="rover_web_setup_postcard">Bez skonfigurowanej sieci Wi-Fi PostcardRTK otwiera sieć %1$s-XXXX. Strona ustawień to http://%2$s.</string>

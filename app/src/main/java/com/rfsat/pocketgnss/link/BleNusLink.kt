@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Bluetooth Low Energy serial link over the Nordic UART Service (NUS), the BLE output of RFSAT's PicoRTK and
- * PostcardRTK firmware (and of the ESP32-C6 rover, V2, which has no Bluetooth classic). NMEA arrives as notifications
+ * PostcardRTK firmware (and of the ESP32-C6 rovers, V2 and V6, which have no Bluetooth classic). NMEA arrives as notifications
  * on the TX characteristic; RTCM from the NTRIP relay is written to the RX characteristic in MTU-sized pieces.
  * BLE devices are not paired: Setup finds them with a scan (BLUETOOTH_SCAN, "never for location").
  */

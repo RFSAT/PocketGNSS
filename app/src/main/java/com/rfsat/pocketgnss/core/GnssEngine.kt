@@ -1135,7 +1135,7 @@ class GnssEngine(private val context: Context, val store: SettingsStore) {
 
     companion object {
 
-        /** Receivers with their own NTRIP client (the relay then arbitrates, [RelayRole]). V5 / V6 wired have none. */
+        /** Receivers with their own NTRIP client (the relay then arbitrates, [RelayRole]). The wired LG290P (V5) has none. */
         val OWN_NTRIP = setOf(com.rfsat.pocketgnss.link.ReceiverVariant.LTE, com.rfsat.pocketgnss.link.ReceiverVariant.WIFI,
             com.rfsat.pocketgnss.link.ReceiverVariant.PICORTK, com.rfsat.pocketgnss.link.ReceiverVariant.LG290P_C6,
             com.rfsat.pocketgnss.link.ReceiverVariant.POSTCARDRTK, com.rfsat.pocketgnss.link.ReceiverVariant.RTK_EVERYWHERE)

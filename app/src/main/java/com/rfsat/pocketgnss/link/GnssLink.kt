@@ -21,19 +21,24 @@ enum class LinkKind { USB, BLUETOOTH, TCP, PHONE, SIMULATOR,
 enum class ReceiverVariant {
     UNSET, LTE, WIFI,
     /*
-     * RFSAT's RTK rovers built on the Quectel LG290P (master documentation RFSAT-RTK-DOC-001, variants V1-V6).
+     * RFSAT's RTK rovers built on the Quectel LG290P (master documentation RFSAT-RTK-DOC-001, variants V1-V7;
+     * Study S1 is a desk study, not a receiver).
      * Their firmware (PicoRTK, PostcardRTK, RTK Everywhere) sets the receiver and runs its own NTRIP client;
-     * V5 / V6 is the receiver on its own, configured once with the profiles of the documentation.
+     * V5 is the receiver on its own, configured once with the profiles of the documentation.
      */
     /** V1: Waveshare LG290P module + Raspberry Pi Pico 2 W (PicoRTK firmware). */
     PICORTK,
-    /** V2: Waveshare LG290P module + ESP32-C6 SuperMini (PostcardRTK firmware for the C6; Bluetooth LE only). */
+    /**
+     * V2: Waveshare LG290P module + ESP32-C6 SuperMini; V6: RFSAT's own LG290P + ESP32-C6-MINI-1 board. Both run the
+     * PostcardRTK firmware for the C6 (Bluetooth LE only, USB-C on the C6's native USB). V6's M5 socket is the LG290P's
+     * own UART (like V5).
+     */
     LG290P_C6,
     /** V3: SparkFun RTK Postcard with the PostcardRTK firmware. */
     POSTCARDRTK,
-    /** V4: SparkFun RTK Postcard + Portability Shield with RFSAT's RTK Everywhere fork. */
+    /** V4: SparkFun RTK Postcard + Portability Shield with RFSAT's RTK Everywhere fork; V7: the same with the IM19 tilt sensor (survey). */
     RTK_EVERYWHERE,
-    /** V5 / V6: the LG290P on its own, over USB or its UART (no firmware of ours). */
+    /** V5: the LG290P on its own, over USB or its UART (no firmware of ours); also V6 through its M5 socket. */
     LG290P_WIRED;
 
     /** One of RFSAT's LG290P rovers (not the AgriBIT u-blox receiver). */

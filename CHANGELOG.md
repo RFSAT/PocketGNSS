@@ -7,6 +7,9 @@ Versioning: 1.MINOR.PATCH. The minor number rises with new features, the patch n
 Only `appVersion` in app/build.gradle.kts is edited; the Play version code is derived from it
 (1*10000 + MINOR*100 + PATCH).
 
+## 1.13.6 (build 11306)
+Receiver list updated to RFSAT's current numbering: LG290P + ESP32-C6 covers V2 and RFSAT's own V6 board (same firmware, Bluetooth LE), Postcard + RTK Everywhere covers V4 and the survey receiver V7 (with the IM19 tilt sensor), and the wired LG290P is V5 (also V6 through its M5 socket). Help texts follow in all languages. About page: AgriBIT (u-blox F9P / F9R) and RFSAT's LG290P receivers V1 to V7.
+
 ## 1.13.5 (build 11305)
 Log: an Accuracy button shares a recording's accuracy.csv (the receiver's GST and $PQTMEPE beside the accuracy shown, every epoch). Relay standby: RTK on corrections more than 15 s old no longer counts as the receiver's own corrections in use, so the relay takes over within about 20 s when they stop (the LG290P stays RTK fixed for up to 2 min on old corrections).
 
